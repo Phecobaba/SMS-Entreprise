@@ -1,0 +1,8 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Disciplinary log</title>@vite(['resources/css/app.css', 'resources/js/app.js'])</head><body class="bg-slate-100 p-5 text-slate-900">
+@include('core._shell-start')<main class="mx-auto max-w-3xl space-y-5 rounded bg-white p-7 shadow"><a wire:navigate class="text-blue-700 underline" href="{{ route('staff.show', $staff) }}">Staff record</a><h1 class="text-2xl font-bold">Disciplinary log · {{ $staff->user->name }}</h1><p class="text-sm text-slate-600">This sensitive view is audit logged.</p>
+@if($errors->any())<div class="rounded bg-red-50 p-3">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
+<ul class="divide-y">@foreach($entries as $entry)<li class="py-2">{{ $entry->date->format('d M Y') }} · {{ $entry->type }} · {{ $entry->description }} @if($entry->resolution)<span>({{ $entry->resolution }})</span>@endif</li>@endforeach</ul>
+{{ $entries->links() }}
+@can('manage_staff_records')<form method="post" action="{{ route('staff.discipline.store', $staff) }}" class="grid gap-2">@csrf<select class="border p-2" name="type"><option>Query</option><option>Warning</option><option>Commendation</option></select><input class="border p-2" type="date" name="date" required><textarea class="border p-2" name="description" placeholder="Description" required></textarea><textarea class="border p-2" name="resolution" placeholder="Resolution (optional)"></textarea><button class="rounded bg-blue-700 p-2 text-white">Add entry</button></form>@endcan</main>@include('core._shell-end')
+@livewireScripts
+</body></html>

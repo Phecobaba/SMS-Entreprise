@@ -1,0 +1,8 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Salary history</title>@vite(['resources/css/app.css', 'resources/js/app.js'])</head><body class="bg-slate-100 p-5 text-slate-900">
+@include('core._shell-start')<main class="mx-auto max-w-3xl space-y-5 rounded bg-white p-7 shadow"><a wire:navigate class="text-blue-700 underline" href="{{ route('staff.show', $staff) }}">Staff record</a><h1 class="text-2xl font-bold">Salary history · {{ $staff->user->name }}</h1><p class="text-sm text-slate-600">This sensitive view is audit logged.</p>
+@if($errors->any())<div class="rounded bg-red-50 p-3">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
+<table class="w-full text-left"><thead><tr><th>Effective from</th><th>Effective to</th><th>Amount (₦)</th></tr></thead><tbody>@foreach($history as $salary)<tr class="border-t"><td>{{ $salary->effective_from->format('d M Y') }}</td><td>{{ $salary->effective_to?->format('d M Y') ?? 'Current' }}</td><td>{{ number_format($salary->amount_kobo / 100, 2) }}</td></tr>@endforeach</tbody></table>
+{{ $history->links() }}
+@can('manage_staff_records')<form method="post" action="{{ route('staff.salary.store', $staff) }}" class="flex gap-2">@csrf<input class="border p-2" type="number" min="1" name="amount_kobo" placeholder="Amount (kobo)" required><input class="border p-2" type="date" name="effective_from" required><button class="rounded bg-blue-700 p-2 text-white">Add salary</button></form>@endcan</main>@include('core._shell-end')
+@livewireScripts
+</body></html>

@@ -1,0 +1,33 @@
+@props(['name'])
+@php
+    $paths = [
+        'layout-dashboard' => '<path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/>',
+        'device-laptop' => '<path d="M3 5h18v12H3zM2 21h20M8 17v4M16 17v4"/>',
+        'report' => '<path d="M5 3h14v18H5zM9 7h6M9 11h6M9 15h4"/>',
+        'clipboard-list' => '<path d="M9 5h6M9 3h6v4H9zM5 5v16h14V5M9 12h6M9 16h6"/>',
+        'calendar-check' => '<path d="M4 5h16v16H4zM8 3v4M16 3v4M4 10h16M8 15l2 2 5-5"/>',
+        'wallet' => '<path d="M4 6h15a2 2 0 0 1 2 2v10H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h13M16 12h5v4h-5a2 2 0 0 1 0-4z"/>',
+        'notebook' => '<path d="M6 4h14v17H6zM4 7h4M4 11h4M4 15h4M4 19h4M11 8h5M11 12h5"/>',
+        'user' => '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+        'eye' => '<path d="M3 12c2.4-4 5.4-6 9-6s6.6 2 9 6c-2.4 4-5.4 6-9 6s-6.6-2-9-6z"/><circle cx="12" cy="12" r="2"/>',
+        'logout' => '<path d="M10 8V5a2 2 0 0 1 2-2h7v18h-7a2 2 0 0 1-2-2v-3M15 12H3M6 9l-3 3 3 3"/>',
+        'bell' => '<path d="M10 5a2 2 0 1 1 4 0 7 7 0 0 1 4 6v4l2 2H4l2-2v-4a7 7 0 0 1 4-6M10 21h4"/>',
+        'dots' => '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+        'chevron-right' => '<path d="m9 6 6 6-6 6"/>', 'chevron-left' => '<path d="m15 6-6 6 6 6"/>',
+        'book' => '<path d="M4 4h6a2 2 0 0 1 2 2v15a3 3 0 0 0-3-3H4zM20 4h-6a2 2 0 0 0-2 2v15a3 3 0 0 1 3-3h5z"/>',
+        'flag' => '<path d="M5 21V4M5 5h11l-2 4 2 4H5"/>',
+        'clock' => '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+        'device-floppy' => '<path d="M5 3h12l4 4v14H3V3zM7 3v6h9V3M7 17h10v4H7z"/>',
+        'circle-check' => '<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
+        'wifi-off' => '<path d="m3 3 18 18M8.5 8.5A10 10 0 0 1 21 9M3 9a14 14 0 0 1 3.5-2M6 13a9 9 0 0 1 6-2c1 0 2 .2 3 .5M9 17a4 4 0 0 1 6 0M12 21h.01"/>',
+        'alert-triangle' => '<path d="M12 3 2 21h20zM12 9v4M12 17h.01"/>',
+        'lock' => '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+        'currency-naira' => '<path d="M7 21V3l10 18V3M4 9h16M4 15h16"/>',
+        'list-check' => '<path d="m4 6 2 2 3-3M11 7h9M4 12l2 2 3-3M11 13h9M4 18l2 2 3-3M11 19h9"/>',
+        'send' => '<path d="m3 3 18 9-18 9 4-9zM7 12h14"/>',
+        'info-circle' => '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
+        'player-pause' => '<path d="M8 5v14M16 5v14"/>', 'player-play' => '<path d="m8 5 11 7-11 7z"/>',
+        'x' => '<path d="m6 6 12 12M18 6 6 18"/>',
+    ];
+@endphp
+<svg {{ $attributes->class('oak-i') }} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-icon="{{ $name }}" aria-hidden="true">{!! $paths[$name] ?? $paths['info-circle'] !!}</svg>
