@@ -6,6 +6,7 @@ use App\Modules\Core\Models\Permission;
 use App\Modules\Core\Models\Role;
 use App\Modules\Core\Models\School;
 use App\Modules\Core\Models\User;
+use App\Modules\Core\Services\AppNavigation;
 use App\Modules\Core\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -14,6 +15,38 @@ use Tests\TestCase;
 class AuthenticationAndPermissionTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_admin_navigation_has_attendance_and_alerts_while_teacher_keeps_attendance(): void
+    {
+        $school = School::create(['name' => 'Oakfield']);
+        config()->set('tenancy.default_school_id', $school->id);
+        app(TenantContext::class)->set($school->id);
+
+        $permissions = collect([
+            'view_all_sections', 'mark_attendance', 'view_attendance_alerts', 'enter_results',
+        ])->mapWithKeys(fn (string $name) => [$name => Permission::firstOrCreate(['name' => $name])]);
+        $adminRole = Role::create(['name' => 'School Admin']);
+        $adminRole->permissions()->attach($permissions->only([
+            'view_all_sections', 'mark_attendance', 'view_attendance_alerts',
+        ])->pluck('id'));
+        $teacherRole = Role::create(['name' => 'Teacher']);
+        $teacherRole->permissions()->attach($permissions->only([
+            'mark_attendance', 'enter_results',
+        ])->pluck('id'));
+
+        $admin = User::create(['name' => 'Admin', 'email' => 'admin@example.test', 'password' => 'password']);
+        $teacher = User::create(['name' => 'Teacher', 'email' => 'teacher@example.test', 'password' => 'password']);
+        $admin->roles()->attach($adminRole);
+        $teacher->roles()->attach($teacherRole);
+
+        $navigation = app(AppNavigation::class);
+        $adminItems = collect($navigation->items($admin));
+        $teacherItems = collect($navigation->items($teacher));
+
+        $this->assertSame(route('attendance.index'), $adminItems->firstWhere('label', 'Attendance')['url']);
+        $this->assertSame(route('attendance.alerts'), $adminItems->firstWhere('label', 'Alerts')['url']);
+        $this->assertSame(route('attendance.index'), $teacherItems->firstWhere('label', 'Attendance')['url']);
+    }
 
     public function test_login_is_scoped_to_the_school_and_dashboard_requires_a_permission(): void
     {

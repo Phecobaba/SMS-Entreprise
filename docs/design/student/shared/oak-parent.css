@@ -1,0 +1,47 @@
+/* Parent batch + fees v2 — ONLY new classes. Load after oak-student.css (and batch2 where used). */
+
+/* ---------- Ward bar + switcher (parent pages) ---------- */
+.oak-ward-bar { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 14px; background: #fff; border: 1px solid var(--color-border); border-radius: 12px; margin-bottom: 18px; }
+.oak-ward-avatar { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--color-brand-teal); color: var(--color-brand-cream); font: 600 1.1rem var(--font-serif); flex: 0 0 40px; }
+.oak-ward-who { min-width: 0; line-height: 1.25; }
+.oak-ward-who small { display: block; color: var(--color-text-muted); font-size: .8rem; }
+.oak-ward-who strong { display: block; font: 600 1.05rem var(--font-serif); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.oak-ward-who span { color: var(--color-text-muted); font-size: .88rem; }
+.oak-ward-bar .oak-btn { margin-left: auto; }
+.oak-ward-opts { display: grid; gap: 10px; border: 0; padding: 0; margin: 0; }
+.oak-ward-opt { position: relative; display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 10px; background: #fff; cursor: pointer; }
+.oak-ward-opt input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+.oak-ward-opt:has(input:checked) { border: 1.5px solid var(--color-brand-teal); background: var(--color-surface); }
+.oak-ward-opt:has(input:focus-visible) { outline: 3px solid var(--color-accent-ochre); outline-offset: 2px; }
+.oak-ward-opt .oak-ward-who { flex: 1; }
+.oak-ward-opt .oak-i.tick { color: var(--color-brand-teal); visibility: hidden; }
+.oak-ward-opt:has(input:checked) .oak-i.tick { visibility: visible; }
+
+/* ---------- Money breakdown + part-payments (fees) ---------- */
+.fe-prog { height: 10px; border-radius: 999px; background: #fff; overflow: hidden; margin-top: 8px; }
+.fe-prog > i { display: block; height: 100%; background: var(--color-success); }
+.fe-progtext { font-size: .92rem; color: var(--color-text); margin-top: 6px; }
+.fe-progtext b { font-weight: 600; }
+.fe-lines { margin: 4px 0 0; }
+.fe-lines td { padding: 8px 0; border-bottom: 1px solid var(--color-border-light); font-size: .93rem; }
+.fe-lines td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.fe-lines tr.fe-total td { border-bottom: 0; border-top: 1.5px solid var(--color-border); font-weight: 700; padding-top: 10px; }
+.fe-sub { margin: 16px 0 6px; font: 600 .9rem var(--font-sans); color: var(--color-text-muted); }
+.fe-pp { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 4px 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--color-border-light); }
+.fe-pp:last-child { border-bottom: 0; }
+.fe-pp p { color: var(--color-text-muted); font-size: .85rem; }
+.fe-pp[data-open] { background: #fff; border: 1.5px solid var(--color-brand-teal); border-radius: 10px; padding: 12px; margin: 6px 0; border-bottom: 1.5px solid var(--color-brand-teal); }
+.fe-receipt { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--color-border-light); font-size: .9rem; }
+.fe-receipt:last-child { border-bottom: 0; }
+.fe-visit { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; color: var(--color-text-muted); font-size: .9rem; }
+.oak-status-await { background: var(--color-warning-bg); color: var(--color-warning); border: 1px dashed var(--color-accent-ochre); }
+
+@media (max-width: 767px) {
+  .oak-ward-bar { margin-bottom: 14px; }
+  .oak-ward-bar .oak-btn { padding: 0 12px; }
+  .fe-pp { grid-template-columns: 1fr; }
+  .fe-pp > .oak-status-pill { justify-self: start; }
+  details.fe-inv > summary { grid-template-columns: minmax(0,1fr); }
+  details.fe-inv > summary .oak-row-end { justify-content: flex-start; }
+  .fe-pp .oak-btn { width: 100%; }
+}

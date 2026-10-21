@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Modules\Academics\Services\ResultAcademicCatalog;
 use App\Modules\Academics\Services\ResultTeachingAssignments;
 use App\Modules\Academics\Services\SectionAccess;
-use App\Modules\Core\Services\SchoolUserDirectory;
 use App\Modules\Core\TenantContext;
 use App\Modules\Results\Models\AssessmentComponent;
 use App\Modules\Results\Models\GradingScheme;
@@ -19,7 +18,7 @@ use Illuminate\View\View;
 
 class ResultConfigurationController extends Controller
 {
-    public function index(Request $request, ResultAcademicCatalog $catalog, ResultTeachingAssignments $assignments, SchoolUserDirectory $users): View
+    public function index(Request $request, ResultAcademicCatalog $catalog): View
     {
         return view('results.configuration', [
             'components' => AssessmentComponent::orderBy('name')->paginate(15, ['*'], 'components_page'),
@@ -27,8 +26,6 @@ class ResultConfigurationController extends Controller
             'templates' => ResultTemplate::with(['components.component', 'scheme'])->latest()->paginate(15, ['*'], 'templates_page'),
             'componentOptions' => AssessmentComponent::orderBy('name')->get(),
             'schemeOptions' => GradingScheme::orderBy('name')->get(),
-            'teacherAssignments' => $assignments->paginated(),
-            'userOptions' => $users->activeOptions(),
             ...$catalog->options($request->user()),
         ]);
     }

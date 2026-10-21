@@ -4,7 +4,9 @@ namespace App\Providers;
 
 use App\Modules\Academics\Services\FormTeacherAssignments;
 use App\Modules\Core\Models\User;
+use App\Modules\Core\Services\AppNavigation;
 use App\Modules\Core\TenantContext;
+use App\Modules\Portals\Services\PortalContext;
 use App\Modules\Results\Models\ResultCard;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -17,6 +19,8 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(TenantContext::class);
+        $this->app->scoped(PortalContext::class);
+        $this->app->scoped(AppNavigation::class);
     }
 
     /**
@@ -38,9 +42,16 @@ class AppServiceProvider extends ServiceProvider
 
         Gate::define('view_dashboard', fn (User $user): bool => $user->hasPermission('view_dashboard'));
         Gate::define('manage_academics', fn (User $user): bool => $user->hasPermission('manage_academics'));
+        Gate::define('manage_section_classes', fn (User $user): bool => $user->hasPermission('manage_section_classes'));
+        Gate::define('manage_section_levels', fn (User $user): bool => $user->hasPermission('manage_section_levels'));
+        Gate::define('manage_section_arms', fn (User $user): bool => $user->hasPermission('manage_section_arms'));
+        Gate::define('manage_section_subjects', fn (User $user): bool => $user->hasPermission('manage_section_subjects'));
+        Gate::define('manage_section_teacher_assignments', fn (User $user): bool => $user->hasPermission('manage_section_teacher_assignments'));
+        Gate::define('manage_promotions', fn (User $user): bool => $user->hasPermission('manage_promotions'));
         Gate::define('manage_school_profile', fn (User $user): bool => $user->hasPermission('manage_school_profile'));
         Gate::define('manage_admissions', fn (User $user): bool => $user->hasPermission('manage_admissions'));
         Gate::define('manage_payments', fn (User $user): bool => $user->hasPermission('manage_payments'));
+        Gate::define('manage_fee_schedule', fn (User $user): bool => $user->hasPermission('manage_fee_schedule'));
         Gate::define('manage_staff_records', fn (User $user): bool => $user->hasPermission('manage_staff_records'));
         Gate::define('view_staff_salary', fn (User $user): bool => $user->hasPermission('view_staff_salary'));
         Gate::define('view_staff_disciplinary', fn (User $user): bool => $user->hasPermission('view_staff_disciplinary'));

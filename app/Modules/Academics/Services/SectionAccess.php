@@ -17,7 +17,7 @@ class SectionAccess
     {
         $query = Section::query();
         if (! $actor->can('view_all_sections')) {
-            $query->where('head_user_id', $actor->id);
+            $query->whereHas('heads', fn (Builder $heads) => $heads->whereKey($actor->id));
         }
 
         return $query->orderBy('id')->pluck('id')->map(fn ($id) => (int) $id)->all();

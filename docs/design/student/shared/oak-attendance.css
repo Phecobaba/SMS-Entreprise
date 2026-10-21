@@ -1,0 +1,29 @@
+/* Attendance with two sessions per day. NEW classes only; load after oak-student.css and oak-student-batch2.css.
+   Used by the student and parent Attendance pages and by the Admin/Head attendance screens. */
+
+/* Pill for "Not held": dashed and neutral, so it is never mistaken for Absent and never relies on colour */
+.oak-status-nh { background: transparent; color: var(--color-text-muted); border: 1px dashed var(--color-border); }
+.oak-status-pending { background: var(--color-surface); color: var(--color-text-muted); }
+
+/* 30-day strip: each cell = one school day, left half Morning, right half Afternoon */
+.at2-grid { display: grid; grid-template-columns: repeat(10,minmax(0,1fr)); gap: 6px; }
+.at2-cell { display: grid; grid-template-rows: auto 1fr; gap: 2px; padding: 4px; border-radius: 9px; background: #fff; border: 1px solid var(--color-border-light); min-height: 62px; }
+.at2-day { font-size: .72rem; line-height: 1; color: var(--color-text-muted); text-align: center; padding-top: 1px; }
+.at2-halves { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+.at2-half { display: grid; place-items: center; min-height: 34px; border-radius: 6px; font-size: .88rem; font-weight: 700; }
+.at2-half.at-nh { background: transparent; color: var(--color-text-muted); border: 1px dashed var(--color-border); font-weight: 400; }
+.at2-half.at-u { background: var(--color-bg); color: var(--color-text-muted); font-weight: 400; border: 1px solid var(--color-border-light); }
+.at2-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; font-size: .85rem; color: var(--color-text-muted); }
+.at2-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.at2-legend i { width: 20px; height: 20px; border-radius: 5px; display: inline-grid; place-items: center; font-style: normal; font-weight: 700; font-size: .72rem; }
+.at2-legend i.at-nh { border: 1px dashed var(--color-border); background: transparent; color: var(--color-text-muted); font-weight: 400; }
+.at2-legend i.at-u { border: 1px solid var(--color-border-light); background: var(--color-bg); color: var(--color-text-muted); font-weight: 400; }
+.at2-table th:not(:first-child), .at2-table td:not(:first-child) { width: 34%; }
+.at2-today { color: var(--color-text-muted); font-size: .8rem; display: block; }
+
+@media (max-width: 767px) {
+  .at2-grid { grid-template-columns: repeat(6,minmax(0,1fr)); }
+  .at2-table th:not(:first-child), .at2-table td:not(:first-child) { width: auto; }
+  .at2-table td { padding-left: 4px; padding-right: 4px; }
+  .at2-table .oak-status-pill { font-size: .72rem; padding: 3px 7px; }
+}

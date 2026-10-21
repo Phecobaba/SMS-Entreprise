@@ -2,6 +2,7 @@
 
 namespace App\Modules\Payments\Services;
 
+use App\Modules\Academics\Services\AcademicCalendar;
 use App\Modules\Academics\Services\ResultAcademicCatalog;
 use App\Modules\Academics\Services\SectionAccess;
 use App\Modules\Admissions\Models\Student;
@@ -21,11 +22,16 @@ use Illuminate\Validation\ValidationException;
 
 class PaymentLedger
 {
-    public function outstandingKobo(?User $viewer = null): int
+    public function invoiceCountForStudents(array $studentIds): int
     {
-        $query = Invoice::where('status', 'Unpaid')->where('purpose', 'Tuition');
+        return $studentIds === [] ? 0 : Invoice::whereIn('student_id', $studentIds)->count();
+    }
+
+    public function outstandingKobo(?User $viewer = null, ?int $sectionId = null): int
+    {
+        $query = Invoice::where('status', 'Unpaid')->where('kind', Invoice::KIND_TERM_FEE);
         if ($viewer) {
-            $armIds = app(SectionAccess::class)->visibleArmIds($viewer);
+            $armIds = app(SectionAccess::class)->visibleArmIds($viewer, $sectionId);
             if ($armIds !== null) {
                 $studentIds = Student::whereIn('class_arm_id', $armIds)->select('id');
                 $query->whereIn('student_id', $studentIds);
@@ -33,6 +39,34 @@ class PaymentLedger
         }
 
         return (int) $query->sum('amount_kobo');
+    }
+
+    public function dashboardSummary(): array
+    {
+        $term = app(AcademicCalendar::class)->currentTerm();
+
+        if (! $term) {
+            return [
+                'term' => null,
+                'outstanding_kobo' => 0,
+                'collected_kobo' => 0,
+                'recent' => collect(),
+                'not_invoiced_count' => 0,
+            ];
+        }
+
+        return [
+            'term' => trim($term->name.' · '.($term->session?->name ?? '')),
+            'outstanding_kobo' => (int) Invoice::where('term_id', $term->id)
+                ->where('kind', Invoice::KIND_TERM_FEE)->where('status', 'Unpaid')->sum('amount_kobo'),
+            'collected_kobo' => (int) Payment::whereHas('invoice', fn ($query) => $query->where('term_id', $term->id))
+                ->sum('amount_kobo'),
+            'recent' => Payment::with(['invoice.student.user', 'invoice.candidate'])
+                ->whereHas('invoice', fn ($query) => $query->where('term_id', $term->id))
+                ->latest('paid_at')->limit(4)->get(),
+            'not_invoiced_count' => Student::active()->whereNotIn('id', Invoice::where('kind', Invoice::KIND_TERM_FEE)
+                ->where('term_id', $term->id)->select('student_id'))->count(),
+        ];
     }
 
     public function candidateInvoices(int $candidateId)
@@ -46,12 +80,13 @@ class PaymentLedger
         $isWard = app(ParentAccountDirectory::class)->isWard($studentId, $viewer->id);
         abort_unless($isOwner || $isWard, 403);
         $invoices = Invoice::with('payment')->where('student_id', $studentId)->latest('id')->limit(5)->get();
-        $latestUnpaidTuition = Invoice::where('student_id', $studentId)->where('purpose', 'Tuition')
-            ->where('status', 'Unpaid')->latest('id')->first();
+        $latestTermInvoice = Invoice::where('student_id', $studentId)->where('kind', Invoice::KIND_TERM_FEE)
+            ->latest('id')->first();
+        $latestUnpaidTuition = $latestTermInvoice?->status === 'Unpaid' ? $latestTermInvoice : null;
 
         return [
             'recent' => $invoices,
-            'outstanding_kobo' => (int) Invoice::where('student_id', $studentId)->where('status', 'Unpaid')->sum('amount_kobo'),
+            'outstanding_kobo' => $this->termFeeOutstandingKobo($studentId),
             'latest_unpaid_tuition' => $latestUnpaidTuition,
             'latest_unpaid_tuition_payable' => $latestUnpaidTuition && PaymentAttempt::where('invoice_id', $latestUnpaidTuition->id)
                 ->latest('id')->value('status') !== 'Pending',
@@ -61,27 +96,75 @@ class PaymentLedger
     public function portalInvoices(int $studentId, User $viewer): array
     {
         app(ResultPaymentAccess::class)->authorizeOwnership($studentId, $viewer);
+        $readOnly = ! app(StudentDirectory::class)->isActive($studentId);
         $rows = Invoice::with(['payment', 'attempts'])->where('student_id', $studentId)
+            ->when($readOnly, fn ($query) => $query->where('status', 'Paid')->whereHas('payment'))
             ->latest('id')->paginate(20)->withQueryString();
 
         return [
             'rows' => $rows,
             'terms' => app(ResultAcademicCatalog::class)->labels([], $rows->pluck('term_id')->filter()->all())['terms'],
-            'outstanding_kobo' => (int) Invoice::where('student_id', $studentId)
-                ->where('status', 'Unpaid')->sum('amount_kobo'),
+            'outstanding_kobo' => $readOnly ? 0 : $this->termFeeOutstandingKobo($studentId),
+            'read_only' => $readOnly,
+        ];
+    }
+
+    public function portalReceiptSummary(int $studentId, User $viewer): array
+    {
+        app(ResultPaymentAccess::class)->authorizeOwnership($studentId, $viewer);
+
+        return [
+            'recent' => Invoice::with('payment')->where('student_id', $studentId)
+                ->where('status', 'Paid')->whereHas('payment')->latest('id')->limit(5)->get(),
+            'outstanding_kobo' => 0,
+            'latest_unpaid_tuition' => null,
+            'latest_unpaid_tuition_payable' => false,
+            'read_only' => true,
         ];
     }
 
     public function wardFeesDue(int $studentId): bool
     {
-        $unpaidIds = Invoice::where('student_id', $studentId)->where('status', 'Unpaid')->pluck('id');
-        if ($unpaidIds->isEmpty()) {
-            return false;
-        }
-        $attemptStatuses = PaymentAttempt::whereIn('invoice_id', $unpaidIds)->latest('id')->get()
-            ->unique('invoice_id')->pluck('status', 'invoice_id');
+        return $this->wardFeesDueByStudentIds([$studentId])[$studentId] ?? false;
+    }
 
-        return $unpaidIds->contains(fn ($id) => ($attemptStatuses[$id] ?? null) !== 'Pending');
+    public function termFeeOutstandingKobo(int $studentId): int
+    {
+        return $this->termFeeOutstandingKoboByStudentIds([$studentId])[$studentId] ?? 0;
+    }
+
+    /** @return array<int, int> */
+    private function termFeeOutstandingKoboByStudentIds(array $studentIds): array
+    {
+        $studentIds = array_values(array_unique(array_map('intval', $studentIds)));
+        $outstanding = array_fill_keys($studentIds, 0);
+        if ($studentIds === []) {
+            return $outstanding;
+        }
+
+        $invoices = Invoice::whereIn('student_id', $studentIds)->where('kind', Invoice::KIND_TERM_FEE)
+            ->get(['id', 'student_id', 'amount_kobo', 'status']);
+        if ($invoices->isEmpty()) {
+            return $outstanding;
+        }
+
+        $recorded = Payment::whereIn('invoice_id', $invoices->pluck('id'))
+            ->selectRaw('invoice_id, SUM(amount_kobo) as paid_kobo')
+            ->groupBy('invoice_id')
+            ->pluck('paid_kobo', 'invoice_id');
+
+        foreach ($invoices as $invoice) {
+            if ($invoice->status !== 'Paid') {
+                $outstanding[$invoice->student_id] += max(0, $invoice->amount_kobo - (int) ($recorded[$invoice->id] ?? 0));
+            }
+        }
+
+        return $outstanding;
+    }
+
+    public function wardFeesDueByStudentIds(array $studentIds): array
+    {
+        return array_map(fn (int $outstanding): bool => $outstanding > 0, $this->termFeeOutstandingKoboByStudentIds($studentIds));
     }
 
     public function invoice(array $data, User $actor): Invoice
@@ -91,7 +174,25 @@ class PaymentLedger
             throw ValidationException::withMessages(['invoice' => 'Select exactly one student or candidate and a positive amount.']);
         }
 
-        return Invoice::create($data + ['created_by' => $actor->id, 'status' => 'Unpaid']);
+        $kind = match ($data['purpose'] ?? null) {
+            'Tuition' => Invoice::KIND_TERM_FEE,
+            'Registration' => Invoice::KIND_REGISTRATION,
+            'Offer Deposit' => Invoice::KIND_OFFER_DEPOSIT,
+            default => Invoice::KIND_ONE_OFF,
+        };
+
+        return DB::transaction(function () use ($data, $kind, $actor): Invoice {
+            $invoice = Invoice::create($data + [
+                'kind' => $kind, 'term_fee_student_id' => $kind === Invoice::KIND_TERM_FEE ? $data['student_id'] : null,
+                'creation_source' => 'single', 'created_by' => $actor->id, 'status' => 'Unpaid',
+            ]);
+            $invoice->lines()->create([
+                'fee_item_id' => null, 'description' => $invoice->purpose,
+                'amount_kobo' => $invoice->amount_kobo, 'is_required' => true,
+            ]);
+
+            return $invoice;
+        });
     }
 
     public function manualPayment(Invoice $invoice, User $actor): Payment
@@ -111,6 +212,10 @@ class PaymentLedger
         }
         if ($invoice->status !== 'Unpaid') {
             throw ValidationException::withMessages(['payment' => 'This invoice is already paid.']);
+        }
+        if (! $actor->can('manage_payments') && $invoice->student_id
+            && ! app(StudentDirectory::class)->isActive($invoice->student_id)) {
+            throw ValidationException::withMessages(['payment' => 'Online payment is unavailable while this student has read-only access.']);
         }
         if (PaymentAttempt::where('invoice_id', $invoice->id)->latest('id')->value('status') === 'Pending') {
             throw ValidationException::withMessages(['payment' => 'A payment is already being confirmed for this invoice.']);

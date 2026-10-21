@@ -19,6 +19,11 @@ use Illuminate\Validation\ValidationException;
 
 class AssignmentService
 {
+    public function countForArm(int $armId): int
+    {
+        return Assignment::where('class_arm_id', $armId)->count();
+    }
+
     public function create(array $data, User $actor): Assignment
     {
         Gate::forUser($actor)->authorize('mark_assignments');
@@ -110,7 +115,7 @@ class AssignmentService
 
     public function forStudent(User $actor, string $show = 'todo')
     {
-        $student = app(StudentDirectory::class)->forUser($actor);
+        $student = app(StudentDirectory::class)->forActiveUser($actor);
         abort_unless($student, 403);
 
         return $this->portalRows($student->id, $show);
@@ -119,6 +124,7 @@ class AssignmentService
     public function forParent(User $actor, int $studentId, string $show = 'todo')
     {
         abort_unless(app(ParentAccountDirectory::class)->isWard($studentId, $actor->id), 403);
+        abort_unless(app(StudentDirectory::class)->isActive($studentId), 403);
 
         return $this->portalRows($studentId, $show);
     }

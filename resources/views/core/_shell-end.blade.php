@@ -1,21 +1,18 @@
 @auth
 @php
-    $oakNavItems = app(\App\Modules\Core\Services\AppNavigation::class)->items(auth()->user());
-    $oakIsStudent = collect($oakNavItems)->contains('label', 'Exams');
-    $oakIsParent = ! $oakIsStudent && app(\App\Modules\Assignments\Services\ParentAccountDirectory::class)->existsForUser(auth()->id());
-    $oakPortalContext = $oakIsParent ? app(\App\Modules\Portals\Services\PortalContext::class)->for(request()) : null;
-    $oakStudentQuery = $oakPortalContext['student_id'] ?? null;
-    $oakUnread = app(\App\Modules\Notifications\Services\InAppNotifications::class)->unreadCount(auth()->user());
-    $oakHeaderContext = $pageContext ?? (($overview['selected']['class'] ?? null) ?: null);
+    $oakShell = request()->attributes->get('oakShell', []);
+    extract($oakShell);
+    $oakMobileItems = collect($oakMobileItems ?? []);
+    $oakMoreItems = collect($oakNavItems)->reject(fn ($item) => $oakMobileItems->contains('url', $item['url']))->values();
 @endphp
     </div>
 </div>
-@if($oakIsStudent || count($oakNavItems) >= 5)
+@if($oakIsStaff || $oakIsStudent || count($oakNavItems) >= 5)
 <div class="oak-scrim" id="oak-more-sheet" role="dialog" aria-modal="true" aria-labelledby="oak-more-title">
     <div class="oak-sheet">
         <h2 id="oak-more-title">More</h2>
         <p class="oak-sheet-sub">{{ auth()->user()->name }}@if($oakHeaderContext) · {{ $oakHeaderContext }}@endif</p>
-        @foreach(array_slice($oakNavItems, 4) as $item)
+        @foreach($oakMoreItems as $item)
             <a class="oak-list-row oak-more-row" href="{{ $item['url'] }}" wire:navigate><span><span class="oak-more-icon">@include('core._nav-icon', ['label' => $item['label']])</span>{{ $item['label'] }}</span><x-icon name="chevron-right" /></a>
         @endforeach
         @if($oakIsStudent || $oakIsParent)

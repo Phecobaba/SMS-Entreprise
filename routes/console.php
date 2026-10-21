@@ -8,6 +8,7 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('oakfield:lapse-expired-offers')->dailyAt('00:15');
-Schedule::command('oakfield:sync-entrance-cbt-outcomes')->everyMinute();
-Schedule::command('oakfield:attendance-alerts')->weekdays()->dailyAt('16:00');
+// Offer expiry is a school-day rule: 00:15 means Africa/Lagos time.
+Schedule::command('oakfield:lapse-expired-offers')->dailyAt('00:15')->timezone('Africa/Lagos');
+Schedule::command('oakfield:sync-entrance-cbt-outcomes')->everyMinute()->timezone('Africa/Lagos');
+Schedule::command('oakfield:attendance-alerts')->everyFiveMinutes()->timezone('Africa/Lagos');

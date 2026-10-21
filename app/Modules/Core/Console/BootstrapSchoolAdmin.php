@@ -77,12 +77,13 @@ class BootstrapSchoolAdmin extends Command
                 $enoteManagePermission = Permission::firstOrCreate(['name' => 'manage_enotes']);
                 $enoteUploadPermission = Permission::firstOrCreate(['name' => 'upload_enotes']);
                 $paymentsPermission = Permission::firstOrCreate(['name' => 'manage_payments']);
+                $feeSchedulePermission = Permission::firstOrCreate(['name' => 'manage_fee_schedule']);
                 $staffPermission = Permission::firstOrCreate(['name' => 'manage_staff_records']);
                 $salaryPermission = Permission::firstOrCreate(['name' => 'view_staff_salary']);
                 $disciplinePermission = Permission::firstOrCreate(['name' => 'view_staff_disciplinary']);
                 $allSectionsPermission = Permission::firstOrCreate(['name' => 'view_all_sections']);
                 $role = Role::firstOrCreate(['name' => 'School Admin']);
-                $role->permissions()->syncWithoutDetaching([$permission->id, $academicsPermission->id, $profilePermission->id, $admissionsPermission->id, $overridePermission->id, $resultSettingsPermission->id, $resultEntryPermission->id, $resultApprovalPermission->id, $principalCommentPermission->id, $proprietorCommentPermission->id, $cbtPermission->id, $cbtApprovalPermission->id, $attendanceMarkPermission->id, $attendanceManagePermission->id, $attendanceAlertsPermission->id, $assignmentManagePermission->id, $assignmentMarkPermission->id, $enoteManagePermission->id, $enoteUploadPermission->id, $paymentsPermission->id, $staffPermission->id, $salaryPermission->id, $disciplinePermission->id, $allSectionsPermission->id]);
+                $role->permissions()->syncWithoutDetaching([$permission->id, $academicsPermission->id, $profilePermission->id, $admissionsPermission->id, $overridePermission->id, $resultSettingsPermission->id, $resultEntryPermission->id, $resultApprovalPermission->id, $principalCommentPermission->id, $proprietorCommentPermission->id, $cbtPermission->id, $cbtApprovalPermission->id, $attendanceMarkPermission->id, $attendanceManagePermission->id, $attendanceAlertsPermission->id, $assignmentManagePermission->id, $assignmentMarkPermission->id, $enoteManagePermission->id, $enoteUploadPermission->id, $paymentsPermission->id, $feeSchedulePermission->id, $staffPermission->id, $salaryPermission->id, $disciplinePermission->id, $allSectionsPermission->id]);
 
                 $user = User::firstOrCreate(
                     ['email' => $email],

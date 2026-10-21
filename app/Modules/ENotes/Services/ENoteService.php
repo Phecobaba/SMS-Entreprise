@@ -79,7 +79,7 @@ class ENoteService
 
     public function studentListing(User $actor, ?int $subjectId): array
     {
-        $student = app(StudentDirectory::class)->forUser($actor);
+        $student = app(StudentDirectory::class)->forActiveUser($actor);
         abort_unless($student, 403);
         $classId = app(ResultAcademicCatalog::class)->placement($student->class_arm_id)['class_id'];
         $base = ENote::where('class_id', $classId);
@@ -95,7 +95,7 @@ class ENoteService
 
     public function studentAccessible(int $id, User $actor): ENote
     {
-        $student = app(StudentDirectory::class)->forUser($actor);
+        $student = app(StudentDirectory::class)->forActiveUser($actor);
         abort_unless($student, 403);
         $classId = app(ResultAcademicCatalog::class)->placement($student->class_arm_id)['class_id'];
 

@@ -15,11 +15,23 @@ use App\Modules\CBT\Services\ExamWorkflow;
 use App\Modules\Core\Models\Role;
 use App\Modules\Core\Models\User;
 use App\Modules\Payments\Models\Invoice;
+use App\Modules\Payments\Services\FeeInvoicingService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class AdmissionPipeline
 {
+    public function dashboardPendingOffers(User $actor, ?int $sectionId = null): int
+    {
+        $candidateIds = app(SectionAccess::class)->scopeCandidates(
+            Candidate::query(),
+            $actor,
+            $sectionId,
+        )->select('id');
+
+        return AdmissionOffer::where('status', 'Pending')->whereIn('candidate_id', $candidateIds)->count();
+    }
+
     public function candidateForUser(User $user): ?Candidate
     {
         return Candidate::where('user_id', $user->id)->first();
@@ -217,6 +229,7 @@ class AdmissionPipeline
             $role = Role::firstOrCreate(['name' => 'Student']);
             User::findOrFail($candidate->user_id)->roles()->syncWithoutDetaching([$role->id]);
             $this->transition($candidate, 'Offer Accepted', 'Converted to Student', $actor, $override ? trim($reason) : 'Checklist complete', $override);
+            app(FeeInvoicingService::class)->automaticallyInvoice($student, $actor);
 
             return $student;
         });

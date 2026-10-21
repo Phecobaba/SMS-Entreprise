@@ -79,9 +79,13 @@ class AssignmentController extends Controller
     public function mine(Request $request, AssignmentService $service): View
     {
         $show = $request->validate(['show' => ['nullable', 'in:todo,done,all']])['show'] ?? 'todo';
+        $context = app(PortalContext::class)->for($request);
+        if ($context['selected']['restricted'] ?? false) {
+            return view('portals.restricted', compact('context'));
+        }
 
         return view('assignments.mine', ['rows' => $service->forStudent($request->user(), $show),
-            'heading' => 'Assignments', 'show' => $show, 'context' => app(PortalContext::class)->for($request)]);
+            'heading' => 'Assignments', 'show' => $show, 'context' => $context]);
     }
 
     public function parent(Request $request, AssignmentService $service): View
@@ -89,6 +93,9 @@ class AssignmentController extends Controller
         $show = $request->validate(['show' => ['nullable', 'in:todo,done,all']])['show'] ?? 'todo';
         $context = app(PortalContext::class)->for($request);
         abort_unless($context && $context['kind'] === 'parent', 403);
+        if ($context['selected']['restricted'] ?? false) {
+            return view('portals.restricted', compact('context'));
+        }
 
         return view('assignments.mine', ['rows' => $context['student_id']
             ? $service->forParent($request->user(), $context['student_id'], $show) : collect(),

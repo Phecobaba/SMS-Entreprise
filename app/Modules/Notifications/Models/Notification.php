@@ -9,7 +9,7 @@ class Notification extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['user_id', 'channel', 'title', 'body', 'read_at'];
+    protected $fillable = ['user_id', 'channel', 'title', 'body', 'url', 'read_at'];
 
     protected function casts(): array
     {

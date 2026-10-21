@@ -318,7 +318,7 @@ class ExamWorkflow
     public function assertOwner(ExamSubmission $submission, User $actor): void
     {
         $candidate = app(AdmissionPipeline::class)->candidateForUser($actor);
-        $student = app(StudentDirectory::class)->forUser($actor);
+        $student = app(StudentDirectory::class)->forActiveUser($actor);
         abort_unless(($submission->candidate_id && $candidate?->id === $submission->candidate_id)
             || ($submission->student_id && $student?->id === $submission->student_id), 403);
     }
@@ -326,7 +326,7 @@ class ExamWorkflow
     public function availableFor(User $actor)
     {
         $candidate = app(AdmissionPipeline::class)->candidateForUser($actor);
-        $student = app(StudentDirectory::class)->forUser($actor);
+        $student = app(StudentDirectory::class)->forActiveUser($actor);
         if ($student && $candidate?->status === 'Converted to Student') {
             $classId = app(ResultAcademicCatalog::class)->placement($student->class_arm_id)['class_id'];
 
@@ -354,7 +354,7 @@ class ExamWorkflow
     public function dashboardFor(User $actor)
     {
         $candidate = app(AdmissionPipeline::class)->candidateForUser($actor);
-        $student = app(StudentDirectory::class)->forUser($actor);
+        $student = app(StudentDirectory::class)->forActiveUser($actor);
         if (! $student) {
             return collect();
         }
@@ -393,7 +393,7 @@ class ExamWorkflow
 
             return ['candidate_id' => $candidate->id];
         }
-        $student = app(StudentDirectory::class)->forUser($actor);
+        $student = app(StudentDirectory::class)->forActiveUser($actor);
         abort_unless($student, 403);
         $classId = app(ResultAcademicCatalog::class)->placement($student->class_arm_id)['class_id'];
         abort_unless($classId === $exam->class_id, 403);

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Core\Models;
 
+use App\Modules\Academics\Models\Section;
 use App\Modules\Core\Models\Concerns\BelongsToTenant;
 use App\Modules\Core\TenantContext;
 use Database\Factories\UserFactory;
@@ -38,6 +39,14 @@ class User extends Authenticatable
             ->using(UserRole::class)
             ->withPivot('school_id')
             ->wherePivot('school_id', app(TenantContext::class)->id());
+    }
+
+    public function sections(): BelongsToMany
+    {
+        return $this->belongsToMany(Section::class, 'section_user')
+            ->withPivot('school_id')
+            ->wherePivot('school_id', app(TenantContext::class)->id())
+            ->withTimestamps();
     }
 
     public function hasPermission(string $permission): bool

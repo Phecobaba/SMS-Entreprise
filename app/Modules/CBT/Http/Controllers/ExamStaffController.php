@@ -18,7 +18,7 @@ class ExamStaffController extends Controller
     public function index(ResultAcademicCatalog $academics, ResultAssessmentCatalog $components): View
     {
         return view('cbt.staff-index', [
-            'types' => ExamType::orderBy('name')->get(),
+            'types' => ExamType::orderBy('name')->limit(100)->get(),
             'exams' => Exam::orderByDesc('id')->paginate(20),
             'components' => $components->options(),
             ...$academics->options(),

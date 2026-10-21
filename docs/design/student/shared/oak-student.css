@@ -1,0 +1,268 @@
+/* Oakfield student design — canonical shared CSS.
+   Token names match resources/css/app.css. Class names reuse the app's `oak-` vocabulary
+   where one already exists; new classes are marked NEW. Everything here is inlined into each
+   screen file so every file opens standalone. */
+
+/* ---------- Tokens ---------- */
+:root {
+  --color-bg: #FBF8EF;
+  --color-surface: #F1EAD8;
+  --color-text: #1F3638;
+  --color-text-muted: #5B6B6A;
+  --color-brand-teal: #2E4F56;
+  --color-brand-cream: #F5E58A;
+  --color-accent-ochre: #C77B3F;
+  --color-success: #3F7D63;       --color-success-bg: #EAF3DE;
+  --color-warning: #633806;       --color-warning-bg: #FAEEDA;
+  --color-danger: #791F1F;        --color-danger-bg: #FCEBEB;
+  --color-border: #DDD3BA;
+  --color-border-light: #EFE9DA;
+  /* NEW — contrast-safe companions (see DESIGN_AMENDMENTS.md) */
+  --color-success-ink: #27500A;      /* pill text on success-bg: 8.2:1 (was 4.25:1) */
+  --color-success-num: #2E6B50;      /* big green numbers on surface: 5.25:1 (was 4.05:1) */
+  --color-ochre-ink: #9A5A22;        /* ochre TEXT on bg/surface: 5.1:1 (was 3.12:1). Borders/dots keep #C77B3F */
+  --color-tab-idle: #6F6A5E;         /* inactive mobile tab: 5.4:1 (was 2.99:1) */
+  --color-sidebar-text: #D9E6E3;
+  --color-sidebar-rule: #3E6168;
+  --color-band-muted: #B9CBC8;
+  --font-sans: -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: Georgia, 'Times New Roman', serif;
+  --tap: 44px;
+}
+
+/* ---------- Reset (the app gets this from Tailwind preflight) ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); font-size: 16px; line-height: 1.45; }
+h1, h2, h3, p, ul, ol, figure { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+a { color: inherit; }
+button { font: inherit; color: inherit; cursor: pointer; }
+table { border-collapse: collapse; width: 100%; }
+[hidden] { display: none !important; }
+svg.oak-i { width: 1.25em; height: 1.25em; flex: 0 0 auto; vertical-align: middle; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+h1, h2, .oak-school-name { font-family: var(--font-serif); font-weight: 600; }
+:is(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 3px solid var(--color-accent-ochre); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; } }
+
+/* ---------- App shell (matches app.css 150px sidebar / mobile band + 5 tabs) ---------- */
+.oak-app-shell { min-height: 100vh; display: grid; grid-template-columns: 150px minmax(0,1fr); }
+.oak-sidebar { background: var(--color-brand-teal); display: flex; flex-direction: column; padding: 18px 12px 16px; position: sticky; top: 0; height: 100vh; }
+.oak-brand { color: inherit; display: flex; align-items: center; gap: .6rem; min-width: 0; text-decoration: none; }
+.oak-sidebar-brand { min-height: 60px; margin: 0 4px 28px; }
+/* Design files paint the emblem via background so the data URI is stored once; in the build use the app's <img class="oak-logo-mark"> inside .oak-logo-crop exactly as _shell-start does. */
+.oak-logo-crop { display: block; width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%; overflow: hidden; background: var(--color-brand-teal) var(--emblem, none) center / cover no-repeat; }
+.oak-sidebar .oak-school-name { font-size: 1rem; color: var(--color-brand-cream); }
+.oak-sidebar-links { display: grid; gap: 3px; align-content: start; overflow-y: auto; }
+.oak-sidebar-links a { display: flex; align-items: center; gap: 11px; min-height: 40px; padding: 7px 9px; font-size: .88rem; border-radius: 7px; color: var(--color-sidebar-text); text-decoration: none; }
+.oak-sidebar-links a:hover { background: rgba(245,229,138,.14); }
+.oak-sidebar-links a.oak-active, .oak-sidebar-links a[aria-current="page"] { background: var(--color-brand-cream); color: var(--color-brand-teal); }
+.oak-sidebar-foot { margin-top: auto; border-top: 1px solid var(--color-sidebar-rule); padding-top: 8px; display: grid; gap: 3px; }
+.oak-sidebar-foot a, .oak-sidebar-foot button { display: flex; align-items: center; gap: 11px; min-height: 40px; padding: 7px 9px; border-radius: 7px; color: var(--color-sidebar-text); background: none; border: 0; font-size: .88rem; text-decoration: none; width: 100%; text-align: left; }
+.oak-sidebar-foot a:hover, .oak-sidebar-foot button:hover { background: rgba(245,229,138,.14); }
+.oak-sidebar-foot a.oak-active { background: var(--color-brand-cream); color: var(--color-brand-teal); }
+
+.oak-content { min-width: 0; background: var(--color-bg); }
+.oak-dashboard { padding: 24px 28px 48px; }
+.oak-dashboard-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+.oak-dashboard-heading h1 { font-size: clamp(1.6rem, 2.4vw, 2.1rem); line-height: 1.18; font-weight: 400; }
+.oak-dashboard-heading p { margin-top: 4px; color: var(--color-text-muted); font-size: 1rem; }
+.oak-heading-tools { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.oak-role-pill { border-radius: 999px; padding: 6px 15px; background: var(--color-brand-cream); color: var(--color-brand-teal); font-size: .8rem; white-space: nowrap; }
+.oak-bell { position: relative; display: grid; place-items: center; width: var(--tap); height: var(--tap); border-radius: 50%; color: var(--color-brand-teal); text-decoration: none; }
+.oak-bell:hover { background: var(--color-surface); }
+.oak-bell .oak-i { width: 22px; height: 22px; }
+.oak-bell b { position: absolute; top: 5px; right: 3px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 999px; background: var(--color-accent-ochre); color: #fff; font-size: .68rem; line-height: 18px; text-align: center; font-weight: 600; }
+
+/* Mobile band + tab bar */
+.oak-header { display: none; background: var(--color-brand-teal); color: var(--color-brand-cream); padding: 14px 18px 16px; position: relative; }
+.oak-header .oak-school-name { font-size: 1.1rem; }
+.oak-header-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.oak-header .oak-brand { min-height: var(--tap); }
+.oak-header .oak-logo-crop { width: 34px; height: 34px; flex-basis: 34px; }
+.oak-header .oak-bell { color: var(--color-sidebar-text); }
+.oak-header .oak-bell:hover { background: rgba(255,255,255,.1); }
+.oak-header-intro { display: flex; flex-direction: column; margin-top: 8px; color: #fff; }
+.oak-header-intro strong { font: 600 1.35rem var(--font-serif); }
+.oak-header-intro span { color: var(--color-band-muted); font-size: .88rem; }
+.oak-mobile-tabs { display: none; }
+
+/* ---------- Buttons & actions ---------- */
+.oak-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--tap); padding: 9px 18px; border-radius: 8px; font-size: .95rem; text-decoration: none; border: 1.5px solid transparent; white-space: nowrap; }
+.oak-btn-primary { background: var(--color-brand-teal); color: var(--color-brand-cream); border-color: var(--color-brand-teal); }
+.oak-btn-primary:hover { background: #264248; }
+.oak-btn-secondary { background: var(--color-bg); color: var(--color-ochre-ink); border-color: var(--color-accent-ochre); }
+.oak-btn-secondary:hover { background: var(--color-surface); }
+.oak-btn-quiet { background: transparent; color: var(--color-brand-teal); border-color: var(--color-border); }
+.oak-btn-block { width: 100%; }
+.oak-btn[disabled], .oak-btn[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
+.oak-link { display: inline-flex; align-items: center; color: var(--color-brand-teal); text-decoration: underline; text-underline-offset: 3px; font-size: .9rem; background: none; border: 0; padding: 0; }
+@media (max-width: 767px), (pointer: coarse) { .oak-link { min-height: var(--tap); padding: 0 6px; margin: 0 -6px; } }
+
+/* ---------- Pills ---------- */
+.oak-status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: .78rem; font-weight: 600; white-space: nowrap; }
+.oak-status-success { background: var(--color-success-bg); color: var(--color-success-ink); }
+.oak-status-warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.oak-status-danger  { background: var(--color-danger-bg);  color: var(--color-danger); }
+.oak-status-neutral { background: var(--color-surface);    color: var(--color-text-muted); }   /* NEW: Scheduled, Closed */
+.oak-status-new     { background: var(--color-brand-cream); color: var(--color-text); }          /* NEW: "2 new" counters */
+
+/* ---------- Metric cards ---------- */
+.oak-metric-grid { display: grid; gap: 12px; }
+.oak-metric-grid-three { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.oak-metric { min-width: 0; padding: 15px 17px; background: var(--color-surface); border-radius: 11px; display: flex; flex-direction: column; gap: 4px; }
+.oak-metric > span { color: var(--color-text-muted); font-size: .88rem; }
+.oak-metric > strong { font-size: clamp(1.45rem,2.5vw,2rem); font-weight: 400; line-height: 1.2; }
+.oak-metric small { color: var(--color-text-muted); font-size: .78rem; }
+.oak-metric-success { color: var(--color-success-num); }
+.oak-metric-accent { color: var(--color-ochre-ink); }
+.oak-metric > strong.oak-metric-locked { display: flex; align-items: center; gap: 8px; font-size: 1.2rem; color: var(--color-text-muted); }
+.oak-metric-locked .oak-i { width: 20px; height: 20px; }
+
+/* ---------- Sections, tables, rows ---------- */
+.oak-section { margin-top: 26px; }
+.oak-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.oak-section-head h2 { font: 400 1.05rem var(--font-sans); }
+.oak-table-scroll { overflow-x: auto; }
+.oak-table th { color: var(--color-text-muted); font-weight: 400; text-align: left; border-bottom: 1px solid var(--color-border); padding: 8px 6px; font-size: .88rem; }
+.oak-table td { border-bottom: 1px solid var(--color-border-light); padding: 11px 6px; font-size: .95rem; }
+.oak-table tr:last-child td { border-bottom: 0; }
+.oak-table td.oak-num, .oak-table th.oak-num { text-align: right; }
+.oak-list-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--color-border-light); font-size: .95rem; min-height: 48px; }
+.oak-list-row:last-child { border-bottom: 0; }
+.oak-list-row .oak-muted { color: var(--color-text-muted); font-size: .85rem; }
+.oak-list-row > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.oak-two-col { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 28px; }
+.oak-empty { display: grid; justify-items: start; gap: 6px; padding: 14px 0; color: var(--color-text-muted); font-size: .95rem; }
+.oak-empty strong { color: var(--color-text); font-weight: 600; }
+.oak-empty .oak-i { width: 28px; height: 28px; color: var(--color-brand-teal); }
+
+/* ---------- Banners (NEW) ---------- */
+.oak-banner { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 16px; border-radius: 10px; background: #fff; border: 1.5px solid var(--color-brand-teal); }
+.oak-banner-main { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.oak-banner-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 9px; background: var(--color-brand-teal); color: var(--color-brand-cream); flex: 0 0 42px; }
+.oak-banner h2, .oak-banner h3 { font: 600 1rem var(--font-sans); }
+.oak-banner p { color: var(--color-text-muted); font-size: .88rem; margin-top: 2px; }
+.oak-notice { display: flex; gap: 11px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; font-size: .92rem; }
+.oak-notice .oak-i { margin-top: 1px; }
+.oak-notice-warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.oak-notice-danger { background: var(--color-danger-bg); color: var(--color-danger); }
+.oak-notice-info { background: var(--color-surface); color: var(--color-text); }
+.oak-notice-success { background: var(--color-success-bg); color: var(--color-success-ink); }
+.oak-locked { display: grid; gap: 10px; justify-items: start; padding: 18px; border-radius: 11px; background: var(--color-surface); }
+.oak-locked > .oak-i { width: 26px; height: 26px; color: var(--color-brand-teal); }
+.oak-locked h3 { font: 600 1.05rem var(--font-serif); }
+.oak-locked p { color: var(--color-text-muted); font-size: .92rem; max-width: 52ch; }
+
+/* ---------- Notification ticker (NEW) ---------- */
+.oak-ticker { display: flex; align-items: stretch; background: var(--color-surface); border-bottom: 1px solid var(--color-border); min-height: 45px; font-size: .9rem; }
+.oak-ticker-label { display: flex; align-items: center; gap: 7px; padding: 0 14px; background: var(--color-brand-teal); color: var(--color-brand-cream); font-size: .82rem; white-space: nowrap; }
+.oak-ticker-label .oak-i { width: 17px; height: 17px; }
+.oak-ticker-view { position: relative; flex: 1; min-width: 0; overflow: hidden; }
+.oak-ticker-track { display: inline-flex; align-items: center; gap: 48px; padding-right: 48px; height: 100%; white-space: nowrap; animation: oak-scroll var(--ticker-dur, 38s) linear infinite; }
+.oak-ticker:hover .oak-ticker-track, .oak-ticker:focus-within .oak-ticker-track, .oak-ticker[data-paused] .oak-ticker-track { animation-play-state: paused; }
+.oak-ticker-track a { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; padding: 10px 2px; }
+.oak-ticker-track a:hover span:first-child { text-decoration: underline; }
+.oak-ticker-track b { font-weight: 600; }
+.oak-ticker-track i { width: 7px; height: 7px; border-radius: 50%; background: var(--color-accent-ochre); display: inline-block; }
+.oak-ticker-static { display: none; }
+.oak-ticker-pause { display: grid; place-items: center; width: var(--tap); background: none; border: 0; border-left: 1px solid var(--color-border); color: var(--color-brand-teal); }
+@keyframes oak-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .oak-ticker-track { animation: none; gap: 22px; }
+  .oak-ticker-view { overflow-x: auto; }
+  .oak-ticker-track [aria-hidden="true"] { display: none; }
+  .oak-ticker-pause { display: none; }
+}
+
+/* ---------- Bottom sheet / modal (NEW) ---------- */
+.oak-scrim { position: fixed; inset: 0; background: rgba(31,54,56,.5); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 60; }
+.oak-scrim[data-open] { display: flex; }
+.oak-sheet { width: 100%; max-width: 440px; max-height: 92vh; overflow-y: auto; background: #fff; border-radius: 14px; border: 1px solid var(--color-border); padding: 22px; }
+.oak-sheet h2 { font-size: 1.3rem; font-weight: 600; }
+.oak-sheet > p.oak-sheet-sub { margin: 4px 0 16px; color: var(--color-text-muted); font-size: .92rem; }
+.oak-sheet-actions { display: flex; gap: 10px; margin-top: 18px; }
+.oak-sheet-actions .oak-btn { flex: 1; }
+.oak-rules { display: grid; gap: 10px; margin: 6px 0 0; }
+.oak-rules li { display: flex; gap: 10px; align-items: flex-start; font-size: .93rem; }
+.oak-rules .oak-i { color: var(--color-brand-teal); margin-top: 2px; }
+
+/* ---------- Toast (NEW) ---------- */
+.oak-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--color-text); color: #fff; padding: 11px 16px; border-radius: 9px; font-size: .92rem; z-index: 80; display: none; max-width: 90vw; }
+.oak-toast[data-open] { display: block; }
+
+/* ---------- Form fields (NEW — login, profile) ---------- */
+.oak-field { display: grid; gap: 6px; }
+.oak-field label { font-size: .92rem; font-weight: 600; }
+.oak-field input { min-height: 48px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px; background: #fff; font: inherit; color: var(--color-text); width: 100%; }
+.oak-field input[aria-invalid="true"] { border-color: var(--color-danger); background: var(--color-danger-bg); }
+.oak-field .oak-hint { font-size: .85rem; color: var(--color-text-muted); }
+.oak-field .oak-error { font-size: .88rem; color: var(--color-danger); display: flex; gap: 6px; align-items: center; }
+
+/* ---------- Pagination (NEW — mirrors Laravel simple links) ---------- */
+.oak-pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; font-size: .9rem; color: var(--color-text-muted); }
+
+/* ---------- Design-only chrome (NOT part of the build) ---------- */
+.design-only { position: fixed; z-index: 50; left: 12px; bottom: 12px; background: #1F3638; color: #fff; border-radius: 10px; padding: 8px 10px; font: 12px/1.3 var(--font-sans); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; max-width: calc(100vw - 24px); box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.design-only b { font-weight: 600; margin-right: 4px; }
+.design-only button { background: rgba(255,255,255,.12); color: #fff; border: 0; border-radius: 6px; padding: 5px 9px; font-size: 12px; min-height: 28px; }
+.design-only button[aria-pressed="true"] { background: var(--color-brand-cream); color: var(--color-text); }
+
+/* ---------- Mobile (≤767px) ---------- */
+@media (max-width: 767px) {
+  .oak-app-shell { display: block; padding-bottom: 76px; }
+  .oak-sidebar { display: none; }
+  .oak-header { display: block; }
+  .oak-dashboard-heading { display: none; }
+  .oak-dashboard { padding: 14px 14px 28px; }
+  .oak-metric-grid { gap: 8px; }
+  .oak-metric { padding: 11px 10px; border-radius: 10px; }
+  .oak-metric > span { font-size: .78rem; }
+  .oak-metric > strong { font-size: 1.4rem; }
+  .oak-two-col { grid-template-columns: 1fr; gap: 0; }
+  .oak-banner { flex-direction: column; align-items: stretch; }
+  .oak-banner .oak-btn { width: 100%; }
+  .oak-section { margin-top: 22px; }
+  .oak-mobile-tabs { display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 40; min-height: 68px; background: #fff; border-top: 1px solid var(--color-border); padding-bottom: env(safe-area-inset-bottom); }
+  .oak-mobile-tabs > a, .oak-mobile-tabs > button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 7px 2px; color: var(--color-tab-idle); text-decoration: none; font-size: .72rem; line-height: 1.1; background: none; border: 0; }
+  .oak-mobile-tabs .oak-i { width: 23px; height: 23px; }
+  .oak-mobile-tabs [aria-current="page"], .oak-mobile-tabs .oak-active { color: var(--color-brand-teal); font-weight: 600; }
+  .oak-mobile-tabs [aria-current="page"] .oak-i { stroke-width: 2.4; }
+  .oak-scrim { align-items: flex-end; padding: 0; }
+  .oak-sheet { max-width: none; border-radius: 16px 16px 0 0; padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
+  .design-only { bottom: 80px; }
+  /* tables that must stay tables become two-line rows */
+  .oak-stack thead { display: none; }
+  .oak-stack tr { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 4px 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--color-border-light); }
+  .oak-stack tr:last-child { border-bottom: 0; }
+  .oak-stack td { border: 0; padding: 0; }
+  .oak-stack td:first-child { grid-column: 1; grid-row: 1; }
+  .oak-stack td:last-child { grid-column: 2; grid-row: 1; text-align: right; }
+  .oak-stack td:nth-child(2):not(:last-child) { grid-column: 1 / -1; grid-row: 2; color: var(--color-text-muted); font-size: .85rem; }
+  .oak-notice-action { flex-wrap: wrap; }
+  .oak-notice-action > form, .oak-notice-action > form .oak-btn { width: 100%; }
+  .oak-metric > strong.oak-metric-locked { font-size: 1.05rem; }
+  .oak-ticker-label span { display: none; }
+  .oak-ticker-track { display: none; }
+  .oak-ticker-static { display: flex; align-items: center; min-height: 44px; padding: 0 12px; font-size: .9rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
+  .oak-ticker-static[data-fade] { animation: oak-fade .45s ease; }
+  @keyframes oak-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+}
+@media (min-width: 768px) and (max-width: 1000px) { .oak-dashboard { padding: 20px 20px 40px; } }
+
+/* ---------- Exam list rows (NEW) ---------- */
+.oak-exam-list { display: grid; }
+.oak-exam-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px 16px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--color-border-light); }
+.oak-exam-row:last-child { border-bottom: 0; }
+.oak-exam-row h3 { font: 600 1rem var(--font-sans); }
+.oak-exam-meta { color: var(--color-text-muted); font-size: .88rem; margin-top: 2px; display: flex; flex-wrap: wrap; gap: 2px 14px; }
+.oak-exam-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.oak-exam-meta .oak-i { width: 15px; height: 15px; }
+.oak-exam-row[data-open-now] { background: #fff; border: 1.5px solid var(--color-brand-teal); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
+.oak-exam-row > .oak-status-pill { justify-self: start; }
+.oak-exam-score { font-size: .95rem; white-space: nowrap; }
+@media (max-width: 767px) {
+  .oak-exam-row { grid-template-columns: 1fr; }
+  .oak-exam-row > .oak-btn { width: 100%; }
+}

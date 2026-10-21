@@ -17,7 +17,7 @@ class ResultPaymentAccess
     public function unpaidInvoice(ResultCard $card): ?Invoice
     {
         $invoice = Invoice::where('student_id', $card->student_id)->where('term_id', $card->term_id)
-            ->where('purpose', 'Tuition')->where('status', 'Unpaid')->latest('id')->first();
+            ->where('kind', Invoice::KIND_TERM_FEE)->where('status', 'Unpaid')->latest('id')->first();
 
         return $invoice && PaymentAttempt::where('invoice_id', $invoice->id)->latest('id')->value('status') !== 'Pending'
             ? $invoice : null;
@@ -25,7 +25,7 @@ class ResultPaymentAccess
 
     public function unpaidForTerms(int $studentId, array $termIds): Collection
     {
-        return Invoice::with('attempts')->where('student_id', $studentId)->where('purpose', 'Tuition')
+        return Invoice::with('attempts')->where('student_id', $studentId)->where('kind', Invoice::KIND_TERM_FEE)
             ->where('status', 'Unpaid')->whereIn('term_id', $termIds)
             ->latest('id')->get()->unique('term_id')
             ->filter(fn (Invoice $invoice) => $invoice->attempts->sortByDesc('id')->first()?->status !== 'Pending')
@@ -44,7 +44,7 @@ class ResultPaymentAccess
             return;
         }
         if ($rule !== 'TermInvoicePaid' || ! Invoice::where('student_id', $card->student_id)
-            ->where('term_id', $card->term_id)->where('purpose', 'Tuition')
+            ->where('term_id', $card->term_id)->where('kind', Invoice::KIND_TERM_FEE)
             ->where('status', 'Paid')->whereHas('payment')->exists()) {
             throw new AuthorizationException('The term tuition invoice must be paid before this result is available.');
         }
@@ -57,7 +57,7 @@ class ResultPaymentAccess
         if ($rule === 'None') {
             return;
         }
-        $latest = Invoice::where('student_id', $studentId)->where('purpose', 'Tuition')
+        $latest = Invoice::where('student_id', $studentId)->where('kind', Invoice::KIND_TERM_FEE)
             ->latest('id')->first();
         if ($rule !== 'TermInvoicePaid' || ! $latest || $latest->status !== 'Paid' || ! $latest->payment()->exists()) {
             throw new AuthorizationException('The latest tuition invoice must be paid before attendance is available.');

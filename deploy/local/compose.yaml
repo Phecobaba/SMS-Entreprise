@@ -1,0 +1,31 @@
+services:
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: oakfield_local
+      MYSQL_USER: oakfield
+      MYSQL_PASSWORD: local-only-password
+      MYSQL_ROOT_PASSWORD: local-only-root-password
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -plocal-only-root-password --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  web:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8080:80"
+      - "127.0.0.1:2222:22"
+    volumes:
+      - oakfield_home:/home/oakfield
+      - ./.local/id_ed25519.pub:/run/deploy-key.pub:ro
+
+volumes:
+  mysql_data:
+  oakfield_home:

@@ -2,12 +2,8 @@
 
 namespace App\Modules\Portals\Services;
 
-use App\Modules\Academics\Models\AcademicTerm;
-use App\Modules\Academics\Services\ClassArmDirectory;
-use App\Modules\Academics\Services\ResultAcademicCatalog;
-use App\Modules\Admissions\Services\StudentDirectory;
+use App\Modules\Academics\Services\AcademicCalendar;
 use App\Modules\Assignments\Services\AssignmentService;
-use App\Modules\Assignments\Services\ParentAccountDirectory;
 use App\Modules\Attendance\Services\AttendanceService;
 use App\Modules\CBT\Services\ExamWorkflow;
 use App\Modules\Core\Models\User;
@@ -18,27 +14,41 @@ use Illuminate\Auth\Access\AuthorizationException;
 
 class PortalOverview
 {
-    public function for(User $viewer, ?int $requestedStudentId = null): ?array
+    public function for(User $viewer, ?int $requestedStudentId = null, ?array $portalContext = null): ?array
     {
-        $self = app(StudentDirectory::class)->forUser($viewer);
-        $studentIds = $self ? [$self->id] : app(ParentAccountDirectory::class)->wardIds($viewer);
+        if ($portalContext === null) {
+            return null;
+        }
+
+        $isStudent = $portalContext['kind'] === 'student';
+        $studentIds = $isStudent
+            ? [$portalContext['student_id']]
+            : array_column($portalContext['wards'], 'id');
         if ($studentIds === []) {
             return null;
         }
 
-        $selectedId = $requestedStudentId ?? $studentIds[0];
+        $selectedId = $requestedStudentId ?? $portalContext['student_id'] ?? $studentIds[0];
         if (! in_array($selectedId, $studentIds, true)) {
             throw new AuthorizationException('That student is not linked to your account.');
         }
 
-        $students = app(StudentDirectory::class)->portalStudents($studentIds);
-        $armLabels = app(ClassArmDirectory::class)->labels($students->pluck('class_arm_id')->unique()->all());
-        $wards = $students->map(fn ($student) => [
-            'id' => $student->id,
-            'name' => $student->user?->name ?? 'Student #'.$student->id,
-            'class' => $armLabels[$student->class_arm_id] ?? 'Class not assigned',
-        ])->values()->all();
+        $students = $portalContext['_students'];
+        $wards = $isStudent ? [$portalContext['selected']] : $portalContext['wards'];
         $selected = collect($wards)->firstWhere('id', $selectedId);
+        $selectedStudent = $students->firstWhere('id', $selectedId);
+        $restricted = (bool) ($selected['restricted'] ?? false);
+
+        if ($restricted) {
+            return [
+                'kind' => $isStudent ? 'student' : 'parent',
+                'wards' => $wards,
+                'selected' => $selected,
+                'restricted' => true,
+                'results' => app(ResultCards::class)->portalSummary($selectedId, $viewer),
+                'payments' => app(PaymentLedger::class)->portalReceiptSummary($selectedId, $viewer),
+            ];
+        }
 
         try {
             $attendance = app(AttendanceService::class)->portalSummary($selectedId, $viewer);
@@ -49,7 +59,7 @@ class PortalOverview
         }
 
         $data = [
-            'kind' => $self ? 'student' : 'parent',
+            'kind' => $isStudent ? 'student' : 'parent',
             'wards' => $wards,
             'selected' => $selected,
             'results' => app(ResultCards::class)->portalSummary($selectedId, $viewer),
@@ -57,12 +67,12 @@ class PortalOverview
             'attendance_locked' => $attendanceLocked,
             'payments' => app(PaymentLedger::class)->portalSummary($selectedId, $viewer),
             'assignments' => app(AssignmentService::class)->portalSummary($selectedId, $viewer),
+            'restricted' => false,
         ];
 
-        if ($self) {
-            $classId = app(ResultAcademicCatalog::class)->placement($self->class_arm_id)['class_id'];
-            $term = AcademicTerm::with('session')
-                ->whereDate('start_date', '<=', today())->whereDate('end_date', '>=', today())->first();
+        if ($isStudent) {
+            $classId = $selectedStudent?->classArm?->class_id;
+            $term = app(AcademicCalendar::class)->currentTerm();
             $data['term_context'] = $term ? $term->name.', '.$term->session?->name : null;
             $data['exams'] = app(ExamWorkflow::class)->dashboardFor($viewer);
             $data['enotes'] = $classId

@@ -26,11 +26,11 @@ class ResultTeachingAssignments
         return ['class' => $class?->name, 'subject' => $subject?->name];
     }
 
-    public function dashboardTeacherCount(?User $viewer = null): int
+    public function dashboardTeacherCount(?User $viewer = null, ?int $sectionId = null): int
     {
         $query = TeacherSubjectAssignment::query();
         if ($viewer) {
-            $visibleClassIds = app(SectionAccess::class)->scopeClasses(SchoolClass::query(), $viewer)->select('id');
+            $visibleClassIds = app(SectionAccess::class)->scopeClasses(SchoolClass::query(), $viewer, $sectionId)->select('id');
             $query->whereIn('class_id', $visibleClassIds);
         }
 
@@ -53,6 +53,9 @@ class ResultTeachingAssignments
         }
         if (! ClassSubject::where('class_id', $classId)->where('subject_id', $subjectId)->exists()) {
             throw ValidationException::withMessages(['subject_id' => 'Assign the subject to this class first.']);
+        }
+        if (TeacherSubjectAssignment::where('class_id', $classId)->where('subject_id', $subjectId)->where('user_id', '!=', $userId)->exists()) {
+            throw ValidationException::withMessages(['user_id' => 'This class subject already has a teacher. Remove that assignment before choosing another teacher.']);
         }
 
         return TeacherSubjectAssignment::firstOrCreate(['user_id' => $userId, 'class_id' => $classId, 'subject_id' => $subjectId]);

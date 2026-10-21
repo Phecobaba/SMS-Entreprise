@@ -9,7 +9,7 @@ class AttendanceRecord extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['student_id', 'class_arm_id', 'date', 'status', 'marked_by', 'locked'];
+    protected $fillable = ['student_id', 'class_arm_id', 'date', 'session', 'status', 'marked_by', 'locked'];
 
     protected function casts(): array
     {

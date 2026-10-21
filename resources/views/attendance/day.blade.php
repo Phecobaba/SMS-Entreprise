@@ -1,32 +1,37 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Class attendance</title>@vite(['resources/css/app.css', 'resources/js/app.js'])</head>
-<body class="min-h-screen bg-slate-100 p-5 text-slate-900">
-@include('core._shell-start')<main class="mx-auto max-w-4xl rounded-lg bg-white p-7 shadow">
-<a wire:navigate href="{{ route('attendance.index') }}" class="text-blue-700 underline">Attendance</a><h1 class="mt-4 text-2xl font-bold">{{ $arm->schoolClass?->name }} {{ $arm->name }} · {{ $date }}</h1>
-<p class="mt-2 text-slate-600">{{ $roster->count() }} students. The school-day edit window closes at midnight WAT; locked records cannot be edited.</p>
-@if(session('status'))<p class="mt-3 rounded bg-green-50 p-3 text-green-800">{{ session('status') }}</p>@endif
-@if($errors->any())<div class="mt-3 rounded bg-red-50 p-3 text-red-800">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
-@if($roster->isEmpty())<p class="mt-6 rounded bg-amber-50 p-3">No students are enrolled in this class arm yet.</p>
+<body>
+@include('core._shell-start')<main class="oak-dashboard" style="max-width:960px">
+<a wire:navigate href="{{ route('attendance.index') }}" class="oak-link">Attendance</a>
+<div class="oak-dashboard-heading"><div><h1>{{ $arm->schoolClass?->name }} {{ $arm->name }}</h1><p>{{ $date }} · {{ $roster->count() }} students</p></div></div>
+<nav class="ad-tabs" aria-label="Attendance session">@foreach(['Morning','Afternoon'] as $tab)<a wire:navigate href="{{ route('attendance.day', ['arm' => $arm->id, 'date' => $date, 'session' => $tab]) }}" @if($session === $tab) aria-current="page" @endif>{{ $tab }}</a>@endforeach</nav>
+<p class="oak-muted">The tab chooses the saved session. The same-day edit window closes at midnight WAT; locked records cannot be edited.</p>
+@if(session('status'))<div class="oak-notice oak-notice-success" role="status"><div>{{ session('status') }}</div></div>@endif
+@if($errors->any())<div class="oak-notice oak-notice-danger" role="alert"><div>@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div></div>@endif
+@if($notHeld)
+    <div class="oak-notice oak-notice-warning"><div><strong>Not held, no roll needed.</strong><p>This {{ strtolower($session) }} session is excluded from alerts and attendance percentages.</p></div></div>
+@elseif($roster->isEmpty())
+    <div class="oak-empty">No students are enrolled in this class arm yet.</div>
 @else
-<form method="post" action="{{ route('attendance.mark', $arm->id) }}" class="mt-6">
-@csrf<input type="hidden" name="date" value="{{ $date }}">
-<div class="overflow-x-auto"><table class="w-full text-left"><thead><tr class="border-b"><th class="p-2">Student</th><th class="p-2">Status</th></tr></thead><tbody>
+<form method="post" action="{{ route('attendance.mark', $arm->id) }}" class="ad-card">
+@csrf<input type="hidden" name="date" value="{{ $date }}"><input type="hidden" name="session" value="{{ $session }}">
+<div class="oak-table-scroll"><table class="oak-table oak-stack"><thead><tr><th>Student</th>@if($session === 'Afternoon')<th>Morning</th>@endif<th>{{ $session }} status</th></tr></thead><tbody>
 @foreach($roster as $student)
 @php($record = $records[$student->id] ?? null)
-<tr class="border-b"><td class="p-2">{{ $student->user?->name ?? 'Student #'.$student->id }}</td><td class="p-2">
+<tr><td>{{ $student->user?->name ?? 'Student #'.$student->id }}</td>@if($session === 'Afternoon')<td><span class="oak-status-pill oak-status-neutral">{{ ($morningRecords[$student->id] ?? null)?->status ?? 'Not marked' }}</span></td>@endif<td>
 @if($editable && ! $record?->locked)
-<select name="statuses[{{ $student->id }}]" class="w-full rounded border p-2" aria-label="Attendance status for {{ $student->user?->name ?? 'Student #'.$student->id }}">
+<select name="statuses[{{ $student->id }}]" class="ad-inline-select" aria-label="Attendance status for {{ $student->user?->name ?? 'Student #'.$student->id }}">
 @foreach(['Present','Absent','Late','Excused'] as $status)<option value="{{ $status }}" @selected(($record?->status ?? 'Present') === $status)>{{ $status }}</option>@endforeach
 </select>
-@else<span>{{ $record?->status ?? 'Not marked' }} @if($record?->locked) · Locked @endif</span>@endif
+@else<span class="oak-status-pill oak-status-neutral">{{ $record?->status ?? 'Not marked' }} @if($record?->locked) · Locked @endif</span>@endif
 </td></tr>
 @endforeach
 </tbody></table></div>
-@if($editable && ! $records->contains(fn ($record) => $record->locked))<button class="mt-4 rounded bg-blue-700 px-4 py-2 text-white">Save full class</button>@endif
+@if($editable && ! $records->contains(fn ($record) => $record->locked))<button class="oak-btn oak-btn-primary" style="margin-top:16px">Save {{ strtolower($session) }} roll</button>@endif
 </form>
 @can('manage_attendance')
 @if($editable && $records->count() === $roster->count() && ! $records->contains(fn ($record) => $record->locked))
-<form method="post" action="{{ route('attendance.lock', $arm->id) }}" class="mt-3">@csrf<input type="hidden" name="date" value="{{ $date }}"><button class="rounded border px-4 py-2">Lock this day</button></form>
+<form method="post" action="{{ route('attendance.lock', $arm->id) }}" style="margin-top:12px">@csrf<input type="hidden" name="date" value="{{ $date }}"><input type="hidden" name="session" value="{{ $session }}"><button class="oak-btn oak-btn-secondary">Lock {{ strtolower($session) }}</button></form>
 @endif
 @endcan
 @endif

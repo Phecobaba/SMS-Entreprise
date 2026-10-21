@@ -8,6 +8,7 @@
         'calendar-check' => '<path d="M4 5h16v16H4zM8 3v4M16 3v4M4 10h16M8 15l2 2 5-5"/>',
         'wallet' => '<path d="M4 6h15a2 2 0 0 1 2 2v10H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h13M16 12h5v4h-5a2 2 0 0 1 0-4z"/>',
         'notebook' => '<path d="M6 4h14v17H6zM4 7h4M4 11h4M4 15h4M4 19h4M11 8h5M11 12h5"/>',
+        'school' => '<path d="m2 9 10-4 10 4-10 4zM6 11v5c0 2 3 3 6 3s6-1 6-3v-5M22 9v6"/>',
         'user' => '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
         'eye' => '<path d="M3 12c2.4-4 5.4-6 9-6s6.6 2 9 6c-2.4 4-5.4 6-9 6s-6.6-2-9-6z"/><circle cx="12" cy="12" r="2"/>',
         'logout' => '<path d="M10 8V5a2 2 0 0 1 2-2h7v18h-7a2 2 0 0 1-2-2v-3M15 12H3M6 9l-3 3 3 3"/>',
@@ -28,6 +29,11 @@
         'info-circle' => '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
         'player-pause' => '<path d="M8 5v14M16 5v14"/>', 'player-play' => '<path d="m8 5 11 7-11 7z"/>',
         'x' => '<path d="m6 6 12 12M18 6 6 18"/>',
+        'arrow-up' => '<path d="M12 19V5M6 11l6-6 6 6"/>',
+        'arrow-down' => '<path d="M12 5v14M6 13l6 6 6-6"/>',
+        'pencil' => '<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4M13.5 6.5l4 4"/>',
+        'plus' => '<path d="M12 5v14M5 12h14"/>',
+        'trash' => '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
     ];
 @endphp
 <svg {{ $attributes->class('oak-i') }} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-icon="{{ $name }}" aria-hidden="true">{!! $paths[$name] ?? $paths['info-circle'] !!}</svg>

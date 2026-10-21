@@ -1,0 +1,26 @@
+/* Canonical token block. Names match resources/css/app.css; the NEW tokens are explained in DESIGN_AMENDMENTS.md. */
+:root {
+  --color-bg: #FBF8EF;
+  --color-surface: #F1EAD8;
+  --color-text: #1F3638;
+  --color-text-muted: #5B6B6A;
+  --color-brand-teal: #2E4F56;
+  --color-brand-cream: #F5E58A;
+  --color-accent-ochre: #C77B3F;
+  --color-success: #3F7D63;       --color-success-bg: #EAF3DE;
+  --color-warning: #633806;       --color-warning-bg: #FAEEDA;
+  --color-danger: #791F1F;        --color-danger-bg: #FCEBEB;
+  --color-border: #DDD3BA;
+  --color-border-light: #EFE9DA;
+  /* NEW — contrast-safe companions (see DESIGN_AMENDMENTS.md) */
+  --color-success-ink: #27500A;      /* pill text on success-bg: 8.2:1 (was 4.25:1) */
+  --color-success-num: #2E6B50;      /* big green numbers on surface: 5.25:1 (was 4.05:1) */
+  --color-ochre-ink: #9A5A22;        /* ochre TEXT on bg/surface: 5.1:1 (was 3.12:1). Borders/dots keep #C77B3F */
+  --color-tab-idle: #6F6A5E;         /* inactive mobile tab: 5.4:1 (was 2.99:1) */
+  --color-sidebar-text: #D9E6E3;
+  --color-sidebar-rule: #3E6168;
+  --color-band-muted: #B9CBC8;
+  --font-sans: -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: Georgia, 'Times New Roman', serif;
+  --tap: 44px;
+}

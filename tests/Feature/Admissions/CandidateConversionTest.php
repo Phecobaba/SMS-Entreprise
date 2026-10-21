@@ -35,7 +35,8 @@ class CandidateConversionTest extends TestCase
         $role->permissions()->attach(Permission::firstOrCreate(['name' => 'manage_payments']));
         $role->permissions()->attach(Permission::firstOrCreate(['name' => 'view_all_sections']));
         $admin->roles()->attach($role);
-        $section = Section::create(['name' => 'Primary School', 'head_title' => 'Head Teacher', 'head_user_id' => $admin->id]);
+        $section = Section::create(['name' => 'Primary School', 'head_title' => 'Head Teacher']);
+        $section->heads()->attach($admin, ['school_id' => $school->id]);
         $level = AcademicLevel::create(['section_id' => $section->id, 'name' => 'Primary']);
         $class = SchoolClass::create(['academic_level_id' => $level->id, 'name' => 'Primary 1']);
         $arm = ClassArm::create(['class_id' => $class->id, 'name' => 'A']);

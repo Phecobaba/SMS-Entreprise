@@ -31,9 +31,12 @@ class PaymentController extends Controller
     {
         $data = $request->validate([
             'student_id' => ['nullable', 'integer'], 'candidate_id' => ['nullable', 'integer'],
-            'term_id' => ['nullable', 'integer'], 'purpose' => ['required', Rule::in(['Tuition', 'Registration', 'Offer Deposit'])],
-            'amount_kobo' => ['required', 'integer', 'min:1'], 'due_date' => ['required', 'date'],
+            'term_id' => ['nullable', 'integer'], 'purpose' => ['required', Rule::in(['Registration', 'Offer Deposit'])],
+            'amount_naira' => ['required', 'regex:/^[0-9,]+$/'], 'due_date' => ['required', 'date'],
         ]);
+        $data['amount_kobo'] = (int) str_replace(',', '', $data['amount_naira']) * 100;
+        unset($data['amount_naira']);
+        $data['term_id'] = null;
         $ledger->invoice($data, $request->user());
 
         return back()->with('status', 'Invoice created.');

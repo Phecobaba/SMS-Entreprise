@@ -22,11 +22,11 @@ use Illuminate\Validation\ValidationException;
 
 class ResultWorkflow
 {
-    public function dashboardApprovals(User $actor, int $limit = 5): array
+    public function dashboardApprovals(User $actor, int $limit = 5, ?int $sectionId = null): array
     {
-        $query = Result::whereIn('status', ['Submitted', 'Rejected']);
-        $results = app(SectionAccess::class)->scopeResults($query, $actor)->latest('updated_at')->limit($limit)->get();
-        $arms = ClassArm::with('schoolClass')->whereIn('id', $results->pluck('class_arm_id'))->get()->keyBy('id');
+        $query = Result::where('status', 'Submitted');
+        $results = app(SectionAccess::class)->scopeResults($query, $actor, $sectionId)->latest('updated_at')->limit($limit)->get();
+        $arms = ClassArm::with('schoolClass.level.section')->whereIn('id', $results->pluck('class_arm_id'))->get()->keyBy('id');
         $subjects = Subject::whereIn('id', $results->pluck('subject_id'))->pluck('name', 'id');
         $teachers = User::whereIn('id', $results->pluck('submitted_by')->filter())->pluck('name', 'id');
 
@@ -36,7 +36,18 @@ class ResultWorkflow
             'subject' => $subjects[$result->subject_id] ?? 'Subject #'.$result->subject_id,
             'teacher' => $teachers[$result->submitted_by] ?? 'Unassigned',
             'status' => $result->status,
+            'section' => $arms->get($result->class_arm_id)?->schoolClass?->level?->section?->name,
+            'submitted_at' => $result->updated_at,
         ])->all();
+    }
+
+    public function dashboardApprovalCount(User $actor, ?int $sectionId = null): int
+    {
+        return app(SectionAccess::class)->scopeResults(
+            Result::where('status', 'Submitted'),
+            $actor,
+            $sectionId,
+        )->count();
     }
 
     public function dashboardTeacherPending(User $actor): int

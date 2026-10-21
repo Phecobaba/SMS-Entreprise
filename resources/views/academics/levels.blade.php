@@ -1,0 +1,23 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Levels · Oakfield</title>@vite(['resources/css/app.css','resources/js/app.js'])</head><body>
+@php $pageTitle = 'Levels'; @endphp
+@include('core._shell-start')
+<main class="oak-dashboard">
+    <div class="oak-dashboard-heading"><div><h1>{{ $canViewAll ? 'Academic levels' : (($sections->first()?->name ?? 'Your section').' levels') }}</h1><p>Levels have no separate order. Class order controls progression.</p></div><span class="oak-role-pill">{{ $canViewAll ? 'Admin' : ($sections->first()?->head_title ?? 'Head') }}</span></div>
+    @if($canViewAll)@include('academics._tabs')@endif
+    @if(session('status'))<div class="oak-notice oak-notice-success" role="status">{{ session('status') }}</div>@endif
+    @if($errors->any())<div class="oak-notice oak-notice-danger" role="alert"><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>@endif
+    @if(!$hasSection)
+        <div class="oak-locked"><x-icon name="lock" /><h3>No section assigned</h3><p>Ask the Admin to assign you to a section before managing levels.</p></div>
+    @else
+        @unless($canViewAll)<div class="ad-section-badge"><x-icon name="school" />{{ $sections->first()?->name }} only</div>@endunless
+        <section class="ad-card oak-section">
+            <div class="ad-bar"><button class="oak-btn oak-btn-primary" type="button" data-open-sheet="add-level">Add level</button></div>
+            @forelse($levels as $level)
+                <div class="ad-class-row"><div><h4>{{ $level->name }}</h4><small class="ad-meta">{{ $level->section?->name }} · {{ $level->classes_count }} {{ Str::plural('class', $level->classes_count) }}</small></div><div></div><div></div><div class="ad-actions"><button class="oak-btn oak-btn-secondary" type="button" data-open-sheet="edit-level-{{ $level->id }}">Edit</button><button class="oak-btn oak-btn-danger" type="button" data-open-sheet="delete-level-{{ $level->id }}">Delete</button></div></div>
+                <x-oak.sheet id="edit-level-{{ $level->id }}" label="Edit {{ $level->name }}"><div class="oak-sheet"><h2>Edit {{ $level->name }}</h2><form method="post" action="{{ route('academics.levels.update',$level) }}" class="ad-form-grid">@csrf @method('PUT')<div class="oak-field"><label>Name</label><input name="name" required maxlength="100" value="{{ $level->name }}"></div>@if($canViewAll)<div class="oak-field"><label>Section</label><select name="section_id" required>@foreach($sections as $section)<option value="{{ $section->id }}" @selected($level->section_id===$section->id)>{{ $section->name }}</option>@endforeach</select><span class="oak-hint">Only the Admin can move a level between sections.</span></div>@endif<div class="oak-sheet-actions ad-wide"><button type="button" class="oak-btn oak-btn-quiet" data-close-sheet>Cancel</button><button class="oak-btn oak-btn-primary">Save level</button></div></form></div></x-oak.sheet>
+                <x-oak.sheet id="delete-level-{{ $level->id }}" label="Delete {{ $level->name }}"><div class="oak-sheet"><h2>Delete {{ $level->name }}?</h2><p>The level can be deleted only when it has no classes, fee schedule, result template or admission application. If it is in use, the server will list what must be retained.</p><form method="post" action="{{ route('academics.levels.destroy',$level) }}" class="oak-sheet-actions">@csrf @method('DELETE')<button type="button" class="oak-btn oak-btn-quiet" data-close-sheet>Cancel</button><button class="oak-btn oak-btn-danger">Delete level</button></form></div></x-oak.sheet>
+            @empty<div class="oak-empty"><strong>No levels yet</strong>Add the first level for this section.</div>@endforelse
+        </section>
+        <x-oak.sheet id="add-level" label="Add level"><div class="oak-sheet"><h2>Add level</h2><form method="post" action="{{ route('academics.levels.store') }}" class="ad-form-grid">@csrf @if($canViewAll)<div class="oak-field"><label>Section</label><select name="section_id" required>@foreach($sections as $section)<option value="{{ $section->id }}">{{ $section->name }}</option>@endforeach</select></div>@else<input type="hidden" name="section_id" value="{{ $sections->first()?->id }}">@endif<div class="oak-field"><label>Name</label><input name="name" required maxlength="100" placeholder="e.g. Junior Secondary"></div><div class="oak-sheet-actions ad-wide"><button type="button" class="oak-btn oak-btn-quiet" data-close-sheet>Cancel</button><button class="oak-btn oak-btn-primary">Add level</button></div></form></div></x-oak.sheet>
+    @endif
+</main>@include('core._shell-end') @livewireScripts</body></html>

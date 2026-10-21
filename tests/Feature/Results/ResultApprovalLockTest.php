@@ -59,7 +59,8 @@ class ResultApprovalLockTest extends TestCase
         $formTeacher->roles()->attach($entryRole);
         $principal->roles()->attach($approvalRole);
 
-        $section = Section::create(['name' => 'Secondary School', 'head_title' => 'Principal', 'head_user_id' => $principal->id]);
+        $section = Section::create(['name' => 'Secondary School', 'head_title' => 'Principal']);
+        $section->heads()->attach($principal, ['school_id' => $school->id]);
         $level = AcademicLevel::create(['section_id' => $section->id, 'name' => 'Secondary']);
         $class = SchoolClass::create(['academic_level_id' => $level->id, 'name' => 'JSS 1']);
         $arm = ClassArm::create(['class_id' => $class->id, 'name' => 'A', 'form_teacher_user_id' => $formTeacher->id]);

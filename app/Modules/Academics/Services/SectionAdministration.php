@@ -8,6 +8,7 @@ use App\Modules\Academics\Models\SchoolClass;
 use App\Modules\Academics\Models\Section;
 use App\Modules\Admissions\Models\Candidate;
 use App\Modules\Core\Models\User;
+use App\Modules\Core\TenantContext;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
@@ -23,14 +24,21 @@ class SectionAdministration
     public function assignHead(Section $section, ?User $head, User $actor): Section
     {
         Gate::forUser($actor)->authorize('view_all_sections');
-        $section->update(['head_user_id' => $head?->id]);
+        if ($head && ! $head->can('approve_results')) {
+            throw ValidationException::withMessages(['head_user_id' => 'Choose a user who has result-approval permission.']);
+        }
+        $section->heads()->sync($head ? [$head->id => ['school_id' => app(TenantContext::class)->id()]] : []);
 
-        return $section->refresh();
+        return $section->refresh()->load('heads');
     }
 
     public function createDepartment(string $name, User $actor): Department
     {
         Gate::forUser($actor)->authorize('view_all_sections');
+
+        if (Department::whereRaw('LOWER(name) = ?', [mb_strtolower(trim($name))])->exists()) {
+            throw ValidationException::withMessages(['name' => 'A department with this name already exists.']);
+        }
 
         return Department::create(['name' => trim($name)]);
     }

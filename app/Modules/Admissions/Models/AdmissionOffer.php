@@ -4,6 +4,7 @@ namespace App\Modules\Admissions\Models;
 
 use App\Modules\Core\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class AdmissionOffer extends Model
 {
@@ -14,5 +15,10 @@ class AdmissionOffer extends Model
     protected function casts(): array
     {
         return ['offer_date' => 'date', 'response_deadline' => 'date', 'deposit_required' => 'boolean', 'deposit_paid' => 'boolean'];
+    }
+
+    public function candidate(): BelongsTo
+    {
+        return $this->belongsTo(Candidate::class);
     }
 }

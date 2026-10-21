@@ -9,7 +9,7 @@ class AttendanceAlert extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['class_arm_id', 'date', 'resolved'];
+    protected $fillable = ['class_arm_id', 'date', 'session', 'resolved'];
 
     protected function casts(): array
     {

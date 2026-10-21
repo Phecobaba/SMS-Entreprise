@@ -64,6 +64,39 @@ const startTicker = (ticker) => {
     start();
 };
 
-const bootOakUi = () => document.querySelectorAll('[data-ticker]').forEach(startTicker);
+const bootAssignmentForms = () => {
+    document.querySelectorAll('[data-require-choice]').forEach((form) => {
+        if (form.dataset.ready) return;
+        form.dataset.ready = 'true';
+        form.addEventListener('submit', (event) => {
+            const hasChoice = [...form.querySelectorAll('input[type="checkbox"]')].some((input) => input.checked);
+            const error = form.querySelector('[data-choice-error]');
+            if (!hasChoice) {
+                event.preventDefault();
+                if (error) error.hidden = false;
+                form.querySelector('input[type="checkbox"]')?.focus();
+            } else if (error) error.hidden = true;
+        });
+    });
+
+    document.querySelectorAll('[data-change-form]').forEach((form) => {
+        if (form.dataset.ready) return;
+        form.dataset.ready = 'true';
+        const controls = [...form.querySelectorAll('input[type="checkbox"]:not(:disabled), select[name^="teachers"]')];
+        const initial = controls.map((control) => control.type === 'checkbox' ? control.checked : control.value);
+        const review = form.querySelector('[data-review-button]');
+        const update = () => {
+            const changed = controls.some((control, index) => (control.type === 'checkbox' ? control.checked : control.value) !== initial[index]);
+            if (review) review.disabled = !changed;
+        };
+        controls.forEach((control) => control.addEventListener('change', update));
+        update();
+    });
+};
+
+const bootOakUi = () => {
+    document.querySelectorAll('[data-ticker]').forEach(startTicker);
+    bootAssignmentForms();
+};
 document.addEventListener('DOMContentLoaded', bootOakUi);
 document.addEventListener('livewire:navigated', bootOakUi);

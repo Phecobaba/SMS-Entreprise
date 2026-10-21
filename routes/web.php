@@ -1,7 +1,11 @@
 <?php
 
+use App\Modules\Academics\Http\Controllers\AcademicAssignmentController;
 use App\Modules\Academics\Http\Controllers\AcademicConfigurationController;
+use App\Modules\Academics\Http\Controllers\AcademicStructureController;
 use App\Modules\Admissions\Http\Controllers\AdmissionController;
+use App\Modules\Admissions\Http\Controllers\IncomingAdmissionController;
+use App\Modules\Admissions\Http\Controllers\PromotionController;
 use App\Modules\Assignments\Http\Controllers\AssignmentController;
 use App\Modules\Attendance\Http\Controllers\AttendanceController;
 use App\Modules\CBT\Http\Controllers\ExamParticipantController;
@@ -12,6 +16,7 @@ use App\Modules\Core\Http\Controllers\SchoolProfileController;
 use App\Modules\ENotes\Http\Controllers\ENoteController;
 use App\Modules\LandingPage\Http\Controllers\LandingPageController;
 use App\Modules\Notifications\Http\Controllers\NotificationController;
+use App\Modules\Payments\Http\Controllers\FeeInvoicingController;
 use App\Modules\Payments\Http\Controllers\PaymentController;
 use App\Modules\Payments\Http\Controllers\PaystackWebhookController;
 use App\Modules\Portals\Http\Controllers\PortalPageController;
@@ -89,6 +94,22 @@ Route::middleware(['auth', 'can:manage_payments'])->prefix('payments')->name('pa
     Route::post('/result-access-rule', [PaymentController::class, 'rule'])->name('rule');
 });
 
+Route::middleware(['auth', 'can:manage_fee_schedule'])->prefix('fees')->name('fees.')->group(function (): void {
+    Route::get('/schedule', [FeeInvoicingController::class, 'schedule'])->name('schedule.index');
+    Route::post('/items', [FeeInvoicingController::class, 'storeItem'])->name('items.store');
+    Route::delete('/items/{item}', [FeeInvoicingController::class, 'destroyItem'])->name('items.destroy');
+    Route::post('/schedule-lines', [FeeInvoicingController::class, 'storeLine'])->name('schedule-lines.store');
+    Route::put('/schedule-lines/{line}', [FeeInvoicingController::class, 'updateLine'])->name('schedule-lines.update');
+    Route::delete('/schedule-lines/{line}', [FeeInvoicingController::class, 'destroyLine'])->name('schedule-lines.destroy');
+    Route::post('/schedule/copy/preview', [FeeInvoicingController::class, 'previewScheduleCopy'])->name('schedule.copy.preview');
+    Route::post('/schedule/copy/apply', [FeeInvoicingController::class, 'applyScheduleCopy'])->name('schedule.copy.apply');
+    Route::get('/generate', [FeeInvoicingController::class, 'generate'])->name('generate.index');
+    Route::post('/generate/preview', [FeeInvoicingController::class, 'preview'])->name('generate.preview');
+    Route::post('/generate/apply', [FeeInvoicingController::class, 'apply'])->name('generate.apply');
+    Route::get('/not-invoiced', [FeeInvoicingController::class, 'notInvoiced'])->name('not-invoiced.index');
+    Route::post('/students/{student}/invoice', [FeeInvoicingController::class, 'invoiceStudent'])->name('students.invoice');
+});
+
 Route::middleware(['auth', 'can:manage_staff_records'])->prefix('staff')->name('staff.')->group(function (): void {
     Route::get('/', [StaffController::class, 'index'])->name('index');
     Route::post('/', [StaffController::class, 'store'])->name('store');
@@ -106,13 +127,54 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 });
 
-Route::middleware(['auth', 'can:manage_academics'])->prefix('academics')->name('academics.')->group(function (): void {
-    Route::get('/', [AcademicConfigurationController::class, 'index'])->name('index');
+Route::middleware('auth')->prefix('academics')->name('academics.')->group(function (): void {
+    Route::get('/levels', [AcademicConfigurationController::class, 'levels'])->name('levels.index');
     Route::post('/levels', [AcademicConfigurationController::class, 'storeLevel'])->name('levels.store');
-    Route::post('/sessions', [AcademicConfigurationController::class, 'storeSession'])->name('sessions.store');
-    Route::post('/terms', [AcademicConfigurationController::class, 'storeTerm'])->name('terms.store');
+    Route::put('/levels/{level}', [AcademicConfigurationController::class, 'updateLevel'])->name('levels.update');
+    Route::delete('/levels/{level}', [AcademicConfigurationController::class, 'destroyLevel'])->name('levels.destroy');
+    Route::get('/bulk-subjects', [AcademicAssignmentController::class, 'bulkSubjects'])->name('bulk-subjects.index');
+    Route::post('/bulk-subjects/review', [AcademicAssignmentController::class, 'reviewBulkSubjects'])->name('bulk-subjects.review');
+    Route::post('/bulk-subjects/apply', [AcademicAssignmentController::class, 'applyBulkSubjects'])->name('bulk-subjects.apply');
+    Route::get('/teacher-assignments', [AcademicAssignmentController::class, 'teacherAssignments'])->name('teacher-assignments.index');
+    Route::post('/teacher-assignments/review', [AcademicAssignmentController::class, 'reviewTeacherAssignments'])->name('teacher-assignments.review');
+    Route::post('/teacher-assignments/apply', [AcademicAssignmentController::class, 'applyTeacherAssignments'])->name('teacher-assignments.apply');
+    Route::get('/promotion', [PromotionController::class, 'index'])->name('promotion.index');
+    Route::post('/promotion/review', [PromotionController::class, 'review'])->name('promotion.review');
+    Route::post('/promotion/apply', [PromotionController::class, 'apply'])->name('promotion.apply');
+    Route::post('/promotion/move-one', [PromotionController::class, 'moveOne'])->name('promotion.move-one');
+    Route::get('/promotion/incoming', [IncomingAdmissionController::class, 'index'])->name('promotion.incoming.index');
+    Route::post('/promotion/incoming/review', [IncomingAdmissionController::class, 'review'])->name('promotion.incoming.review');
+    Route::post('/promotion/incoming/accept', [IncomingAdmissionController::class, 'accept'])->name('promotion.incoming.accept');
+    Route::post('/promotion/incoming/not-continuing', [IncomingAdmissionController::class, 'notContinuing'])->name('promotion.incoming.not-continuing');
+    Route::get('/classes', [AcademicStructureController::class, 'classes'])->name('classes.index');
     Route::post('/classes', [AcademicConfigurationController::class, 'storeClass'])->name('classes.store');
+    Route::put('/classes/{class}', [AcademicConfigurationController::class, 'updateClass'])->name('classes.update');
+    Route::post('/classes/{class}/move', [AcademicStructureController::class, 'moveClass'])->name('classes.move');
+    Route::delete('/classes/{class}', [AcademicStructureController::class, 'destroyClass'])->name('classes.destroy');
+    Route::get('/classes-arrange', [AcademicStructureController::class, 'arrange'])->name('classes.arrange');
+    Route::post('/classes-arrange', [AcademicStructureController::class, 'saveArrangement'])->name('classes.arrange.store');
     Route::post('/arms', [AcademicConfigurationController::class, 'storeArm'])->name('arms.store');
+    Route::put('/arms/{arm}', [AcademicConfigurationController::class, 'updateArm'])->name('arms.update');
+    Route::delete('/arms/{arm}', [AcademicConfigurationController::class, 'destroyArm'])->name('arms.destroy');
+});
+
+Route::middleware(['auth', 'can:manage_academics'])->prefix('academics')->name('academics.')->group(function (): void {
+    Route::get('/', [AcademicStructureController::class, 'sections'])->name('index');
+    Route::get('/setup', [AcademicConfigurationController::class, 'index'])->name('setup');
+    Route::get('/sessions', [AcademicConfigurationController::class, 'sessions'])->name('sessions.index');
+    Route::post('/sections', [AcademicStructureController::class, 'storeSection'])->name('sections.store');
+    Route::put('/sections/{section}', [AcademicStructureController::class, 'updateSection'])->name('sections.update');
+    Route::put('/levels/{level}/section', [AcademicStructureController::class, 'assignLevel'])->name('levels.section');
+    Route::get('/departments', [AcademicStructureController::class, 'departments'])->name('departments.index');
+    Route::post('/departments', [AcademicStructureController::class, 'storeDepartment'])->name('departments.store');
+    Route::put('/departments/{department}', [AcademicStructureController::class, 'updateDepartment'])->name('departments.update');
+    Route::delete('/departments/{department}', [AcademicStructureController::class, 'destroyDepartment'])->name('departments.destroy');
+    Route::post('/sessions', [AcademicConfigurationController::class, 'storeSession'])->name('sessions.store');
+    Route::put('/sessions/{session}', [AcademicConfigurationController::class, 'updateSession'])->name('sessions.update');
+    Route::delete('/sessions/{session}', [AcademicConfigurationController::class, 'destroySession'])->name('sessions.destroy');
+    Route::post('/terms', [AcademicConfigurationController::class, 'storeTerm'])->name('terms.store');
+    Route::put('/terms/{term}', [AcademicConfigurationController::class, 'updateTerm'])->name('terms.update');
+    Route::delete('/terms/{term}', [AcademicConfigurationController::class, 'destroyTerm'])->name('terms.destroy');
     Route::post('/subjects', [AcademicConfigurationController::class, 'storeSubject'])->name('subjects.store');
     Route::post('/class-subjects', [AcademicConfigurationController::class, 'attachSubject'])->name('class-subjects.store');
 });
@@ -125,6 +187,12 @@ Route::middleware(['auth', 'can:mark_attendance'])->prefix('attendance')->name('
     Route::post('/form-teachers', [AttendanceController::class, 'assign'])->middleware('can:manage_attendance')->name('form-teachers.store');
 });
 Route::get('/attendance/alerts', [AttendanceController::class, 'alerts'])->middleware(['auth', 'can:view_attendance_alerts'])->name('attendance.alerts');
+Route::middleware(['auth', 'can:manage_attendance'])->prefix('attendance')->name('attendance.')->group(function (): void {
+    Route::get('/settings', [AttendanceController::class, 'settings'])->name('settings');
+    Route::put('/settings/{section}', [AttendanceController::class, 'updateSettings'])->name('settings.update');
+    Route::post('/settings/{section}/not-held', [AttendanceController::class, 'markNotHeld'])->name('not-held.store');
+    Route::delete('/not-held/{entry}', [AttendanceController::class, 'removeNotHeld'])->name('not-held.destroy');
+});
 
 Route::middleware(['auth', 'can:mark_assignments'])->prefix('assignments')->name('assignments.')->group(function (): void {
     Route::get('/', [AssignmentController::class, 'index'])->name('index');

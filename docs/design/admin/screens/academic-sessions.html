@@ -1,0 +1,818 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Oakfield · Sessions and terms</title>
+<style>
+:root { --emblem: url(data:image/png;base64,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); }
+/* Oakfield student design — canonical shared CSS.
+   Token names match resources/css/app.css. Class names reuse the app's `oak-` vocabulary
+   where one already exists; new classes are marked NEW. Everything here is inlined into each
+   screen file so every file opens standalone. */
+
+/* ---------- Tokens ---------- */
+:root {
+  --color-bg: #FBF8EF;
+  --color-surface: #F1EAD8;
+  --color-text: #1F3638;
+  --color-text-muted: #5B6B6A;
+  --color-brand-teal: #2E4F56;
+  --color-brand-cream: #F5E58A;
+  --color-accent-ochre: #C77B3F;
+  --color-success: #3F7D63;       --color-success-bg: #EAF3DE;
+  --color-warning: #633806;       --color-warning-bg: #FAEEDA;
+  --color-danger: #791F1F;        --color-danger-bg: #FCEBEB;
+  --color-border: #DDD3BA;
+  --color-border-light: #EFE9DA;
+  /* NEW — contrast-safe companions (see DESIGN_AMENDMENTS.md) */
+  --color-success-ink: #27500A;      /* pill text on success-bg: 8.2:1 (was 4.25:1) */
+  --color-success-num: #2E6B50;      /* big green numbers on surface: 5.25:1 (was 4.05:1) */
+  --color-ochre-ink: #9A5A22;        /* ochre TEXT on bg/surface: 5.1:1 (was 3.12:1). Borders/dots keep #C77B3F */
+  --color-tab-idle: #6F6A5E;         /* inactive mobile tab: 5.4:1 (was 2.99:1) */
+  --color-sidebar-text: #D9E6E3;
+  --color-sidebar-rule: #3E6168;
+  --color-band-muted: #B9CBC8;
+  --font-sans: -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: Georgia, 'Times New Roman', serif;
+  --tap: 44px;
+}
+
+/* ---------- Reset (the app gets this from Tailwind preflight) ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--color-bg); color: var(--color-text); font-family: var(--font-sans); font-size: 16px; line-height: 1.45; }
+h1, h2, h3, p, ul, ol, figure { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+a { color: inherit; }
+button { font: inherit; color: inherit; cursor: pointer; }
+table { border-collapse: collapse; width: 100%; }
+[hidden] { display: none !important; }
+svg.oak-i { width: 1.25em; height: 1.25em; flex: 0 0 auto; vertical-align: middle; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+h1, h2, .oak-school-name { font-family: var(--font-serif); font-weight: 600; }
+:is(a, button, input, select, textarea, summary, [tabindex]):focus-visible { outline: 3px solid var(--color-accent-ochre); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; } }
+
+/* ---------- App shell (matches app.css 150px sidebar / mobile band + 5 tabs) ---------- */
+.oak-app-shell { min-height: 100vh; display: grid; grid-template-columns: 150px minmax(0,1fr); }
+.oak-sidebar { background: var(--color-brand-teal); display: flex; flex-direction: column; padding: 18px 12px 16px; position: sticky; top: 0; height: 100vh; }
+.oak-brand { color: inherit; display: flex; align-items: center; gap: .6rem; min-width: 0; text-decoration: none; }
+.oak-sidebar-brand { min-height: 60px; margin: 0 4px 28px; }
+/* Design files paint the emblem via background so the data URI is stored once; in the build use the app's <img class="oak-logo-mark"> inside .oak-logo-crop exactly as _shell-start does. */
+.oak-logo-crop { display: block; width: 38px; height: 38px; flex: 0 0 38px; border-radius: 50%; overflow: hidden; background: var(--color-brand-teal) var(--emblem, none) center / cover no-repeat; }
+.oak-sidebar .oak-school-name { font-size: 1rem; color: var(--color-brand-cream); }
+.oak-sidebar-links { display: grid; gap: 3px; align-content: start; overflow-y: auto; }
+.oak-sidebar-links a { display: flex; align-items: center; gap: 11px; min-height: 40px; padding: 7px 9px; font-size: .88rem; border-radius: 7px; color: var(--color-sidebar-text); text-decoration: none; }
+.oak-sidebar-links a:hover { background: rgba(245,229,138,.14); }
+.oak-sidebar-links a.oak-active, .oak-sidebar-links a[aria-current="page"] { background: var(--color-brand-cream); color: var(--color-brand-teal); }
+.oak-sidebar-foot { margin-top: auto; border-top: 1px solid var(--color-sidebar-rule); padding-top: 8px; display: grid; gap: 3px; }
+.oak-sidebar-foot a, .oak-sidebar-foot button { display: flex; align-items: center; gap: 11px; min-height: 40px; padding: 7px 9px; border-radius: 7px; color: var(--color-sidebar-text); background: none; border: 0; font-size: .88rem; text-decoration: none; width: 100%; text-align: left; }
+.oak-sidebar-foot a:hover, .oak-sidebar-foot button:hover { background: rgba(245,229,138,.14); }
+.oak-sidebar-foot a.oak-active { background: var(--color-brand-cream); color: var(--color-brand-teal); }
+
+.oak-content { min-width: 0; background: var(--color-bg); }
+.oak-dashboard { padding: 24px 28px 48px; }
+.oak-dashboard-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+.oak-dashboard-heading h1 { font-size: clamp(1.6rem, 2.4vw, 2.1rem); line-height: 1.18; font-weight: 400; }
+.oak-dashboard-heading p { margin-top: 4px; color: var(--color-text-muted); font-size: 1rem; }
+.oak-heading-tools { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.oak-role-pill { border-radius: 999px; padding: 6px 15px; background: var(--color-brand-cream); color: var(--color-brand-teal); font-size: .8rem; white-space: nowrap; }
+.oak-bell { position: relative; display: grid; place-items: center; width: var(--tap); height: var(--tap); border-radius: 50%; color: var(--color-brand-teal); text-decoration: none; }
+.oak-bell:hover { background: var(--color-surface); }
+.oak-bell .oak-i { width: 22px; height: 22px; }
+.oak-bell b { position: absolute; top: 5px; right: 3px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 999px; background: var(--color-accent-ochre); color: #fff; font-size: .68rem; line-height: 18px; text-align: center; font-weight: 600; }
+
+/* Mobile band + tab bar */
+.oak-header { display: none; background: var(--color-brand-teal); color: var(--color-brand-cream); padding: 14px 18px 16px; position: relative; }
+.oak-header .oak-school-name { font-size: 1.1rem; }
+.oak-header-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.oak-header .oak-brand { min-height: var(--tap); }
+.oak-header .oak-logo-crop { width: 34px; height: 34px; flex-basis: 34px; }
+.oak-header .oak-bell { color: var(--color-sidebar-text); }
+.oak-header .oak-bell:hover { background: rgba(255,255,255,.1); }
+.oak-header-intro { display: flex; flex-direction: column; margin-top: 8px; color: #fff; }
+.oak-header-intro strong { font: 600 1.35rem var(--font-serif); }
+.oak-header-intro span { color: var(--color-band-muted); font-size: .88rem; }
+.oak-mobile-tabs { display: none; }
+
+/* ---------- Buttons & actions ---------- */
+.oak-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--tap); padding: 9px 18px; border-radius: 8px; font-size: .95rem; text-decoration: none; border: 1.5px solid transparent; white-space: nowrap; }
+.oak-btn-primary { background: var(--color-brand-teal); color: var(--color-brand-cream); border-color: var(--color-brand-teal); }
+.oak-btn-primary:hover { background: #264248; }
+.oak-btn-secondary { background: var(--color-bg); color: var(--color-ochre-ink); border-color: var(--color-accent-ochre); }
+.oak-btn-secondary:hover { background: var(--color-surface); }
+.oak-btn-quiet { background: transparent; color: var(--color-brand-teal); border-color: var(--color-border); }
+.oak-btn-block { width: 100%; }
+.oak-btn[disabled], .oak-btn[aria-disabled="true"] { opacity: .55; cursor: not-allowed; }
+.oak-link { display: inline-flex; align-items: center; color: var(--color-brand-teal); text-decoration: underline; text-underline-offset: 3px; font-size: .9rem; background: none; border: 0; padding: 0; }
+@media (max-width: 767px), (pointer: coarse) { .oak-link { min-height: var(--tap); padding: 0 6px; margin: 0 -6px; } }
+
+/* ---------- Pills ---------- */
+.oak-status-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: .78rem; font-weight: 600; white-space: nowrap; }
+.oak-status-success { background: var(--color-success-bg); color: var(--color-success-ink); }
+.oak-status-warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.oak-status-danger  { background: var(--color-danger-bg);  color: var(--color-danger); }
+.oak-status-neutral { background: var(--color-surface);    color: var(--color-text-muted); }   /* NEW: Scheduled, Closed */
+.oak-status-new     { background: var(--color-brand-cream); color: var(--color-text); }          /* NEW: "2 new" counters */
+
+/* ---------- Metric cards ---------- */
+.oak-metric-grid { display: grid; gap: 12px; }
+.oak-metric-grid-three { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.oak-metric { min-width: 0; padding: 15px 17px; background: var(--color-surface); border-radius: 11px; display: flex; flex-direction: column; gap: 4px; }
+.oak-metric > span { color: var(--color-text-muted); font-size: .88rem; }
+.oak-metric > strong { font-size: clamp(1.45rem,2.5vw,2rem); font-weight: 400; line-height: 1.2; }
+.oak-metric small { color: var(--color-text-muted); font-size: .78rem; }
+.oak-metric-success { color: var(--color-success-num); }
+.oak-metric-accent { color: var(--color-ochre-ink); }
+.oak-metric > strong.oak-metric-locked { display: flex; align-items: center; gap: 8px; font-size: 1.2rem; color: var(--color-text-muted); }
+.oak-metric-locked .oak-i { width: 20px; height: 20px; }
+
+/* ---------- Sections, tables, rows ---------- */
+.oak-section { margin-top: 26px; }
+.oak-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.oak-section-head h2 { font: 400 1.05rem var(--font-sans); }
+.oak-table-scroll { overflow-x: auto; }
+.oak-table th { color: var(--color-text-muted); font-weight: 400; text-align: left; border-bottom: 1px solid var(--color-border); padding: 8px 6px; font-size: .88rem; }
+.oak-table td { border-bottom: 1px solid var(--color-border-light); padding: 11px 6px; font-size: .95rem; }
+.oak-table tr:last-child td { border-bottom: 0; }
+.oak-table td.oak-num, .oak-table th.oak-num { text-align: right; }
+.oak-list-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--color-border-light); font-size: .95rem; min-height: 48px; }
+.oak-list-row:last-child { border-bottom: 0; }
+.oak-list-row .oak-muted { color: var(--color-text-muted); font-size: .85rem; }
+.oak-list-row > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.oak-two-col { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 28px; }
+.oak-empty { display: grid; justify-items: start; gap: 6px; padding: 14px 0; color: var(--color-text-muted); font-size: .95rem; }
+.oak-empty strong { color: var(--color-text); font-weight: 600; }
+.oak-empty .oak-i { width: 28px; height: 28px; color: var(--color-brand-teal); }
+
+/* ---------- Banners (NEW) ---------- */
+.oak-banner { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 14px 16px; border-radius: 10px; background: #fff; border: 1.5px solid var(--color-brand-teal); }
+.oak-banner-main { display: flex; align-items: center; gap: 13px; min-width: 0; }
+.oak-banner-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 9px; background: var(--color-brand-teal); color: var(--color-brand-cream); flex: 0 0 42px; }
+.oak-banner h2, .oak-banner h3 { font: 600 1rem var(--font-sans); }
+.oak-banner p { color: var(--color-text-muted); font-size: .88rem; margin-top: 2px; }
+.oak-notice { display: flex; gap: 11px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; font-size: .92rem; }
+.oak-notice .oak-i { margin-top: 1px; }
+.oak-notice-warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.oak-notice-danger { background: var(--color-danger-bg); color: var(--color-danger); }
+.oak-notice-info { background: var(--color-surface); color: var(--color-text); }
+.oak-notice-success { background: var(--color-success-bg); color: var(--color-success-ink); }
+.oak-locked { display: grid; gap: 10px; justify-items: start; padding: 18px; border-radius: 11px; background: var(--color-surface); }
+.oak-locked > .oak-i { width: 26px; height: 26px; color: var(--color-brand-teal); }
+.oak-locked h3 { font: 600 1.05rem var(--font-serif); }
+.oak-locked p { color: var(--color-text-muted); font-size: .92rem; max-width: 52ch; }
+
+/* ---------- Notification ticker (NEW) ---------- */
+.oak-ticker { display: flex; align-items: stretch; background: var(--color-surface); border-bottom: 1px solid var(--color-border); min-height: 45px; font-size: .9rem; }
+.oak-ticker-label { display: flex; align-items: center; gap: 7px; padding: 0 14px; background: var(--color-brand-teal); color: var(--color-brand-cream); font-size: .82rem; white-space: nowrap; }
+.oak-ticker-label .oak-i { width: 17px; height: 17px; }
+.oak-ticker-view { position: relative; flex: 1; min-width: 0; overflow: hidden; }
+.oak-ticker-track { display: inline-flex; align-items: center; gap: 48px; padding-right: 48px; height: 100%; white-space: nowrap; animation: oak-scroll var(--ticker-dur, 38s) linear infinite; }
+.oak-ticker:hover .oak-ticker-track, .oak-ticker:focus-within .oak-ticker-track, .oak-ticker[data-paused] .oak-ticker-track { animation-play-state: paused; }
+.oak-ticker-track a { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; padding: 10px 2px; }
+.oak-ticker-track a:hover span:first-child { text-decoration: underline; }
+.oak-ticker-track b { font-weight: 600; }
+.oak-ticker-track i { width: 7px; height: 7px; border-radius: 50%; background: var(--color-accent-ochre); display: inline-block; }
+.oak-ticker-static { display: none; }
+.oak-ticker-pause { display: grid; place-items: center; width: var(--tap); background: none; border: 0; border-left: 1px solid var(--color-border); color: var(--color-brand-teal); }
+@keyframes oak-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+  .oak-ticker-track { animation: none; gap: 22px; }
+  .oak-ticker-view { overflow-x: auto; }
+  .oak-ticker-track [aria-hidden="true"] { display: none; }
+  .oak-ticker-pause { display: none; }
+}
+
+/* ---------- Bottom sheet / modal (NEW) ---------- */
+.oak-scrim { position: fixed; inset: 0; background: rgba(31,54,56,.5); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 60; }
+.oak-scrim[data-open] { display: flex; }
+.oak-sheet { width: 100%; max-width: 440px; max-height: 92vh; overflow-y: auto; background: #fff; border-radius: 14px; border: 1px solid var(--color-border); padding: 22px; }
+.oak-sheet h2 { font-size: 1.3rem; font-weight: 600; }
+.oak-sheet > p.oak-sheet-sub { margin: 4px 0 16px; color: var(--color-text-muted); font-size: .92rem; }
+.oak-sheet-actions { display: flex; gap: 10px; margin-top: 18px; }
+.oak-sheet-actions .oak-btn { flex: 1; }
+.oak-rules { display: grid; gap: 10px; margin: 6px 0 0; }
+.oak-rules li { display: flex; gap: 10px; align-items: flex-start; font-size: .93rem; }
+.oak-rules .oak-i { color: var(--color-brand-teal); margin-top: 2px; }
+
+/* ---------- Toast (NEW) ---------- */
+.oak-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--color-text); color: #fff; padding: 11px 16px; border-radius: 9px; font-size: .92rem; z-index: 80; display: none; max-width: 90vw; }
+.oak-toast[data-open] { display: block; }
+
+/* ---------- Form fields (NEW — login, profile) ---------- */
+.oak-field { display: grid; gap: 6px; }
+.oak-field label { font-size: .92rem; font-weight: 600; }
+.oak-field input { min-height: 48px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px; background: #fff; font: inherit; color: var(--color-text); width: 100%; }
+.oak-field input[aria-invalid="true"] { border-color: var(--color-danger); background: var(--color-danger-bg); }
+.oak-field .oak-hint { font-size: .85rem; color: var(--color-text-muted); }
+.oak-field .oak-error { font-size: .88rem; color: var(--color-danger); display: flex; gap: 6px; align-items: center; }
+
+/* ---------- Pagination (NEW — mirrors Laravel simple links) ---------- */
+.oak-pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; font-size: .9rem; color: var(--color-text-muted); }
+
+/* ---------- Design-only chrome (NOT part of the build) ---------- */
+.design-only { position: fixed; z-index: 50; left: 12px; bottom: 12px; background: #1F3638; color: #fff; border-radius: 10px; padding: 8px 10px; font: 12px/1.3 var(--font-sans); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; max-width: calc(100vw - 24px); box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+.design-only b { font-weight: 600; margin-right: 4px; }
+.design-only button { background: rgba(255,255,255,.12); color: #fff; border: 0; border-radius: 6px; padding: 5px 9px; font-size: 12px; min-height: 28px; }
+.design-only button[aria-pressed="true"] { background: var(--color-brand-cream); color: var(--color-text); }
+
+/* ---------- Mobile (≤767px) ---------- */
+@media (max-width: 767px) {
+  .oak-app-shell { display: block; padding-bottom: 76px; }
+  .oak-sidebar { display: none; }
+  .oak-header { display: block; }
+  .oak-dashboard-heading { display: none; }
+  .oak-dashboard { padding: 14px 14px 28px; }
+  .oak-metric-grid { gap: 8px; }
+  .oak-metric { padding: 11px 10px; border-radius: 10px; }
+  .oak-metric > span { font-size: .78rem; }
+  .oak-metric > strong { font-size: 1.4rem; }
+  .oak-two-col { grid-template-columns: 1fr; gap: 0; }
+  .oak-banner { flex-direction: column; align-items: stretch; }
+  .oak-banner .oak-btn { width: 100%; }
+  .oak-section { margin-top: 22px; }
+  .oak-mobile-tabs { display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 40; min-height: 68px; background: #fff; border-top: 1px solid var(--color-border); padding-bottom: env(safe-area-inset-bottom); }
+  .oak-mobile-tabs > a, .oak-mobile-tabs > button { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 7px 2px; color: var(--color-tab-idle); text-decoration: none; font-size: .72rem; line-height: 1.1; background: none; border: 0; }
+  .oak-mobile-tabs .oak-i { width: 23px; height: 23px; }
+  .oak-mobile-tabs [aria-current="page"], .oak-mobile-tabs .oak-active { color: var(--color-brand-teal); font-weight: 600; }
+  .oak-mobile-tabs [aria-current="page"] .oak-i { stroke-width: 2.4; }
+  .oak-scrim { align-items: flex-end; padding: 0; }
+  .oak-sheet { max-width: none; border-radius: 16px 16px 0 0; padding-bottom: calc(22px + env(safe-area-inset-bottom)); }
+  .design-only { bottom: 80px; }
+  /* tables that must stay tables become two-line rows */
+  .oak-stack thead { display: none; }
+  .oak-stack tr { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 4px 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--color-border-light); }
+  .oak-stack tr:last-child { border-bottom: 0; }
+  .oak-stack td { border: 0; padding: 0; }
+  .oak-stack td:first-child { grid-column: 1; grid-row: 1; }
+  .oak-stack td:last-child { grid-column: 2; grid-row: 1; text-align: right; }
+  .oak-stack td:nth-child(2):not(:last-child) { grid-column: 1 / -1; grid-row: 2; color: var(--color-text-muted); font-size: .85rem; }
+  .oak-notice-action { flex-wrap: wrap; }
+  .oak-notice-action > form, .oak-notice-action > form .oak-btn { width: 100%; }
+  .oak-metric > strong.oak-metric-locked { font-size: 1.05rem; }
+  .oak-ticker-label span { display: none; }
+  .oak-ticker-track { display: none; }
+  .oak-ticker-static { display: flex; align-items: center; min-height: 44px; padding: 0 12px; font-size: .9rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
+  .oak-ticker-static[data-fade] { animation: oak-fade .45s ease; }
+  @keyframes oak-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+}
+@media (min-width: 768px) and (max-width: 1000px) { .oak-dashboard { padding: 20px 20px 40px; } }
+
+/* ---------- Exam list rows (NEW) ---------- */
+.oak-exam-list { display: grid; }
+.oak-exam-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px 16px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--color-border-light); }
+.oak-exam-row:last-child { border-bottom: 0; }
+.oak-exam-row h3 { font: 600 1rem var(--font-sans); }
+.oak-exam-meta { color: var(--color-text-muted); font-size: .88rem; margin-top: 2px; display: flex; flex-wrap: wrap; gap: 2px 14px; }
+.oak-exam-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.oak-exam-meta .oak-i { width: 15px; height: 15px; }
+.oak-exam-row[data-open-now] { background: #fff; border: 1.5px solid var(--color-brand-teal); border-radius: 10px; padding: 14px 16px; margin-bottom: 10px; }
+.oak-exam-row > .oak-status-pill { justify-self: start; }
+.oak-exam-score { font-size: .95rem; white-space: nowrap; }
+@media (max-width: 767px) {
+  .oak-exam-row { grid-template-columns: 1fr; }
+  .oak-exam-row > .oak-btn { width: 100%; }
+}
+
+/* Student batch 2 — ONLY the classes that are new in this batch. Load after oak-student.css.
+   Same tokens, same 767px breakpoint. */
+
+/* ---------- Filter chips (Assignments, E-Notes, Exam result) ---------- */
+.oak-chip-nav { display: flex; flex-wrap: wrap; gap: 8px; }
+.oak-chip { display: inline-flex; align-items: center; gap: 6px; min-height: var(--tap); padding: 0 16px; border-radius: 999px; border: 1px solid var(--color-border); background: #fff; color: var(--color-text); font-size: .92rem; text-decoration: none; }
+.oak-chip:hover { background: var(--color-surface); }
+.oak-chip[aria-current="true"], .oak-chip[aria-pressed="true"] { background: var(--color-brand-teal); border-color: var(--color-brand-teal); color: var(--color-brand-cream); font-weight: 600; }
+.oak-chip small { font-size: .78rem; opacity: .85; }
+.oak-subpage-note { color: var(--color-text-muted); font-size: .92rem; max-width: 62ch; }
+
+/* ---------- Exam result ---------- */
+.rs-hero { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 6px 28px; align-items: center; background: var(--color-surface); border-radius: 12px; padding: 20px 24px; }
+.rs-score { font: 400 clamp(2.4rem,5vw,3.2rem)/1 var(--font-serif); }
+.rs-score small { font-size: .45em; color: var(--color-text-muted); }
+.rs-meter { height: 10px; border-radius: 999px; background: #fff; overflow: hidden; margin-top: 10px; }
+.rs-meter > i { display: block; height: 100%; background: var(--color-success); }
+.rs-hero p { color: var(--color-text-muted); font-size: .92rem; }
+.rs-q { padding: 16px 0; border-bottom: 1px solid var(--color-border-light); display: grid; gap: 8px; }
+.rs-q:last-child { border-bottom: 0; }
+.rs-q h3 { font: 400 1.05rem/1.5 var(--font-serif); display: flex; gap: 10px; }
+.rs-q h3 > span:first-child { color: var(--color-text-muted); font-family: var(--font-sans); font-size: .9rem; flex: 0 0 2ch; padding-top: 2px; }
+.rs-ans { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding-left: calc(2ch + 10px); font-size: .93rem; }
+.rs-ans .oak-muted { color: var(--color-text-muted); }
+.rs-explain { margin-left: calc(2ch + 10px); padding: 9px 12px; border-left: 3px solid var(--color-brand-teal); background: var(--color-surface); border-radius: 0 8px 8px 0; font-size: .92rem; }
+.rs-waiting { display: grid; justify-items: start; gap: 10px; padding: 26px; background: var(--color-surface); border-radius: 12px; }
+.rs-waiting > .oak-i { width: 30px; height: 30px; color: var(--color-brand-teal); }
+.rs-waiting h2 { font: 600 1.2rem var(--font-serif); }
+.rs-waiting p { color: var(--color-text-muted); max-width: 54ch; }
+
+/* ---------- Report card ---------- */
+.rc-head { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 16px; align-items: center; padding: 18px 20px; background: var(--color-surface); border-radius: 12px; }
+.rc-head h2 { font: 600 1.35rem var(--font-serif); }
+.rc-head p { color: var(--color-text-muted); font-size: .92rem; margin-top: 2px; }
+.rc-facts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin-top: 12px; }
+.rc-fact { padding: 12px 14px; border: 1px solid var(--color-border); border-radius: 10px; background: #fff; }
+.rc-fact span { display: block; color: var(--color-text-muted); font-size: .82rem; }
+.rc-fact strong { font: 400 1.5rem var(--font-serif); }
+.rc-table th.rc-c, .rc-table td.rc-c { text-align: center; }
+.rc-comp { color: var(--color-text-muted); font-size: .85rem; }
+.rc-grade { display: inline-grid; place-items: center; min-width: 34px; height: 30px; border-radius: 8px; background: var(--color-surface); font-weight: 700; }
+.rc-comments { display: grid; gap: 10px; }
+.rc-comment { padding: 14px 16px; border: 1px solid var(--color-border); border-radius: 10px; background: #fff; }
+.rc-comment h3 { font: 600 .92rem var(--font-sans); color: var(--color-text-muted); margin-bottom: 4px; }
+.rc-comment p { font-family: var(--font-serif); font-size: 1.02rem; line-height: 1.55; }
+.rc-foot { color: var(--color-text-muted); font-size: .85rem; margin-top: 14px; }
+
+/* ---------- Attendance ---------- */
+.at-grid { display: grid; grid-template-columns: repeat(10,minmax(0,1fr)); gap: 6px; }
+.at-cell { display: grid; place-items: center; gap: 0; height: 52px; border-radius: 8px; font-size: .72rem; line-height: 1.15; padding-top: 3px; }
+.at-cell b { font-size: 1rem; font-weight: 700; }
+.at-p { background: var(--color-success-bg); color: var(--color-success-ink); }
+.at-l { background: var(--color-warning-bg); color: var(--color-warning); }
+.at-a { background: var(--color-danger-bg); color: var(--color-danger); }
+.at-e { background: var(--color-surface); color: var(--color-text-muted); }
+.at-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; font-size: .85rem; color: var(--color-text-muted); }
+.at-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.at-legend i { width: 18px; height: 18px; border-radius: 5px; display: inline-grid; place-items: center; font-style: normal; font-weight: 700; font-size: .68rem; }
+
+/* ---------- Assignments, notes, notifications, fees: shared row anatomy ---------- */
+.oak-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 4px 16px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--color-border-light); min-height: 64px; }
+.oak-row:last-child { border-bottom: 0; }
+.oak-row h3 { font: 600 1rem var(--font-sans); }
+.oak-row p { color: var(--color-text-muted); font-size: .88rem; margin-top: 2px; }
+.oak-row-end { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+details.oak-row { display: block; padding: 0; }
+details.oak-row > summary { list-style: none; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 4px 16px; align-items: center; padding: 14px 0; min-height: 64px; cursor: pointer; }
+details.oak-row > summary::-webkit-details-marker { display: none; }
+details.oak-row > summary .oak-i.chev { transition: transform .15s; }
+details.oak-row[open] > summary .oak-i.chev { transform: rotate(90deg); }
+.oak-row-body { padding: 0 0 16px; color: var(--color-text); font-size: .95rem; max-width: 64ch; }
+.oak-due-soon { color: var(--color-warning); font-weight: 600; }
+.oak-due-over { color: var(--color-danger); font-weight: 600; }
+
+/* notifications */
+.nt-row { position: relative; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px 16px; align-items: start; padding: 16px 16px 16px 20px; border-bottom: 1px solid var(--color-border-light); }
+.nt-row:last-child { border-bottom: 0; }
+.nt-row[data-unread] { background: #fff; }
+.nt-row[data-unread]::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--color-accent-ochre); }
+.nt-row h3 { font: 600 1rem var(--font-sans); display: flex; align-items: center; gap: 8px; }
+.nt-row:not([data-unread]) h3 { font-weight: 400; color: var(--color-text-muted); }
+.nt-row p { margin-top: 3px; font-size: .92rem; color: var(--color-text-muted); }
+.nt-row time { display: block; margin-top: 6px; font-size: .8rem; color: var(--color-text-muted); }
+.nt-list { border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-surface); overflow: hidden; }
+
+/* fees */
+.fe-summary { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 14px; align-items: center; padding: 18px 20px; border-radius: 12px; background: var(--color-surface); }
+.fe-summary strong { font: 400 2rem var(--font-serif); display: block; }
+.fe-summary span { color: var(--color-text-muted); font-size: .9rem; }
+
+/* profile */
+.pf-list { display: grid; border: 1px solid var(--color-border); border-radius: 12px; background: #fff; overflow: hidden; }
+.pf-list > div { display: grid; grid-template-columns: 180px minmax(0,1fr); gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--color-border-light); }
+.pf-list > div:last-child { border-bottom: 0; }
+.pf-list dt { color: var(--color-text-muted); font-size: .9rem; }
+.pf-list dd { margin: 0; word-break: break-word; }
+.pf-avatar { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--color-brand-teal); color: var(--color-brand-cream); font: 600 1.4rem var(--font-serif); flex: 0 0 56px; }
+
+/* login (guest layout: no shell) */
+.lg { min-height: 100vh; min-height: 100dvh; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); background: var(--color-bg); }
+.lg-brand { background: var(--color-brand-teal); display: grid; place-items: center; padding: 32px; }
+.lg-brand img { width: min(360px, 70%); height: auto; display: block; }
+.lg-main { display: grid; place-items: center; padding: 32px 24px; }
+.lg-card { width: 100%; max-width: 380px; display: grid; gap: 18px; }
+.lg-card h1 { font: 400 2rem var(--font-serif); }
+.lg-card .oak-sub { color: var(--color-text-muted); margin-top: -10px; }
+.lg-pw { position: relative; }
+.lg-pw input { padding-right: 52px; }
+.lg-pw button { position: absolute; right: 2px; top: 2px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: none; color: var(--color-text-muted); border-radius: 8px; }
+.lg-check { display: flex; align-items: center; gap: 10px; min-height: var(--tap); font-size: .95rem; }
+.lg-check input { width: 22px; height: 22px; accent-color: var(--color-brand-teal); }
+.lg-top { display: none; }
+
+@media (max-width: 767px) {
+  .rs-hero { grid-template-columns: 1fr; padding: 16px; }
+  .rs-ans, .rs-explain { padding-left: 0; margin-left: 0; }
+  .rs-ans { margin-left: 0; }
+  .rc-head { grid-template-columns: 1fr; }
+  .rc-head .oak-btn { width: 100%; }
+  .rc-facts { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+  .rc-fact { padding: 10px; }
+  .rc-fact strong { font-size: 1.2rem; }
+  .rc-table thead { display: none; }
+  .rc-table tr { display: grid; grid-template-columns: auto auto minmax(0,1fr) auto; gap: 4px 8px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--color-border-light); }
+  .rc-table tr:last-child { border-bottom: 0; }
+  .rc-table td { border: 0; padding: 0; text-align: left !important; }
+  .rc-table td.rc-subject { grid-column: 1 / 4; grid-row: 1; font-weight: 600; }
+  .rc-table td.rc-gradecell { grid-column: 4; grid-row: 1; text-align: right !important; }
+  .rc-table td.rc-total { grid-column: 1; grid-row: 2; font-size: .92rem; }
+  .rc-table td.rc-total::before { content: "Total "; color: var(--color-text-muted); }
+  .rc-table td.rc-pct { grid-column: 2; grid-row: 2; font-size: .92rem; color: var(--color-text-muted); }
+  .rc-table td.rc-pct::before { content: "· "; }
+  .rc-table td.rc-remark { grid-column: 3 / 5; grid-row: 2; text-align: right !important; color: var(--color-text-muted); font-size: .88rem; }
+  .rc-table td.rc-compcell { grid-column: 1 / -1; grid-row: 3; }
+  .at-grid { grid-template-columns: repeat(6,minmax(0,1fr)); }
+  .oak-row { grid-template-columns: 1fr; }
+  .oak-row-end { justify-content: flex-start; }
+  .oak-row-end .oak-btn { width: 100%; }
+  .fe-summary { grid-template-columns: 1fr; }
+  .fe-summary .oak-btn { width: 100%; }
+  .nt-row { grid-template-columns: 1fr; }
+  .nt-row .oak-btn { width: 100%; }
+  .pf-list > div { grid-template-columns: 1fr; gap: 2px; }
+  .lg { grid-template-columns: 1fr; }
+  .lg-brand { display: none; }
+  .lg-top { display: flex; align-items: center; gap: 12px; background: var(--color-brand-teal); color: var(--color-brand-cream); padding: 18px; }
+  .lg-top .oak-logo-crop { width: 44px; height: 44px; flex-basis: 44px; }
+  .lg-top .oak-school-name { font-size: 1.15rem; }
+  .lg-main { place-items: start center; padding: 24px 18px 40px; }
+  .lg-card h1 { font-size: 1.7rem; }
+}
+
+/* Attendance with two sessions per day. NEW classes only; load after oak-student.css and oak-student-batch2.css.
+   Used by the student and parent Attendance pages and by the Admin/Head attendance screens. */
+
+/* Pill for "Not held": dashed and neutral, so it is never mistaken for Absent and never relies on colour */
+.oak-status-nh { background: transparent; color: var(--color-text-muted); border: 1px dashed var(--color-border); }
+.oak-status-pending { background: var(--color-surface); color: var(--color-text-muted); }
+
+/* 30-day strip: each cell = one school day, left half Morning, right half Afternoon */
+.at2-grid { display: grid; grid-template-columns: repeat(10,minmax(0,1fr)); gap: 6px; }
+.at2-cell { display: grid; grid-template-rows: auto 1fr; gap: 2px; padding: 4px; border-radius: 9px; background: #fff; border: 1px solid var(--color-border-light); min-height: 62px; }
+.at2-day { font-size: .72rem; line-height: 1; color: var(--color-text-muted); text-align: center; padding-top: 1px; }
+.at2-halves { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; }
+.at2-half { display: grid; place-items: center; min-height: 34px; border-radius: 6px; font-size: .88rem; font-weight: 700; }
+.at2-half.at-nh { background: transparent; color: var(--color-text-muted); border: 1px dashed var(--color-border); font-weight: 400; }
+.at2-half.at-u { background: var(--color-bg); color: var(--color-text-muted); font-weight: 400; border: 1px solid var(--color-border-light); }
+.at2-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 10px; font-size: .85rem; color: var(--color-text-muted); }
+.at2-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.at2-legend i { width: 20px; height: 20px; border-radius: 5px; display: inline-grid; place-items: center; font-style: normal; font-weight: 700; font-size: .72rem; }
+.at2-legend i.at-nh { border: 1px dashed var(--color-border); background: transparent; color: var(--color-text-muted); font-weight: 400; }
+.at2-legend i.at-u { border: 1px solid var(--color-border-light); background: var(--color-bg); color: var(--color-text-muted); font-weight: 400; }
+.at2-table th:not(:first-child), .at2-table td:not(:first-child) { width: 34%; }
+.at2-today { color: var(--color-text-muted); font-size: .8rem; display: block; }
+
+@media (max-width: 767px) {
+  .at2-grid { grid-template-columns: repeat(6,minmax(0,1fr)); }
+  .at2-table th:not(:first-child), .at2-table td:not(:first-child) { width: auto; }
+  .at2-table td { padding-left: 4px; padding-right: 4px; }
+  .at2-table .oak-status-pill { font-size: .72rem; padding: 3px 7px; }
+}
+
+/* Admin design — ONLY new styles. Reuses tokens.css and the existing components (oak-student.css, oak-student-batch2.css) unchanged.
+   Class prefix: ad-* for admin-only patterns; oak-nav-group / data-dense extend the existing shell. Same 767px breakpoint. */
+
+/* ---------- Shell extensions ---------- */
+.oak-app-shell[data-dense] { grid-template-columns: 170px minmax(0,1fr); }
+.oak-nav-group { margin: 14px 9px 4px; color: var(--color-band-muted); font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; }
+.oak-nav-group:first-child { margin-top: 0; }
+.oak-sidebar[aria-label] .oak-sidebar-links { gap: 2px; }
+
+/* ---------- Form controls the student batches did not need ---------- */
+.oak-field select, .oak-field textarea { min-height: 48px; padding: 10px 12px; border: 1px solid var(--color-border); border-radius: 8px; background: #fff; font: inherit; color: var(--color-text); width: 100%; }
+.oak-field select { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%), linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%); background-position: calc(100% - 20px) 21px, calc(100% - 14px) 21px; background-size: 6px 6px; background-repeat: no-repeat; padding-right: 36px; }
+.oak-field select[aria-invalid="true"], .oak-field textarea[aria-invalid="true"] { border-color: var(--color-danger); background-color: var(--color-danger-bg); }
+.ad-inline-select { min-height: 44px; padding: 8px 32px 8px 10px; border: 1px solid var(--color-border); border-radius: 8px; background: #fff; font: inherit; color: var(--color-text); width: 100%; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%), linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%); background-position: calc(100% - 17px) 18px, calc(100% - 11px) 18px; background-size: 6px 6px; background-repeat: no-repeat; }
+.ad-form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px 18px; }
+.ad-form-grid .ad-wide { grid-column: 1 / -1; }
+
+/* ---------- Section switcher (segmented control) ---------- */
+.ad-switch { display: inline-flex; padding: 4px; gap: 4px; background: var(--color-surface); border-radius: 12px; }
+.ad-seg { min-height: 44px; padding: 0 18px; border: 0; border-radius: 9px; background: transparent; color: var(--color-text); font-size: .93rem; white-space: nowrap; }
+.ad-seg:hover { background: rgba(255,255,255,.55); }
+.ad-seg[aria-pressed="true"], .ad-seg[aria-current="true"] { background: var(--color-brand-teal); color: var(--color-brand-cream); font-weight: 600; }
+.ad-scope { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-bottom: 16px; }
+.ad-scope .oak-muted { color: var(--color-text-muted); font-size: .88rem; }
+.ad-section-badge { display: inline-flex; align-items: center; gap: 7px; padding: 5px 13px; border-radius: 999px; background: var(--color-surface); color: var(--color-brand-teal); font-size: .85rem; font-weight: 600; white-space: nowrap; }
+.ad-section-badge .oak-i { width: 16px; height: 16px; }
+
+/* ---------- Page tabs ---------- */
+.ad-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--color-border); margin: 0 0 18px; overflow-x: auto; }
+.ad-tabs a, .ad-tabs button { display: inline-flex; align-items: center; min-height: var(--tap); padding: 0 16px; border: 0; background: none; color: var(--color-text-muted); text-decoration: none; font-size: .95rem; border-bottom: 3px solid transparent; white-space: nowrap; margin-bottom: -1px; }
+.ad-tabs [aria-current="page"], .ad-tabs [aria-selected="true"] { color: var(--color-brand-teal); border-bottom-color: var(--color-brand-teal); font-weight: 600; }
+.ad-tabs a:hover, .ad-tabs button:hover { color: var(--color-text); }
+
+/* ---------- Cards / panels ---------- */
+.ad-card { background: #fff; border: 1px solid var(--color-border); border-radius: 12px; padding: 18px 20px; }
+.ad-card + .ad-card { margin-top: 14px; }
+.ad-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.ad-card-head h2, .ad-card-head h3 { font: 600 1.15rem var(--font-serif); }
+.ad-card-head p { color: var(--color-text-muted); font-size: .88rem; margin-top: 2px; }
+.ad-grid-2 { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+.ad-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.ad-tag { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--color-border); background: var(--color-bg); font-size: .88rem; }
+.ad-dept { display: inline-flex; padding: 2px 10px; border-radius: 999px; background: var(--color-brand-cream); color: var(--color-text); font-size: .78rem; font-weight: 600; }
+.ad-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ad-iconbtn { display: inline-grid; place-items: center; width: var(--tap); height: var(--tap); border: 1px solid var(--color-border); border-radius: 8px; background: #fff; color: var(--color-brand-teal); }
+.ad-iconbtn:hover { background: var(--color-surface); }
+.ad-iconbtn[disabled] { opacity: .45; cursor: not-allowed; }
+.ad-meta { color: var(--color-text-muted); font-size: .85rem; }
+
+/* ---------- Dashboard lists ---------- */
+.ad-attn { display: grid; }
+.ad-attn a { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 56px; padding: 10px 2px; border-bottom: 1px solid var(--color-border-light); text-decoration: none; }
+.ad-attn a:last-child { border-bottom: 0; }
+.ad-attn a:hover { background: var(--color-surface); }
+.ad-attn strong { font: 400 1.4rem var(--font-serif); min-width: 2ch; text-align: right; }
+.ad-actions-row { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+.ad-action { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-height: 72px; padding: 14px 16px; border-radius: 11px; background: var(--color-bg); border: 1.5px solid var(--color-accent-ochre); color: var(--color-ochre-ink); text-decoration: none; }
+.ad-action.ad-primary { background: var(--color-brand-teal); border-color: var(--color-brand-teal); color: var(--color-brand-cream); }
+.ad-action span { font-size: .8rem; opacity: .9; }
+.ad-action strong { font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.ad-skel { display: none; }
+body[data-state="loading"] .ad-skel { display: block; height: 1.5rem; width: 60%; border-radius: 6px; background: linear-gradient(90deg, var(--color-border-light), #fff, var(--color-border-light)); background-size: 200% 100%; animation: ad-shimmer 1.2s linear infinite; }
+@keyframes ad-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* ---------- Stepper ---------- */
+.ad-stepper { display: flex; gap: 8px; margin: 0 0 18px; counter-reset: step; }
+.ad-stepper li { flex: 1; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--color-surface); color: var(--color-text-muted); font-size: .9rem; counter-increment: step; }
+.ad-stepper li::before { content: counter(step); display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: #fff; border: 1px solid var(--color-border); font-weight: 700; font-size: .82rem; flex: 0 0 26px; }
+.ad-stepper li[aria-current="step"] { background: var(--color-brand-teal); color: var(--color-brand-cream); font-weight: 600; }
+.ad-stepper li[aria-current="step"]::before { background: var(--color-brand-cream); color: var(--color-brand-teal); border-color: var(--color-brand-cream); }
+.ad-stepper li[data-done]::before { content: "\2713"; background: var(--color-success-bg); color: var(--color-success-ink); border-color: var(--color-success-bg); }
+.ad-step-short { display: none; font-size: .9rem; color: var(--color-text-muted); margin-bottom: 12px; }
+
+/* ---------- Tick list (checkbox rows) ---------- */
+.ad-tick-list { display: grid; gap: 8px; border: 0; padding: 0; margin: 0; }
+.ad-tick { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 8px 14px; border: 1px solid var(--color-border); border-radius: 10px; background: #fff; cursor: pointer; }
+.ad-tick input { width: 22px; height: 22px; accent-color: var(--color-brand-teal); flex: 0 0 22px; margin: 0; }
+.ad-tick .ad-tick-main { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }
+.ad-tick:has(input:checked) { border-color: var(--color-brand-teal); background: var(--color-surface); }
+.ad-tick:has(input:focus-visible) { outline: 3px solid var(--color-accent-ochre); outline-offset: 2px; }
+.ad-tick-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; font-size: .9rem; color: var(--color-text-muted); }
+
+/* ---------- Preview + report ---------- */
+.ad-summary { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin-bottom: 12px; }
+.ad-summary > div { padding: 14px 16px; border-radius: 11px; background: var(--color-surface); }
+.ad-summary span { display: block; color: var(--color-text-muted); font-size: .85rem; }
+.ad-summary strong { font: 400 2rem var(--font-serif); }
+.ad-summary .ad-add strong { color: var(--color-success-num); }
+.ad-summary .ad-skip strong { color: var(--color-text-muted); }
+.ad-summary .ad-fail strong { color: var(--color-danger); }
+.ad-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 18px; }
+
+/* ---------- Bulk action bar ---------- */
+.ad-bulkbar { position: sticky; bottom: 12px; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 14px; margin-top: 14px; border-radius: 12px; background: var(--color-text); color: #fff; box-shadow: 0 6px 20px rgba(31,54,56,.25); }
+.ad-bulkbar .oak-btn { min-height: 44px; }
+.ad-bulkbar .oak-btn-quiet { background: transparent; color: #fff; border-color: rgba(255,255,255,.4); }
+.ad-bulkbar select { min-height: 44px; border-radius: 8px; border: 0; padding: 0 10px; font: inherit; }
+
+/* ---------- Assignment matrix ---------- */
+.ad-scroll { overflow-x: auto; border: 1px solid var(--color-border); border-radius: 12px; background: #fff; }
+.ad-matrix { min-width: 640px; }
+.ad-matrix th { background: var(--color-surface); color: var(--color-text); font-weight: 600; font-size: .85rem; text-align: center; padding: 10px 8px; border-bottom: 1px solid var(--color-border); }
+.ad-matrix th:first-child, .ad-matrix td:first-child { text-align: left; position: sticky; left: 0; background: #fff; z-index: 1; min-width: 150px; padding-left: 14px; }
+.ad-matrix th:first-child { background: var(--color-surface); }
+.ad-matrix td { text-align: center; padding: 4px 8px; border-bottom: 1px solid var(--color-border-light); }
+.ad-matrix tr:last-child td { border-bottom: 0; }
+.ad-matrix .ad-lvl td { background: var(--color-bg); font-size: .78rem; color: var(--color-text-muted); letter-spacing: .04em; text-transform: uppercase; text-align: left; padding: 6px 14px; }
+.ad-cell { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 8px; cursor: pointer; position: relative; }
+.ad-cell input { width: 22px; height: 22px; accent-color: var(--color-brand-teal); margin: 0; cursor: pointer; }
+.ad-cell[data-changed="add"] { background: var(--color-success-bg); box-shadow: inset 0 0 0 2px var(--color-success); }
+.ad-cell[data-changed="remove"] { background: var(--color-danger-bg); box-shadow: inset 0 0 0 2px var(--color-danger); }
+.ad-na { color: var(--color-border); font-size: 1.1rem; display: inline-block; width: 44px; line-height: 44px; }
+.ad-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 10px 0 0; font-size: .85rem; color: var(--color-text-muted); }
+.ad-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.ad-legend i { width: 16px; height: 16px; border-radius: 4px; display: inline-block; }
+.ad-legend .a { background: var(--color-success-bg); box-shadow: inset 0 0 0 2px var(--color-success); }
+.ad-legend .r { background: var(--color-danger-bg); box-shadow: inset 0 0 0 2px var(--color-danger); }
+.ad-legend .n { background: #fff; border: 1px solid var(--color-border); }
+
+/* ---------- Structure lists ---------- */
+.ad-level-row { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,260px) auto; gap: 10px 14px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--color-border-light); }
+.ad-level-row:last-child { border-bottom: 0; }
+.ad-class-row { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(0,1fr) minmax(0,1fr) auto; gap: 8px 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--color-border-light); }
+.ad-class-row:last-child { border-bottom: 0; }
+.ad-class-row h4 { font: 600 1rem var(--font-sans); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ad-group-title { margin: 22px 0 6px; display: flex; align-items: center; gap: 10px; font: 600 1rem var(--font-serif); }
+.ad-group-title small { font: 400 .85rem var(--font-sans); color: var(--color-text-muted); }
+
+@media (max-width: 767px) {
+  .ad-switch { display: flex; width: 100%; }
+  .ad-seg { flex: 1; padding: 0 6px; font-size: .85rem; white-space: normal; line-height: 1.15; }
+  .ad-grid-2, .ad-form-grid { grid-template-columns: 1fr; }
+  .ad-actions-row { grid-template-columns: 1fr; gap: 8px; }
+  .ad-action { min-height: 64px; flex-direction: row; align-items: center; justify-content: space-between; }
+  .ad-stepper { display: none; }
+  .ad-step-short { display: block; }
+  .ad-summary { gap: 8px; }
+  .ad-summary > div { padding: 10px; }
+  .ad-summary strong { font-size: 1.5rem; }
+  .ad-level-row, .ad-class-row { grid-template-columns: 1fr; }
+  .ad-bar .oak-btn { width: 100%; }
+  .ad-bulkbar { bottom: 80px; }
+  /* matrix: one card per class, subjects as tick rows */
+  .ad-scroll { overflow: visible; border: 0; background: none; }
+  .ad-matrix { min-width: 0; }
+  .ad-matrix thead { display: none; }
+  .ad-matrix tr { display: block; margin-bottom: 10px; border: 1px solid var(--color-border); border-radius: 12px; background: #fff; overflow: hidden; }
+  .ad-matrix td { display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; min-height: 52px; padding: 4px 12px; border-bottom: 1px solid var(--color-border-light); }
+  .ad-matrix td:first-child { position: static; background: var(--color-surface); font-weight: 600; min-height: 44px; }
+  .ad-matrix td[data-label]::before { content: attr(data-label); font-size: .93rem; }
+  .ad-matrix td.ad-na-cell { display: none; }
+  .ad-matrix .ad-lvl { display: block; border: 0; background: none; margin: 14px 0 6px; }
+  .ad-matrix .ad-lvl td { background: none; padding: 0; min-height: 0; border: 0; }
+}
+
+/* ---------- Metrics (3 or 4 cards) + queue rows + promotion rows ---------- */
+.ad-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.ad-queue th { text-align: left; color: var(--color-text-muted); font-weight: 400; font-size: .88rem; padding: 8px 6px; border-bottom: 1px solid var(--color-border); }
+.ad-queue td { padding: 11px 6px; border-bottom: 1px solid var(--color-border-light); font-size: .95rem; }
+.ad-queue tr:last-child td { border-bottom: 0; }
+.ad-queue td:last-child, .ad-queue th:last-child { text-align: right; }
+.ad-prom-head, .ad-prom-row { display: grid; grid-template-columns: 44px minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.1fr) minmax(0,.7fr); gap: 10px 12px; align-items: center; }
+.ad-prom-head { padding: 8px 4px; border-bottom: 1px solid var(--color-border); color: var(--color-text-muted); font-size: .88rem; }
+.ad-prom-row { padding: 8px 4px; border-bottom: 1px solid var(--color-border-light); min-height: 60px; }
+.ad-prom-row:last-child { border-bottom: 0; }
+.ad-prom-row input[type="checkbox"], .ad-prom-head input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--color-brand-teal); margin: 11px; }
+.ad-prom-row[data-stay] { background: var(--color-warning-bg); border-radius: 8px; }
+.ad-prom-row[data-sel] { background: var(--color-surface); border-radius: 8px; }
+.ad-prom-row[data-missing] { background: var(--color-danger-bg); border-radius: 8px; }
+.ad-prom-name { font-weight: 600; }
+.ad-prom-name small { display: block; font-weight: 400; color: var(--color-text-muted); }
+@media (max-width: 767px) {
+  .ad-metrics { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; }
+  .ad-queue thead { display: none; }
+  .ad-queue tr { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 3px 10px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--color-border-light); }
+  .ad-queue tr:last-child { border-bottom: 0; }
+  .ad-queue td { border: 0; padding: 0; text-align: left; }
+  .ad-queue td:nth-child(1) { grid-column: 1; grid-row: 1; font-weight: 600; }
+  .ad-queue td:nth-child(2), .ad-queue td:nth-child(3) { grid-column: 1; color: var(--color-text-muted); font-size: .85rem; }
+  .ad-queue td:last-child { grid-column: 2; grid-row: 1 / span 3; text-align: right; }
+  .ad-prom-head { display: none; }
+  .ad-prom-row { grid-template-columns: 44px minmax(0,1fr); gap: 4px 8px; padding: 12px 4px; }
+  .ad-prom-row > :nth-child(3) { grid-column: 2; font-size: .85rem; color: var(--color-text-muted); }
+  .ad-prom-row > :nth-child(3)::before { content: "Now: "; }
+  .ad-prom-row > :nth-child(4), .ad-prom-row > :nth-child(5) { grid-column: 1 / -1; }
+}
+
+/* ---------- Design-only chrome (NOT part of the build): keep the State bar reachable while a sheet is open ---------- */
+body:has(.oak-scrim[data-open]) .design-only { z-index: 70; bottom: auto; top: 8px; }
+
+code { font-size: .88em; overflow-wrap: anywhere; background: var(--color-surface); padding: 1px 5px; border-radius: 4px; }
+
+/* ---------- Sidebar: the nav area scrolls on its own; brand and Sign out stay pinned ---------- */
+.oak-sidebar { height: 100vh; height: 100dvh; }
+.oak-sidebar-brand, .oak-sidebar-foot { flex: none; }
+.oak-sidebar-links { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(245,229,138,.35) transparent;
+  background-color: var(--color-brand-teal);
+  /* scroll shadows: shown only on the side that has more content */
+  background-image: linear-gradient(var(--color-brand-teal) 30%, rgba(46,79,86,0)), linear-gradient(rgba(46,79,86,0), var(--color-brand-teal) 70%), radial-gradient(farthest-side at 50% 0, rgba(0,0,0,.4), rgba(0,0,0,0)), radial-gradient(farthest-side at 50% 100%, rgba(0,0,0,.4), rgba(0,0,0,0));
+  background-position: 0 0, 0 100%, 0 0, 0 100%; background-repeat: no-repeat; background-size: 100% 28px, 100% 28px, 100% 10px, 100% 10px; background-attachment: local, local, scroll, scroll; }
+.oak-sidebar-links::-webkit-scrollbar { width: 6px; }
+.oak-sidebar-links::-webkit-scrollbar-thumb { background: rgba(245,229,138,.35); border-radius: 3px; }
+/* short laptop screens (mouse pointers only): tighter rows so most of the nav fits without scrolling */
+@media (min-width: 768px) and (max-height: 800px) and (pointer: fine) {
+  .oak-sidebar { padding-top: 12px; padding-bottom: 10px; }
+  .oak-sidebar-brand { min-height: 48px; margin-bottom: 12px; }
+  .oak-sidebar-links a, .oak-sidebar-foot a, .oak-sidebar-foot button { min-height: 36px; padding-top: 5px; padding-bottom: 5px; }
+  .oak-nav-group { margin-top: 8px; margin-bottom: 2px; }
+}
+
+/* ---------- Matrix with many subjects (20+): frozen class column, sticky header, sideways scroll ---------- */
+.ad-scroll[data-wide] { max-height: 460px; overflow: auto; }
+.ad-scroll[data-wide] .ad-matrix { min-width: 0; width: max-content; }
+.ad-scroll[data-wide] .ad-matrix th { position: sticky; top: 0; z-index: 2; min-width: 104px; max-width: 124px; }
+.ad-scroll[data-wide] .ad-matrix th:first-child { left: 0; z-index: 4; min-width: 150px; }
+.ad-scroll[data-wide] .ad-matrix td:first-child { z-index: 3; box-shadow: 1px 0 0 var(--color-border); }
+.ad-scroll[data-wide] .ad-matrix .ad-lvl td:first-child { box-shadow: none; }
+@media (max-width: 767px) {
+  .ad-scroll[data-wide] { max-height: none; overflow: visible; }
+  .ad-scroll[data-wide] .ad-matrix { width: auto; }
+  .ad-scroll[data-wide] .ad-matrix th { position: static; }
+}
+/* dense Admin sidebar: keep "Payment gateway" on one line at 170px */
+.oak-app-shell[data-dense] .oak-sidebar-links a { gap: 8px; font-size: .84rem; }
+.oak-app-shell[data-dense] .oak-sidebar-links a { min-height: 38px; }
+@media (min-width: 768px) and (max-height: 800px) and (pointer: fine) { .oak-app-shell[data-dense] .oak-sidebar-links { gap: 0; } }
+@media (min-width: 768px) and (max-height: 800px) and (pointer: fine) {
+  .oak-sidebar { padding-top: 8px; }
+  .oak-sidebar-brand { min-height: 44px; margin-bottom: 6px; }
+  .oak-app-shell[data-dense] .oak-nav-group { margin-top: 4px; }
+}
+.oak-app-shell[data-dense] .oak-sidebar-links a { padding-left: 8px; padding-right: 4px; }
+
+/* ---------- Attendance today: Morning and Afternoon on one card ---------- */
+.ad-ampm { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ad-ampm span { color: var(--color-text-muted); font-size: .85rem; }
+.ad-ampm b { font: 400 1.35rem var(--font-serif); color: var(--color-success-num); }
+.ad-ampm b.ad-nh { font: 400 .95rem var(--font-sans); color: var(--color-text-muted); }
+.ad-seg-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.ad-impact { display: grid; gap: 8px; padding: 12px 14px; border-radius: 10px; background: var(--color-surface); margin: 12px 0 4px; font-size: .92rem; }
+.ad-impact div { display: flex; gap: 10px; align-items: flex-start; }
+.ad-impact .oak-i { margin-top: 2px; color: var(--color-brand-teal); }
+
+</style>
+<style>
+.bf-prog{height:10px;border-radius:999px;background:#fff;overflow:hidden;margin-top:8px;border:1px solid var(--color-border-light)}
+.bf-prog i{display:block;height:100%;background:var(--color-brand-teal)}
+.bf-lines{width:100%;border-collapse:collapse}.bf-lines td,.bf-lines th{padding:9px 0;border-bottom:1px solid var(--color-border-light);text-align:left;vertical-align:top}
+.bf-lines td:last-child,.bf-lines th:last-child{text-align:right}.bf-lines th{color:var(--color-text-muted);font-weight:400;font-size:.88rem}
+.bf-total td{border-bottom:0;border-top:1.5px solid var(--color-border);font-weight:700;padding-top:10px}
+.bf-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.bf-kv{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px 14px;margin:0}.bf-kv dt{color:var(--color-text-muted)}.bf-kv dd{margin:0;overflow-wrap:anywhere}
+.bf-fee{display:grid;grid-template-columns:minmax(0,1.5fr) 150px 130px auto;gap:10px 14px;align-items:center;padding:10px 0;border-bottom:1px solid var(--color-border-light)}
+.bf-fee:last-child{border-bottom:0}.bf-fee h4{font:600 1rem var(--font-sans);margin:0}
+.bf-req{display:flex;align-items:center;gap:10px;min-height:44px}.bf-req input{width:22px;height:22px;accent-color:var(--color-brand-teal);margin:0}
+.bf-mono{font-family:ui-monospace,Menlo,Consolas,monospace;overflow-wrap:anywhere}
+.bf-copy{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}.bf-copy .bf-mono{flex:1 1 220px;min-height:44px;display:flex;align-items:center;padding:0 12px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface)}
+.bf-file{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px;border:1.5px dashed var(--color-border);border-radius:10px;background:#fff}
+.bf-slip{display:grid;place-items:center;min-height:220px;border-radius:10px;background:var(--color-surface);color:var(--color-text-muted);text-align:center;padding:20px}
+.bf-radio{display:flex;gap:10px;align-items:flex-start;min-height:44px;padding:6px 0}.bf-radio input{width:22px;height:22px;accent-color:var(--color-brand-teal);margin:2px 0 0}
+.bf-hist{margin:0;padding:0;list-style:none;display:grid;gap:8px}.bf-hist li{display:flex;gap:10px;color:var(--color-text-muted);font-size:.92rem}
+.bf-money{font-variant-numeric:tabular-nums}
+.bf-switch{display:inline-flex;align-items:center;gap:12px;min-height:44px;padding:0 4px;background:none;border:0;cursor:pointer;font:inherit;color:inherit}
+.bf-switch i{position:relative;width:52px;height:30px;border-radius:999px;background:#c9c1ae;flex:none;transition:background .15s}
+.bf-switch i::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff}
+.bf-switch[aria-checked="true"] i{background:var(--color-brand-teal)}.bf-switch[aria-checked="true"] i::after{left:25px}
+@media (max-width:767px){.bf-fee{grid-template-columns:minmax(0,1fr) auto}.bf-fee>:nth-child(2){grid-column:1/-1}.bf-kv{grid-template-columns:1fr;gap:2px 0}.bf-kv dd{margin-bottom:8px}}
+</style></head>
+<body>
+<div class="oak-app-shell" data-dense>
+  <aside class="oak-sidebar" aria-label="Main navigation">
+    <a class="oak-brand oak-sidebar-brand" href="admin-dashboard.html"><span class="oak-logo-crop" aria-hidden="true"></span><span class="oak-school-name">Oakfield</span></a>
+    <nav class="oak-sidebar-links"><a href="admin-dashboard.html" data-icon-name="layout-dashboard"><svg class="oak-i" data-icon="layout-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1" /> <path d="M5 16h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1" /> <path d="M15 12h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1" /> <path d="M15 4h4a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1v-2a1 1 0 0 1 1 -1" /></svg><span>Dashboard</span></a><div class="oak-nav-group">Teaching</div><a href="academic-sections.html" data-icon-name="school"><svg class="oak-i" data-icon="school" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 9l-10 -4l-10 4l10 4l10 -4v6" /> <path d="M6 10.6v5.4a6 3 0 0 0 12 0v-5.4" /></svg><span>Academics</span></a><a href="#" data-icon-name="report"><svg class="oak-i" data-icon="report" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h5.697" /> <path d="M18 14v4h4" /> <path d="M18 11v-4a2 2 0 0 0 -2 -2h-2" /> <path d="M8 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2" /> <path d="M14 18a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /> <path d="M8 11h4" /> <path d="M8 15h3" /></svg><span>Results</span></a><a href="#" data-icon-name="device-laptop"><svg class="oak-i" data-icon="device-laptop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 19l18 0" /> <path d="M5 7a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v8a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1l0 -8" /></svg><span>CBT</span></a><a href="#" data-icon-name="calendar-check"><svg class="oak-i" data-icon="calendar-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 21h-5.5a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v6" /> <path d="M16 3v4" /> <path d="M8 3v4" /> <path d="M4 11h16" /> <path d="M15 19l2 2l4 -4" /></svg><span>Attendance</span></a><a href="#" data-icon-name="clipboard-list"><svg class="oak-i" data-icon="clipboard-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" /> <path d="M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2" /> <path d="M9 12l.01 0" /> <path d="M13 12l2 0" /> <path d="M9 16l.01 0" /> <path d="M13 16l2 0" /></svg><span>Assignments</span></a><a href="#" data-icon-name="notebook"><svg class="oak-i" data-icon="notebook" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h11a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-11a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1m3 0v18" /> <path d="M13 8l2 0" /> <path d="M13 12l2 0" /></svg><span>E-Notes</span></a><div class="oak-nav-group">Daily ops</div><a href="#" data-icon-name="user-plus"><svg class="oak-i" data-icon="user-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /> <path d="M16 19h6" /> <path d="M19 16v6" /> <path d="M6 21v-2a4 4 0 0 1 4 -4h4" /></svg><span>Admissions</span></a><a href="students.html" data-icon-name="users"><svg class="oak-i" data-icon="users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /> <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /> <path d="M16 3.13a4 4 0 0 1 0 7.75" /> <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" /></svg><span>Students</span></a><a href="payment-record.html" data-icon-name="wallet"><svg class="oak-i" data-icon="wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8v-3a1 1 0 0 0 -1 -1h-10a2 2 0 0 0 0 4h12a1 1 0 0 1 1 1v3m0 4v3a1 1 0 0 1 -1 1h-12a2 2 0 0 1 -2 -2v-12" /> <path d="M20 12v4h-4a2 2 0 0 1 0 -4h4" /></svg><span>Payments</span></a><a href="fee-schedule.html" data-icon-name="receipt-2"><svg class="oak-i" data-icon="receipt-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2" /> <path d="M14 8h-2.5a1.5 1.5 0 0 0 0 3h1a1.5 1.5 0 0 1 0 3h-2.5m2 0v1.5m0 -9v1.5" /></svg><span>Fee schedule</span></a><div class="oak-nav-group">Administration</div><a href="staff.html" data-icon-name="id"><svg class="oak-i" data-icon="id" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v10a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -10" /> <path d="M7 10a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M15 8l2 0" /> <path d="M15 12l2 0" /> <path d="M7 16l10 0" /></svg><span>Staff HR</span></a><a href="#" data-icon-name="building"><svg class="oak-i" data-icon="building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21l18 0" /> <path d="M9 8l1 0" /> <path d="M9 12l1 0" /> <path d="M9 16l1 0" /> <path d="M14 8l1 0" /> <path d="M14 12l1 0" /> <path d="M14 16l1 0" /> <path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16" /></svg><span>School profile</span></a><a href="payment-gateway.html" data-icon-name="credit-card"><svg class="oak-i" data-icon="credit-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -8" /> <path d="M3 10l18 0" /> <path d="M7 15l.01 0" /> <path d="M11 15l2 0" /></svg><span>Payment gateway</span></a><a href="activity-log.html" data-icon-name="history"><svg class="oak-i" data-icon="history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8l0 4l2 2" /> <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" /></svg><span>Activity log</span></a></nav>
+    <div class="oak-sidebar-foot">
+      
+      <form method="post" action="#"><button type="submit"><svg class="oak-i" data-icon="logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" /> <path d="M9 12h12l-3 -3" /> <path d="M18 15l3 -3" /></svg><span>Sign out</span></button></form>
+    </div>
+  </aside>
+  <div class="oak-content">
+    <header class="oak-header">
+    <div class="oak-header-top">
+      <a class="oak-brand" href="admin-dashboard.html"><span class="oak-logo-crop" aria-hidden="true"></span><span class="oak-school-name">Oakfield</span></a>
+      <a class="oak-bell" href="#" aria-label="Notifications, 2 unread"><svg class="oak-i" data-icon="bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /> <path d="M9 17v1a3 3 0 0 0 6 0v-1" /></svg><b aria-hidden="true">2</b></a>
+    </div>
+    <div class="oak-header-intro"><strong>Academic structure</strong><span>Classes</span></div>
+  </header>
+    <section class="oak-ticker" role="region" aria-label="Latest notifications" data-ticker>
+  <div class="oak-ticker-label"><svg class="oak-i" data-icon="bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /> <path d="M9 17v1a3 3 0 0 0 6 0v-1" /></svg><span>Latest</span></div>
+  <div class="oak-ticker-view">
+    <div class="oak-ticker-track"><a href="#"><i aria-hidden="true"></i><span><b>Offer accepted</b></span><span>Amara Eze accepted the admission offer for SS1 Science.</span></a><a href="#"><i aria-hidden="true"></i><span><b>Offer accepted</b></span><span>Musa Danladi accepted the admission offer for Primary 3.</span></a><span aria-hidden="true" style="display:contents"><a tabindex="-1" href="#"><i aria-hidden="true"></i><span><b>Offer accepted</b></span><span>Amara Eze accepted the admission offer for SS1 Science.</span></a><a tabindex="-1" href="#"><i aria-hidden="true"></i><span><b>Offer accepted</b></span><span>Musa Danladi accepted the admission offer for Primary 3.</span></a></span></div>
+    <a class="oak-ticker-static" href="#" data-ticker-static><b>Offer accepted</b> · Amara Eze accepted the admission offer for SS1 Science.</a>
+  </div>
+  <button class="oak-ticker-pause" type="button" aria-pressed="false" aria-label="Pause moving notifications" data-ticker-pause><svg class="oak-i" data-icon="player-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1l0 -12" /> <path d="M14 6a1 1 0 0 1 1 -1h2a1 1 0 0 1 1 1v12a1 1 0 0 1 -1 1h-2a1 1 0 0 1 -1 -1l0 -12" /></svg></button>
+</section>
+    <main class="oak-dashboard" id="main" style="max-width:1000px"><div class="oak-dashboard-heading"><div><h1>Academic structure</h1><p>Sessions and their terms</p></div><div class="oak-heading-tools"><a class="oak-bell" href="#" aria-label="Notifications, 2 unread"><svg class="oak-i" data-icon="bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /> <path d="M9 17v1a3 3 0 0 0 6 0v-1" /></svg><b aria-hidden="true">2</b></a><span class="oak-role-pill">Admin</span></div></div><nav class="ad-tabs"><a href="academic-sections.html">Sections & levels</a><a href="academic-levels.html">Levels</a><a href="academic-classes.html">Classes</a><a href="academic-departments.html">Departments</a><a href="academic-sessions.html" aria-current="page">Sessions & terms</a><a href="academic-subjects.html">Subjects</a></nav><div data-only="noperm"><div class="oak-locked"><svg class="oak-i" data-icon="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6" /> <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" /> <path d="M8 11v-4a4 4 0 1 1 8 0v4" /></svg><h3>You don't have access to academic structure</h3><p>Ask the school Admin if you need it. Nothing on this page is shown to you.</p></div></div><div class="ad-actions" data-only="normal edit error delete blocked" style="justify-content:flex-end;margin:-6px 0 10px"><button class="oak-btn oak-btn-primary" type="button" data-go="edit-session">Add a session</button></div><div class="ad-card" data-only="normal edit-session edit-term error session-delete session-blocked term-delete term-blocked" style="padding:6px 16px"><div class="ad-card-head"><div><h3>2027/2028</h3><p>Future · 3 terms · no records</p></div><div class="ad-actions"><button class="ad-iconbtn" type="button" aria-label="Edit session 2027/2028" data-go="edit-session"><svg class="oak-i" data-icon="pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /> <path d="M13.5 6.5l4 4" /></svg></button><button class="ad-iconbtn" type="button" aria-label="Delete session 2027/2028" data-go="session-delete"><svg class="oak-i" data-icon="trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l16 0" /> <path d="M10 11l0 6" /> <path d="M14 11l0 6" /> <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /> <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg></button></div></div><div class="ad-class-row" style="grid-template-columns:minmax(0,1fr) auto"><div><h4 style="font-weight:600">First Term</h4><small class="ad-meta" style="display:block;font-weight:400">Starts Mon 6 Sep 2027</small></div><div class="ad-actions"><button class="ad-iconbtn" type="button" aria-label="Edit First Term 2027/2028" data-go="edit-term"><svg class="oak-i" data-icon="pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /> <path d="M13.5 6.5l4 4" /></svg></button><button class="ad-iconbtn" type="button" aria-label="Delete First Term 2027/2028" data-go="term-delete"><svg class="oak-i" data-icon="trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l16 0" /> <path d="M10 11l0 6" /> <path d="M14 11l0 6" /> <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /> <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg></button></div></div><div class="ad-class-row" style="grid-template-columns:minmax(0,1fr) auto"><div><h4 style="font-weight:600">Second Term</h4><small class="ad-meta" style="display:block;font-weight:400">Starts Mon 10 Jan 2028</small></div><div class="ad-actions"><button class="ad-iconbtn" type="button" aria-label="Edit Second Term 2027/2028" data-go="edit-term"><svg class="oak-i" data-icon="pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /> <path d="M13.5 6.5l4 4" /></svg></button><button class="ad-iconbtn" type="button" aria-label="Delete Second Term 2027/2028" data-go="term-delete"><svg class="oak-i" data-icon="trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l16 0" /> <path d="M10 11l0 6" /> <path d="M14 11l0 6" /> <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /> <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg></button></div></div><div class="ad-class-row" style="grid-template-columns:minmax(0,1fr) auto"><div><h4 style="font-weight:600">Third Term</h4><small class="ad-meta" style="display:block;font-weight:400">Starts Mon 24 Apr 2028</small></div><div class="ad-actions"><button class="ad-iconbtn" type="button" aria-label="Edit Third Term 2027/2028" data-go="edit-term"><svg class="oak-i" data-icon="pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /> <path d="M13.5 6.5l4 4" /></svg></button><button class="ad-iconbtn" type="button" aria-label="Delete Third Term 2027/2028" data-go="term-delete"><svg class="oak-i" data-icon="trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l16 0" /> <path d="M10 11l0 6" /> <path d="M14 11l0 6" /> <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /> <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg></button></div></div></div><div class="ad-card" data-only="normal edit-session edit-term error session-delete session-blocked term-delete term-blocked" style="padding:6px 16px"><div class="ad-card-head"><div><h3>2026/2027</h3><p>Current · 3 terms</p></div><div class="ad-actions"><button class="ad-iconbtn" type="button" aria-label="Edit session 2026/2027" data-go="edit-session"><svg class="oak-i" data-icon="pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /> <path d="M13.5 6.5l4 4" /></svg></button><button class="ad-iconbtn" type="button" aria-label="Delete session 2026/2027" data-go="session-blocked"><svg class="oak-i" data-icon="trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l16 0" /> <path d="M10 11l0 6" /> <path d="M14 11l0 6" /> <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /> <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg></button></div></div><div class="ad-class-row" style="grid-template-columns:minmax(0,1fr) auto"><div><h4 style="font-weight:600">First Term</h4><small class="ad-meta" style="display:block;font-weight:400">Current · results, attendance and invoices exist</small></div><div class="ad-actions"><button class="ad-iconbtn" type="button" aria-label="Edit First Term 2026/2027" data-go="edit-term"><svg class="oak-i" data-icon="pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /> <path d="M13.5 6.5l4 4" /></svg></button><button class="ad-iconbtn" type="button" aria-label="Delete First Term 2026/2027" data-go="term-blocked"><svg class="oak-i" data-icon="trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l16 0" /> <path d="M10 11l0 6" /> <path d="M14 11l0 6" /> <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /> <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg></button></div></div><div class="ad-class-row" style="grid-template-columns:minmax(0,1fr) auto"><div><h4 style="font-weight:600">Second Term</h4><small class="ad-meta" style="display:block;font-weight:400">No records yet</small></div><div class="ad-actions"><button class="ad-iconbtn" type="button" aria-label="Edit Second Term 2026/2027" data-go="edit-term"><svg class="oak-i" data-icon="pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /> <path d="M13.5 6.5l4 4" /></svg></button><button class="ad-iconbtn" type="button" aria-label="Delete Second Term 2026/2027" data-go="term-delete"><svg class="oak-i" data-icon="trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l16 0" /> <path d="M10 11l0 6" /> <path d="M14 11l0 6" /> <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /> <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg></button></div></div><div class="ad-class-row" style="grid-template-columns:minmax(0,1fr) auto"><div><h4 style="font-weight:600">Third Term</h4><small class="ad-meta" style="display:block;font-weight:400">No records yet</small></div><div class="ad-actions"><button class="ad-iconbtn" type="button" aria-label="Edit Third Term 2026/2027" data-go="edit-term"><svg class="oak-i" data-icon="pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /> <path d="M13.5 6.5l4 4" /></svg></button><button class="ad-iconbtn" type="button" aria-label="Delete Third Term 2026/2027" data-go="term-delete"><svg class="oak-i" data-icon="trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l16 0" /> <path d="M10 11l0 6" /> <path d="M14 11l0 6" /> <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /> <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg></button></div></div></div><div class="ad-card" data-only="normal edit-session edit-term error session-delete session-blocked term-delete term-blocked" style="padding:6px 16px"><div class="ad-card-head"><div><h3>2025/2026</h3><p>Past · 3 terms · results, attendance and invoices exist</p></div><div class="ad-actions"><button class="ad-iconbtn" type="button" aria-label="Edit session 2025/2026" data-go="edit-session"><svg class="oak-i" data-icon="pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /> <path d="M13.5 6.5l4 4" /></svg></button><button class="ad-iconbtn" type="button" aria-label="Delete session 2025/2026" data-go="session-blocked"><svg class="oak-i" data-icon="trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l16 0" /> <path d="M10 11l0 6" /> <path d="M14 11l0 6" /> <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /> <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg></button></div></div><div class="ad-class-row" style="grid-template-columns:minmax(0,1fr) auto"><div><h4 style="font-weight:600">Third Term</h4><small class="ad-meta" style="display:block;font-weight:400">Results, attendance and invoices exist</small></div><div class="ad-actions"><button class="ad-iconbtn" type="button" aria-label="Edit Third Term 2025/2026" data-go="edit-term"><svg class="oak-i" data-icon="pencil" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" /> <path d="M13.5 6.5l4 4" /></svg></button><button class="ad-iconbtn" type="button" aria-label="Delete Third Term 2025/2026" data-go="term-blocked"><svg class="oak-i" data-icon="trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7l16 0" /> <path d="M10 11l0 6" /> <path d="M14 11l0 6" /> <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /> <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg></button></div></div></div><div data-only="empty"><div class="oak-empty" style="padding:30px 0"><svg class="oak-i" data-icon="info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /> <path d="M12 9h.01" /> <path d="M11 12h1v4h1" /></svg><strong>No sessions yet</strong>Add a session, then its terms.</div></div></main>
+  </div>
+  <nav class="oak-mobile-tabs" aria-label="Mobile navigation"><a href="admin-dashboard.html"><svg class="oak-i" data-icon="home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l-2 0l9 -9l9 9l-2 0" /> <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7" /> <path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6" /></svg><span>Home</span></a><a href="academic-sections.html"><svg class="oak-i" data-icon="school" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 9l-10 -4l-10 4l10 4l10 -4v6" /> <path d="M6 10.6v5.4a6 3 0 0 0 12 0v-5.4" /></svg><span>Academics</span></a><a href="#"><svg class="oak-i" data-icon="report" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h5.697" /> <path d="M18 14v4h4" /> <path d="M18 11v-4a2 2 0 0 0 -2 -2h-2" /> <path d="M8 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2" /> <path d="M14 18a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /> <path d="M8 11h4" /> <path d="M8 15h3" /></svg><span>Results</span></a><a href="payment-record.html"><svg class="oak-i" data-icon="wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 8v-3a1 1 0 0 0 -1 -1h-10a2 2 0 0 0 0 4h12a1 1 0 0 1 1 1v3m0 4v3a1 1 0 0 1 -1 1h-12a2 2 0 0 1 -2 -2v-12" /> <path d="M20 12v4h-4a2 2 0 0 1 0 -4h4" /></svg><span>Payments</span></a>
+    <button type="button" data-open-sheet="more-sheet"><svg class="oak-i" data-icon="dots" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M11 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /> <path d="M18 12a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg><span>More</span></button>
+  </nav>
+</div>
+<div class="oak-scrim" id="more-sheet" role="dialog" aria-modal="true" aria-label="More">
+  <div class="oak-sheet"><h2>More</h2><p class="oak-sheet-sub">Admin · Oakfield</p><a class="oak-list-row" href="#" style="text-decoration:none"><span style="display:flex;align-items:center;gap:12px"><svg class="oak-i" data-icon="device-laptop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 19l18 0" /> <path d="M5 7a1 1 0 0 1 1 -1h12a1 1 0 0 1 1 1v8a1 1 0 0 1 -1 1h-12a1 1 0 0 1 -1 -1l0 -8" /></svg>CBT</span><span style="display:flex;align-items:center;gap:8px"><svg class="oak-i" data-icon="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6" /></svg></span></a><a class="oak-list-row" href="#" style="text-decoration:none"><span style="display:flex;align-items:center;gap:12px"><svg class="oak-i" data-icon="calendar-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 21h-5.5a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v6" /> <path d="M16 3v4" /> <path d="M8 3v4" /> <path d="M4 11h16" /> <path d="M15 19l2 2l4 -4" /></svg>Attendance</span><span style="display:flex;align-items:center;gap:8px"><svg class="oak-i" data-icon="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6" /></svg></span></a><a class="oak-list-row" href="#" style="text-decoration:none"><span style="display:flex;align-items:center;gap:12px"><svg class="oak-i" data-icon="clipboard-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" /> <path d="M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2" /> <path d="M9 12l.01 0" /> <path d="M13 12l2 0" /> <path d="M9 16l.01 0" /> <path d="M13 16l2 0" /></svg>Assignments</span><span style="display:flex;align-items:center;gap:8px"><svg class="oak-i" data-icon="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6" /></svg></span></a><a class="oak-list-row" href="#" style="text-decoration:none"><span style="display:flex;align-items:center;gap:12px"><svg class="oak-i" data-icon="notebook" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h11a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-11a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1m3 0v18" /> <path d="M13 8l2 0" /> <path d="M13 12l2 0" /></svg>E-Notes</span><span style="display:flex;align-items:center;gap:8px"><svg class="oak-i" data-icon="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6" /></svg></span></a><a class="oak-list-row" href="#" style="text-decoration:none"><span style="display:flex;align-items:center;gap:12px"><svg class="oak-i" data-icon="user-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" /> <path d="M16 19h6" /> <path d="M19 16v6" /> <path d="M6 21v-2a4 4 0 0 1 4 -4h4" /></svg>Admissions</span><span style="display:flex;align-items:center;gap:8px"><svg class="oak-i" data-icon="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6" /></svg></span></a><a class="oak-list-row" href="#" style="text-decoration:none"><span style="display:flex;align-items:center;gap:12px"><svg class="oak-i" data-icon="users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /> <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /> <path d="M16 3.13a4 4 0 0 1 0 7.75" /> <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" /></svg>Students</span><span style="display:flex;align-items:center;gap:8px"><svg class="oak-i" data-icon="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6" /></svg></span></a><a class="oak-list-row" href="#" style="text-decoration:none"><span style="display:flex;align-items:center;gap:12px"><svg class="oak-i" data-icon="receipt-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16l-3 -2l-2 2l-2 -2l-2 2l-2 -2l-3 2" /> <path d="M14 8h-2.5a1.5 1.5 0 0 0 0 3h1a1.5 1.5 0 0 1 0 3h-2.5m2 0v1.5m0 -9v1.5" /></svg>Fee schedule</span><span style="display:flex;align-items:center;gap:8px"><svg class="oak-i" data-icon="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6" /></svg></span></a><a class="oak-list-row" href="#" style="text-decoration:none"><span style="display:flex;align-items:center;gap:12px"><svg class="oak-i" data-icon="id" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v10a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -10" /> <path d="M7 10a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M15 8l2 0" /> <path d="M15 12l2 0" /> <path d="M7 16l10 0" /></svg>Staff HR</span><span style="display:flex;align-items:center;gap:8px"><svg class="oak-i" data-icon="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6" /></svg></span></a><a class="oak-list-row" href="#" style="text-decoration:none"><span style="display:flex;align-items:center;gap:12px"><svg class="oak-i" data-icon="building" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21l18 0" /> <path d="M9 8l1 0" /> <path d="M9 12l1 0" /> <path d="M9 16l1 0" /> <path d="M14 8l1 0" /> <path d="M14 12l1 0" /> <path d="M14 16l1 0" /> <path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16" /></svg>School profile</span><span style="display:flex;align-items:center;gap:8px"><svg class="oak-i" data-icon="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6" /></svg></span></a><a class="oak-list-row" href="#" style="text-decoration:none"><span style="display:flex;align-items:center;gap:12px"><svg class="oak-i" data-icon="credit-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 8a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3l0 -8" /> <path d="M3 10l18 0" /> <path d="M7 15l.01 0" /> <path d="M11 15l2 0" /></svg>Payment gateway</span><span style="display:flex;align-items:center;gap:8px"><svg class="oak-i" data-icon="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6" /></svg></span></a><a class="oak-list-row" href="#" style="text-decoration:none"><span style="display:flex;align-items:center;gap:12px"><svg class="oak-i" data-icon="history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8l0 4l2 2" /> <path d="M3.05 11a9 9 0 1 1 .5 4m-.5 5v-5h5" /></svg>Activity log</span><span style="display:flex;align-items:center;gap:8px"><svg class="oak-i" data-icon="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6" /></svg></span></a><a class="oak-list-row" href="#" style="text-decoration:none"><span style="display:flex;align-items:center;gap:12px"><svg class="oak-i" data-icon="bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6" /> <path d="M9 17v1a3 3 0 0 0 6 0v-1" /></svg>Notifications</span><span style="display:flex;align-items:center;gap:8px"><span class="oak-status-pill oak-status-new">2 new</span><svg class="oak-i" data-icon="chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6" /></svg></span></a><form method="post" action="#"><button class="oak-list-row" type="submit" style="width:100%;background:none;border:0;color:var(--color-danger);text-align:left"><span style="display:flex;align-items:center;gap:12px"><svg class="oak-i" data-icon="logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" /> <path d="M9 12h12l-3 -3" /> <path d="M18 15l3 -3" /></svg>Sign out</span></button></form>
+    <div class="oak-sheet-actions"><button class="oak-btn oak-btn-quiet" type="button" data-close-sheet>Close</button></div></div></div><div class="oak-scrim" id="add-class" role="dialog" aria-modal="true" aria-labelledby="ac-t"><form class="oak-sheet" method="post" action="#" onsubmit="return false"><h2 id="ac-t">Add a class</h2><p class="oak-sheet-sub">Subjects attach to the class, so add the class first.</p>
+      <div style="display:grid;gap:14px"><div class="oak-field"><label for="ac-l">Level</label><select id="ac-l"><option>Senior Secondary</option><option>Junior Secondary</option></select></div>
+      <div class="oak-field"><label for="ac-n">Class name</label><input id="ac-n" aria-describedby="ac-e" data-err><span class="oak-error" id="ac-e" data-only="error"><svg class="oak-i" data-icon="alert-triangle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4" /> <path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0" /> <path d="M12 16h.01" /></svg>A class called SS1 Science already exists in Senior Secondary.</span></div>
+      <div class="oak-field" data-only="all primary secondary add error"><label for="ac-d">Department (optional)</label><select id="ac-d"><option>No department</option><option>Science</option><option>Arts</option></select><span class="oak-hint">A tag on the class, not an arm.</span></div>
+      <div class="oak-field"><label for="ac-o">Order</label><input id="ac-o" type="number" min="1" value="4" inputmode="numeric" style="max-width:140px"><span class="oak-hint">1 is the first class. Used to suggest the next class when students are promoted.</span></div>
+      <div class="oak-field"><label for="ac-a">Arms</label><input id="ac-a" value="Gold, Blue"><span class="oak-hint">Parallel groups of this class. Separate with commas. You can add more later.</span></div></div>
+      <div class="oak-sheet-actions"><button class="oak-btn oak-btn-secondary" type="button" data-close-sheet>Cancel</button><button class="oak-btn oak-btn-primary" type="submit">Add class</button></div></form></div>
+<div class="oak-scrim" id="ses-sheet" data-state-sheet="edit-session error" role="dialog" aria-modal="true" aria-labelledby="ss-t"><form class="oak-sheet" method="post" action="#" onsubmit="return false"><h2 id="ss-t">Edit session</h2><p class="oak-sheet-sub">Changing dates never changes results, attendance or invoices already recorded.</p><div style="display:grid;gap:14px"><div data-only="edit-session"><div class="oak-field "><label for="ss-n">Session name</label><input id="ss-n" type="text" value="2026/2027" placeholder=""></div></div><div data-only="error"><div class="oak-field "><label for="ss-n2">Session name</label><input id="ss-n2" type="text" value="2025/2026" placeholder="" aria-invalid="true"><span class="oak-error" role="alert">A session called 2025/2026 already exists. Choose a different name.</span></div></div><div class="oak-field "><label for="ss-da">Starts</label><input id="ss-da" type="text" value="Mon 7 Sep 2026" placeholder="DD Mon YYYY"></div><div class="oak-field "><label for="ss-db">Ends</label><input id="ss-db" type="text" value="Fri 23 Jul 2027" placeholder="DD Mon YYYY"></div></div><div class="oak-sheet-actions"><button class="oak-btn oak-btn-secondary" type="button" data-close-sheet>Cancel</button><button class="oak-btn oak-btn-primary" type="submit">Save session</button></div></form></div><div class="oak-scrim" id="trm-sheet" data-state-sheet="edit-term" role="dialog" aria-modal="true" aria-labelledby="tt-t"><form class="oak-sheet" method="post" action="#" onsubmit="return false"><h2 id="tt-t">Edit term</h2><p class="oak-sheet-sub">First Term, 2026/2027. Changing dates never changes records already made.</p><div style="display:grid;gap:14px"><div class="oak-field "><label for="tt-n">Term name</label><input id="tt-n" type="text" value="First Term" placeholder=""></div><div class="oak-field "><label for="tt-da">Starts</label><input id="tt-da" type="text" value="Mon 7 Sep 2026" placeholder="DD Mon YYYY"></div><div class="oak-field "><label for="tt-db">Ends</label><input id="tt-db" type="text" value="Fri 18 Dec 2026" placeholder="DD Mon YYYY"></div></div><div class="oak-sheet-actions"><button class="oak-btn oak-btn-secondary" type="button" data-close-sheet>Cancel</button><button class="oak-btn oak-btn-primary" type="submit">Save term</button></div></form></div><div class="oak-scrim" id="sd-sheet" data-state-sheet="session-delete" role="dialog" aria-modal="true" aria-labelledby="sdl-t"><form class="oak-sheet" method="post" action="#" onsubmit="return false"><h2 id="sdl-t">Delete 2027/2028 and its 3 terms?</h2><p class="oak-sheet-sub">Nothing references it: no results, attendance or invoices. The session and its three terms are removed together.</p><div class="oak-sheet-actions"><button class="oak-btn oak-btn-secondary" type="button" data-close-sheet>Keep it</button><button class="oak-btn oak-btn-primary" type="submit">Delete session</button></div></form></div><div class="oak-scrim" id="sb-sheet" data-state-sheet="session-blocked" role="dialog" aria-modal="true" aria-labelledby="sbl-t"><form class="oak-sheet" method="post" action="#" onsubmit="return false"><h2 id="sbl-t">2026/2027 can't be deleted</h2><p class="oak-sheet-sub"><strong>2026/2027 has results, attendance records and 389 invoices</strong>, so it can't be deleted.</p><div class="ad-impact"><div><svg class="oak-i" data-icon="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l10 -10" /></svg><span>Results for First Term</span></div><div><svg class="oak-i" data-icon="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l10 -10" /></svg><span>Attendance records</span></div><div><svg class="oak-i" data-icon="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l10 -10" /></svg><span>389 invoices</span></div></div><p class="ad-meta">A session stays once results, attendance or invoices reference it. You can edit its name and dates.</p><div class="oak-sheet-actions"><button class="oak-btn oak-btn-secondary" type="button" data-close-sheet>Close</button></div></form></div><div class="oak-scrim" id="td-sheet" data-state-sheet="term-delete" role="dialog" aria-modal="true" aria-labelledby="tdl-t"><form class="oak-sheet" method="post" action="#" onsubmit="return false"><h2 id="tdl-t">Delete Second Term, 2026/2027?</h2><p class="oak-sheet-sub">Nothing references it yet: no results, attendance or invoices.</p><div class="oak-sheet-actions"><button class="oak-btn oak-btn-secondary" type="button" data-close-sheet>Keep it</button><button class="oak-btn oak-btn-primary" type="submit">Delete term</button></div></form></div><div class="oak-scrim" id="tb-sheet" data-state-sheet="term-blocked" role="dialog" aria-modal="true" aria-labelledby="tbl-t"><form class="oak-sheet" method="post" action="#" onsubmit="return false"><h2 id="tbl-t">First Term, 2026/2027 can't be deleted</h2><p class="oak-sheet-sub"><strong>First Term has results, attendance records and 389 invoices</strong>, so it can't be deleted.</p><div class="ad-impact"><div><svg class="oak-i" data-icon="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l10 -10" /></svg><span>Results</span></div><div><svg class="oak-i" data-icon="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l10 -10" /></svg><span>Attendance records</span></div><div><svg class="oak-i" data-icon="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5l10 -10" /></svg><span>389 invoices</span></div></div><p class="ad-meta">A term stays once results, attendance or invoices reference it. You can edit its name and dates.</p><div class="oak-sheet-actions"><button class="oak-btn oak-btn-secondary" type="button" data-close-sheet>Close</button></div></form></div><div class="design-only" role="group" aria-label="Design states (not part of the build)"><b>State</b><button type="button" data-state="normal" aria-pressed="false">Normal</button><button type="button" data-state="edit-session" aria-pressed="false">Edit a session</button><button type="button" data-state="edit-term" aria-pressed="false">Edit a term</button><button type="button" data-state="error" aria-pressed="false">Error (duplicate name)</button><button type="button" data-state="session-delete" aria-pressed="false">Delete a session: allowed</button><button type="button" data-state="session-blocked" aria-pressed="false">Delete a session: blocked</button><button type="button" data-state="term-delete" aria-pressed="false">Delete a term: allowed</button><button type="button" data-state="term-blocked" aria-pressed="false">Delete a term: blocked</button><button type="button" data-state="empty" aria-pressed="false">No sessions yet</button><button type="button" data-state="noperm" aria-pressed="false">No permission</button></div>
+<script>
+(function(){
+  var d=document;
+  /* sheets */
+  function open(id){var s=d.getElementById(id); if(!s) return; s.setAttribute('data-open',''); s._from=d.activeElement; var f=s.querySelector('button,a,input'); f&&f.focus();}
+  function close(s){s.removeAttribute('data-open'); s._from&&s._from.focus&&s._from.focus();}
+  d.addEventListener('click',function(e){
+    var o=e.target.closest('[data-open-sheet]'); if(o){e.preventDefault(); open(o.getAttribute('data-open-sheet')); return;}
+    var c=e.target.closest('[data-close-sheet]'); if(c){close(c.closest('.oak-scrim')); return;}
+    if(e.target.classList&&e.target.classList.contains('oak-scrim')) close(e.target);
+  });
+  d.addEventListener('keydown',function(e){ if(e.key==='Escape'){ d.querySelectorAll('.oak-scrim[data-open]').forEach(close);} });
+  /* ticker: desktop scrolls (CSS); phone cycles one headline; pause button stops both */
+  var t=d.querySelector('[data-ticker]');
+  if(t){
+    var items=[].slice.call(t.querySelectorAll('.oak-ticker-track > a')), st=t.querySelector('[data-ticker-static]'), i=0, timer;
+    function show(){var a=items[i]; st.innerHTML='<b>'+a.querySelector('b').textContent+'</b> · '+a.children[2].textContent; st.href=a.href; st.removeAttribute('data-fade'); void st.offsetWidth; st.setAttribute('data-fade','');}
+    function start(){ if(timer||!items.length||matchMedia('(prefers-reduced-motion: reduce)').matches) return; timer=setInterval(function(){i=(i+1)%items.length; show();},5000);}
+    function stop(){clearInterval(timer); timer=null;}
+    start();
+    var p=t.querySelector('[data-ticker-pause]');
+    p.addEventListener('click',function(){var on=p.getAttribute('aria-pressed')!=='true'; p.setAttribute('aria-pressed',on); on?t.setAttribute('data-paused',''):t.removeAttribute('data-paused'); on?stop():start();
+      p.setAttribute('aria-label',on?'Resume moving notifications':'Pause moving notifications');});
+    t.addEventListener('focusin',stop); t.addEventListener('focusout',function(){ if(p.getAttribute('aria-pressed')!=='true') start(); });
+  }
+  /* design-only state switcher */
+  var tb=d.querySelector('.design-only');
+  if(tb){
+    function set(s){d.body.setAttribute('data-state',s); tb.querySelectorAll('button').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.state===s);});
+      d.querySelectorAll('[data-only]').forEach(function(el){el.hidden=el.getAttribute('data-only').split(' ').indexOf(s)<0;});}
+    tb.addEventListener('click',function(e){var b=e.target.closest('button[data-state]'); if(b) set(b.dataset.state);});
+    set(tb.querySelector('button[data-state]').dataset.state);
+  }
+})();
+
+(function(){var tb=document.querySelector('.design-only'); function sync(){var s=document.body.getAttribute('data-state'); if(s==='notheld') s='primary'; document.querySelectorAll('.ad-seg[data-go]').forEach(function(b){b.setAttribute('aria-pressed',b.dataset.go===s);});}
+  new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['data-state']});
+  document.querySelectorAll('.ad-seg[data-go]').forEach(function(b){b.addEventListener('click',function(){tb.querySelector('button[data-state="'+b.dataset.go+'"]').click();});}); sync();})();(function(){var tb=document.querySelector('.design-only'); tb.addEventListener('click',function(e){var b=e.target.closest('button[data-state]'); if(!b) return; var s=document.getElementById('add-class');
+      if(b.dataset.state==='add'||b.dataset.state==='error') s.setAttribute('data-open',''); else s.removeAttribute('data-open'); var n=document.getElementById('ac-n'); n.value=(b.dataset.state==='error')?'SS1 Science':''; n.setAttribute('aria-invalid', b.dataset.state==='error');});})();</script>
+<script>
+(function(){var tb=document.querySelector('.design-only');if(!tb)return;
+document.addEventListener('click',function(e){var b=e.target.closest('[data-go]');if(!b)return;var t=tb.querySelector('button[data-state="'+b.dataset.go+'"]');t&&t.click();});
+tb.addEventListener('click',function(e){var b=e.target.closest('button[data-state]');if(!b)return;
+ document.querySelectorAll('.oak-scrim[data-state-sheet]').forEach(function(s){var l=s.getAttribute('data-state-sheet').split(' ');
+  if(l.indexOf(b.dataset.state)>-1) s.setAttribute('data-open',''); else s.removeAttribute('data-open'); });});
+})();
+</script>
+</body>
+</html>

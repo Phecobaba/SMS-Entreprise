@@ -8,6 +8,7 @@ use App\Modules\CBT\Models\ExamSubmission;
 use App\Modules\CBT\Models\Question;
 use App\Modules\CBT\Services\ExamWorkflow;
 use App\Modules\Notifications\Services\InAppNotifications;
+use App\Modules\Portals\Services\PortalContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -17,6 +18,11 @@ class ExamParticipantController extends Controller
 {
     public function index(Request $request, ExamWorkflow $workflow): View
     {
+        $context = app(PortalContext::class)->for($request);
+        if (($context['selected']['restricted'] ?? false) === true) {
+            return view('portals.restricted', compact('context'));
+        }
+
         return view('cbt.participant-index', [
             'exams' => $workflow->availableFor($request->user()),
             'notifications' => app(InAppNotifications::class)->latestUnread($request->user()),

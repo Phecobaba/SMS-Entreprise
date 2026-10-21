@@ -134,7 +134,8 @@ class CbtReleaseAndScoringTest extends TestCase
         $role->permissions()->attach($permission);
         $role->permissions()->attach($paymentsPermission);
         $admin->roles()->attach($role);
-        $section = Section::create(['name' => 'Primary School', 'head_title' => 'Head Teacher', 'head_user_id' => $admin->id]);
+        $section = Section::create(['name' => 'Primary School', 'head_title' => 'Head Teacher']);
+        $section->heads()->attach($admin, ['school_id' => $school->id]);
         $level = AcademicLevel::create(['section_id' => $section->id, 'name' => 'Primary']);
         $pipeline = app(AdmissionPipeline::class);
         $candidate = $pipeline->register(['name' => 'Candidate', 'email' => 'candidate-cbt@example.test', 'phone' => '08000000000', 'password' => 'long-password-here', 'applied_level_id' => $level->id]);

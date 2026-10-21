@@ -16,17 +16,28 @@ class CurrentSchoolProfile
             return null;
         }
         $path = SchoolSetting::first()?->logo_path;
-        $profile['logo_data_uri'] = null;
-        if ($path && Storage::disk('public')->exists($path)) {
-            $mime = Storage::disk('public')->mimeType($path);
-            if (in_array($mime, ['image/png', 'image/jpeg', 'image/gif'], true)) {
-                $profile['logo_data_uri'] = 'data:'.$mime.';base64,'.base64_encode(Storage::disk('public')->get($path));
-            }
-        } elseif ($this->hasDefaultLogo()) {
-            $profile['logo_data_uri'] = 'data:image/jpeg;base64,'.base64_encode(file_get_contents(public_path('branding/oakfield-logo.jpg')));
-        }
+        $profile['logo_data_uri'] = $this->logoDataUri($path);
 
         return $profile;
+    }
+
+    private function logoDataUri(?string $path): ?string
+    {
+        if ($path && Storage::disk('public')->exists($path)) {
+            $mime = Storage::disk('public')->mimeType($path);
+            if (in_array($mime, ['image/png', 'image/jpeg', 'image/gif', 'image/webp'], true)) {
+                return 'data:'.$mime.';base64,'.base64_encode(Storage::disk('public')->get($path));
+            }
+        }
+        $publicPath = $this->publicLogoPath($path);
+        if (! $publicPath) {
+            return null;
+        }
+        $mime = mime_content_type($publicPath);
+
+        return in_array($mime, ['image/png', 'image/jpeg', 'image/gif', 'image/webp'], true)
+            ? 'data:'.$mime.';base64,'.base64_encode(file_get_contents($publicPath))
+            : null;
     }
 
     public function landingPage(): ?array
@@ -43,11 +54,9 @@ class CurrentSchoolProfile
         return [
             'name' => $school->name,
             'motto' => $settings?->motto ?: $school->motto,
-            'logo_url' => $settings?->logo_path && Storage::disk('public')->exists($settings->logo_path)
-                ? Storage::disk('public')->url($settings->logo_path)
-                : ($this->hasDefaultLogo() ? asset('branding/oakfield-logo.jpg') : null),
-            'primary_color' => is_string($primary) && preg_match('/^#[0-9a-fA-F]{6}$/', $primary) ? $primary : '#2E4F56',
-            'secondary_color' => is_string($secondary) && preg_match('/^#[0-9a-fA-F]{6}$/', $secondary) ? $secondary : '#F5E58A',
+            'logo_url' => $this->logoUrl($settings?->logo_path),
+            'primary_color' => is_string($primary) && preg_match('/^#[0-9a-fA-F]{6}$/', $primary) ? $primary : '#334155',
+            'secondary_color' => is_string($secondary) && preg_match('/^#[0-9a-fA-F]{6}$/', $secondary) ? $secondary : '#E2E8F0',
             'about_text' => $settings?->about_text,
             'contact_email' => $settings?->contact_email,
             'contact_phone' => $settings?->contact_phone,
@@ -75,9 +84,30 @@ class CurrentSchoolProfile
         return self::isSafeAdmissionsTarget($target) ? $target : null;
     }
 
-    private function hasDefaultLogo(): bool
+    private function logoUrl(?string $path): ?string
     {
-        return config('tenancy.mode') === 'single_school'
-            && file_exists(public_path('branding/oakfield-logo.jpg'));
+        if (! $path) {
+            return null;
+        }
+        if (Storage::disk('public')->exists($path)) {
+            return Storage::disk('public')->url($path);
+        }
+
+        return $this->publicLogoPath($path) ? asset(ltrim(str_replace('\\', '/', $path), '/')) : null;
+    }
+
+    private function publicLogoPath(?string $path): ?string
+    {
+        if (! $path || str_contains($path, '..')) {
+            return null;
+        }
+        $root = realpath(public_path());
+        $candidate = realpath(public_path(ltrim(str_replace('\\', '/', $path), '/')));
+        if (! $root || ! $candidate) {
+            return null;
+        }
+        $rootPrefix = strtolower(rtrim($root, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR);
+
+        return str_starts_with(strtolower($candidate), $rootPrefix) ? $candidate : null;
     }
 }

@@ -8,35 +8,21 @@
 </head>
 <body>
 @include('core._shell-start')
-@include('core._ticker', ['notifications' => $notifications])
+@if($overview['kind'] !== 'bursar')@include('core._ticker', ['notifications' => $notifications])@endif
 <main class="oak-dashboard">
     @php
         $hour = (int) now('Africa/Lagos')->format('G');
         $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
     @endphp
-    <div class="oak-dashboard-heading">
-        <div><h1>{{ $greeting }}, {{ $overview['kind'] === 'admin' ? 'Admin' : auth()->user()->name }}</h1><p>{{ $overview['kind'] === 'admin' ? "Here's how Oakfield is doing today" : ($overview['kind'] === 'teacher' ? ($overview['context'] ? 'Today — '.$overview['context'] : 'Your teaching workspace') : (in_array($overview['kind'], ['parent', 'student'], true) ? $overview['selected']['name'].' — '.$overview['selected']['class'].($overview['kind'] === 'student' && ($overview['term_context'] ?? null) ? ' · '.$overview['term_context'] : '') : 'Welcome to your Oakfield workspace')) }}</p></div>
-        <div class="oak-heading-tools"><a class="oak-bell" href="{{ route('notifications.index', $overview['kind'] === 'parent' ? ['student' => $overview['selected']['id']] : []) }}" wire:navigate aria-label="Notifications{{ $notifications->count() ? ', '.$notifications->count().' unread' : '' }}"><x-icon name="bell" />@if($notifications->count())<b aria-hidden="true">{{ $notifications->count() }}</b>@endif</a><span class="oak-role-pill">{{ match($overview['kind']) {'admin' => 'Admin', 'teacher' => 'Teacher', 'parent' => 'Parent', 'parent_empty' => 'Parent', 'student' => 'Student', default => auth()->user()->roles()->orderBy('name')->value('name') ?? 'Member'} }}</span></div>
-    </div>
+    @include('core.dashboards.heading')
     @if($overview['kind'] === 'admin')
-        <div class="oak-metric-grid oak-metric-grid-four">
-            <div class="oak-metric"><span>Students</span><strong>{{ number_format($overview['students']) }}</strong></div>
-            <div class="oak-metric"><span>Teachers</span><strong>{{ number_format($overview['teachers']) }}</strong></div>
-            <div class="oak-metric"><span>Attendance today</span><strong class="oak-metric-success">{{ $overview['attendance'] === null ? '—' : $overview['attendance'].'%' }}</strong></div>
-            <div class="oak-metric"><span>Outstanding fees</span><strong class="oak-metric-accent">₦{{ number_format($overview['outstanding_kobo'] / 100, 2) }}</strong></div>
-        </div>
-        <div class="oak-dashboard-actions">
-            @can('manage_admissions')<a class="oak-action oak-action-primary" href="{{ route('admissions.index') }}" wire:navigate><span aria-hidden="true">＋</span>New admission</a>@endcan
-            @can('manage_staff_records')<a class="oak-action oak-action-secondary" href="{{ route('staff.index') }}" wire:navigate><span aria-hidden="true">＋</span>Add staff</a>@endcan
-            @can('manage_payments')<a class="oak-action oak-action-secondary" href="{{ route('payments.index') }}" wire:navigate><span aria-hidden="true">↗</span>View invoices</a>@endcan
-        </div>
-        <section class="oak-dashboard-section"><h2>Pending result approvals</h2>
-            @if($overview['approvals'])
-                <div class="oak-table-scroll"><table><thead><tr><th>Class</th><th>Subject</th><th>Teacher</th><th>Status</th></tr></thead><tbody>
-                    @foreach($overview['approvals'] as $row)<tr><td><a href="{{ $row['url'] }}" wire:navigate>{{ $row['class'] }}</a></td><td>{{ $row['subject'] }}</td><td>{{ $row['teacher'] }}</td><td><span class="oak-status-pill {{ $row['status'] === 'Rejected' ? 'oak-status-danger' : 'oak-status-warning' }}">{{ $row['status'] }}</span></td></tr>@endforeach
-                </tbody></table></div>
-            @else<p class="oak-empty">No submitted or rejected results to review.</p>@endif
-        </section>
+        @include('core.dashboards.admin')
+    @elseif($overview['kind'] === 'head')
+        @include('core.dashboards.head')
+    @elseif($overview['kind'] === 'head_locked')
+        <section class="oak-locked"><x-icon name="lock" /><h3>You haven't been assigned to a section yet</h3><p>Ask the Admin to assign your account to a Section. Dashboard figures stay hidden until then.</p></section>
+    @elseif($overview['kind'] === 'bursar')
+        @include('core.dashboards.bursar')
     @elseif($overview['kind'] === 'teacher')
         <div class="oak-dashboard-actions oak-teacher-actions">
             <a class="oak-action oak-action-primary" href="{{ route('attendance.index') }}" wire:navigate><span aria-hidden="true">✓</span>Mark attendance</a>
@@ -44,7 +30,7 @@
         </div>
         <div class="oak-metric-grid oak-metric-grid-three">
             <div class="oak-metric"><span>Students</span><strong>{{ $overview['students'] }}</strong></div>
-            <div class="oak-metric"><span>Attendance</span><strong class="oak-metric-success">{{ $overview['attendance'] === null ? '—' : $overview['attendance'].'%' }}</strong></div>
+            <div class="oak-metric"><span>Attendance</span><strong class="oak-metric-success">M {{ ($overview['attendance']['Morning'] ?? null) === null ? '—' : $overview['attendance']['Morning'].'%' }} · A {{ ($overview['attendance']['Afternoon'] ?? null) === null ? '—' : $overview['attendance']['Afternoon'].'%' }}</strong></div>
             <div class="oak-metric"><span>Pending</span><strong class="oak-metric-accent">{{ $overview['pending'] }}</strong></div>
         </div>
         <section class="oak-dashboard-section"><h2 class="oak-roster-heading">Class roster</h2>
@@ -53,6 +39,9 @@
             </tbody></table></div>@else<p class="oak-empty">No students are assigned to your form-teacher class yet.</p>@endif
         </section>
     @elseif($overview['kind'] === 'student')
+        @if($overview['restricted'] ?? false)
+            @include('portals._restricted-dashboard')
+        @else
         @php
             $money = fn (int $kobo) => '₦'.number_format($kobo / 100, $kobo % 100 === 0 ? 0 : 2);
             $examWorkflow = app(\App\Modules\CBT\Services\ExamWorkflow::class);
@@ -69,7 +58,7 @@
             @endif
         </div>
         <div class="oak-metric-grid oak-metric-grid-three">
-            <div class="oak-metric"><span>Attendance</span>@if($overview['attendance_locked'])<strong class="oak-metric-locked"><x-icon name="lock" />Locked</strong>@else<strong class="oak-metric-success">{{ $overview['attendance']['percentage'] === null ? '—' : $overview['attendance']['percentage'].'%' }}</strong>@endif</div>
+            <div class="oak-metric"><span>Attendance</span>@if($overview['attendance_locked'])<strong class="oak-metric-locked"><x-icon name="lock" />Locked</strong>@else<strong class="oak-metric-success">{{ $overview['attendance']['percentage'] === null ? '—' : $overview['attendance']['percentage'].'%' }}</strong>@if($overview['attendance']['today'])<small>Today: morning {{ strtolower($overview['attendance']['today']['sessions']['Morning']) }}, afternoon {{ strtolower($overview['attendance']['today']['sessions']['Afternoon']) }}</small>@endif @endif</div>
             <div class="oak-metric"><span>Assignments due</span><strong class="{{ $overview['assignments']['pending'] ? 'oak-metric-accent' : '' }}">{{ $overview['assignments']['pending'] }}</strong></div>
             <div class="oak-metric"><span>Fees outstanding</span><strong class="{{ $overview['payments']['outstanding_kobo'] ? 'oak-metric-accent' : 'oak-metric-success' }}">{{ $money($overview['payments']['outstanding_kobo']) }}</strong></div>
         </div>
@@ -87,8 +76,13 @@
         </div>
         <span id="attendance" hidden></span><span id="payments" hidden></span><span id="profile" hidden></span>
         @if($openExam)@include('cbt._start-sheet', ['exam' => $openExam, 'status' => $openStatus, 'sheetId' => 'dashboard-start-sheet'])@endif
+        @endif
     @elseif($overview['kind'] === 'parent')
-        @include('portals._parent-dashboard')
+        @if($overview['restricted'] ?? false)
+            @include('portals._restricted-dashboard')
+        @else
+            @include('portals._parent-dashboard')
+        @endif
     @elseif($overview['kind'] === 'parent_empty')
         @include('portals._empty')
     @else

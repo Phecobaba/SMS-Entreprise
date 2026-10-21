@@ -10,7 +10,7 @@ class ClassArmDirectory
 {
     public function all(): Collection
     {
-        return ClassArm::with('schoolClass')->orderBy('name')->get();
+        return ClassArm::with('schoolClass.level')->orderBy('name')->get();
     }
 
     public function assertExists(int $armId): void

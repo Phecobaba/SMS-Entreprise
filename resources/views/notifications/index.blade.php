@@ -13,7 +13,7 @@
     <section class="nt-list">
         @forelse($notifications as $notification)
             <article class="nt-row" @unless($notification->read_at) data-unread @endunless>
-                <div><h3>{{ $notification->title }}@unless($notification->read_at)<span class="oak-status-pill oak-status-new">New</span>@endunless</h3><p>{{ $notification->body }}</p><time datetime="{{ $notification->created_at->toIso8601String() }}">{{ $notification->created_at->diffForHumans() }}</time></div>
+                <div><h3>@if($notification->url)<a href="{{ $notification->url }}" wire:navigate>{{ $notification->title }}</a>@else{{ $notification->title }}@endif @unless($notification->read_at)<span class="oak-status-pill oak-status-new">New</span>@endunless</h3><p>{{ $notification->body }}</p><time datetime="{{ $notification->created_at->toIso8601String() }}">{{ $notification->created_at->diffForHumans() }}</time></div>
                 @unless($notification->read_at)<form method="post" action="{{ route('notifications.read', ['notification' => $notification->id, 'student' => $context['student_id'] ?? null]) }}">@csrf<button class="oak-btn oak-btn-quiet">Mark read</button></form>@endunless
             </article>
         @empty<p class="oak-empty">You have no notifications yet.</p>@endforelse

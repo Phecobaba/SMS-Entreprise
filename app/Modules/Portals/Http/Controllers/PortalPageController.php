@@ -5,6 +5,7 @@ namespace App\Modules\Portals\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Academics\Services\ClassArmDirectory;
 use App\Modules\Academics\Services\SectionAccess;
+use App\Modules\Admissions\Models\Student;
 use App\Modules\Admissions\Services\StudentDirectory;
 use App\Modules\Attendance\Services\AttendanceService;
 use App\Modules\ENotes\Services\ENoteService;
@@ -47,6 +48,10 @@ class PortalPageController extends Controller
         if (! $context['student_id']) {
             return view('portals.empty', compact('context'));
         }
+        if (($context['selected']['restricted'] ?? false)
+            && ($context['selected']['status'] ?? null) !== Student::STATUS_GRADUATED) {
+            return view('portals.restricted', compact('context'));
+        }
         $data = null;
         $locked = false;
         if ($context['student_id']) {
@@ -64,6 +69,9 @@ class PortalPageController extends Controller
     {
         $context = $this->context($request, $portal);
         abort_unless($context['kind'] === 'student', 403);
+        if ($context['selected']['restricted'] ?? false) {
+            return view('portals.restricted', compact('context'));
+        }
         $data = $request->validate(['subject' => ['nullable', 'integer']]);
 
         return view('portals.enotes', ['context' => $context,
@@ -72,6 +80,8 @@ class PortalPageController extends Controller
 
     public function downloadEnote(int $note, Request $request, ENoteService $notes): StreamedResponse
     {
+        $context = app(PortalContext::class)->for($request);
+        abort_if(($context['selected']['restricted'] ?? false) === true, 403);
         $item = $notes->studentAccessible($note, $request->user());
         abort_unless($item->file_path && Storage::disk('local')->exists($item->file_path), 404);
 
@@ -83,6 +93,9 @@ class PortalPageController extends Controller
         $context = $this->context($request, $portal);
         if (! $context['student_id']) {
             return view('portals.empty', compact('context'));
+        }
+        if ($context['selected']['restricted'] ?? false) {
+            return view('portals.restricted', compact('context'));
         }
         $student = $context['kind'] === 'student' ? app(StudentDirectory::class)->forUser($request->user()) : null;
 

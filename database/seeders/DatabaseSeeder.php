@@ -11,6 +11,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // Seed tenant data only from an explicit, context-aware command.
+        $this->call(OakfieldBrandingSeeder::class);
     }
 }

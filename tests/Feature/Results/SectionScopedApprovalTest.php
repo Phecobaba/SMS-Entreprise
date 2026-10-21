@@ -40,16 +40,19 @@ class SectionScopedApprovalTest extends TestCase
 
         $approve = Permission::firstOrCreate(['name' => 'approve_results']);
         $viewAll = Permission::firstOrCreate(['name' => 'view_all_sections']);
+        $manageAcademics = Permission::firstOrCreate(['name' => 'manage_academics']);
         $headRole = Role::create(['name' => 'Principal']);
         $headRole->permissions()->attach($approve);
         $adminRole = Role::create(['name' => 'School Admin']);
-        $adminRole->permissions()->attach([$approve->id, $viewAll->id]);
+        $adminRole->permissions()->attach([$approve->id, $viewAll->id, $manageAcademics->id]);
         $primaryHead->roles()->attach($headRole);
         $secondaryHead->roles()->attach($headRole);
         $admin->roles()->attach($adminRole);
 
-        $primary = Section::create(['name' => 'Primary School', 'head_title' => 'Head Teacher', 'head_user_id' => $primaryHead->id]);
-        $secondary = Section::create(['name' => 'Secondary School', 'head_title' => 'Principal', 'head_user_id' => $secondaryHead->id]);
+        $primary = Section::create(['name' => 'Primary School', 'head_title' => 'Head Teacher']);
+        $primary->heads()->attach($primaryHead, ['school_id' => $school->id]);
+        $secondary = Section::create(['name' => 'Secondary School', 'head_title' => 'Principal']);
+        $secondary->heads()->attach($secondaryHead, ['school_id' => $school->id]);
         $primaryLevel = AcademicLevel::create(['section_id' => $primary->id, 'name' => 'Primary']);
         $secondaryLevel = AcademicLevel::create(['section_id' => $secondary->id, 'name' => 'Junior Secondary']);
         $primaryClass = SchoolClass::create(['academic_level_id' => $primaryLevel->id, 'name' => 'Primary 6']);
@@ -70,6 +73,10 @@ class SectionScopedApprovalTest extends TestCase
 
         $this->actingAs($primaryHead)->get(route('results.index'))
             ->assertOk()->assertSee('Primary Learner')->assertDontSee('Secondary Learner');
+        $this->get(route('academics.classes.index'))
+            ->assertOk()->assertSee('Primary 6')->assertDontSee('JS1')->assertDontSee('Add a class');
+        $this->get(route('academics.classes.index', ['section' => $secondary->id]))->assertForbidden();
+        $this->get(route('academics.index'))->assertForbidden();
         $this->post(route('results.approve', $secondaryResult))->assertForbidden();
         $this->post(route('results.approve', $primaryResult))->assertSessionHasNoErrors();
         $this->assertSame('Approved', $primaryResult->fresh()->status);
@@ -77,6 +84,8 @@ class SectionScopedApprovalTest extends TestCase
 
         $this->actingAs($admin)->get(route('results.index'))
             ->assertOk()->assertSee('Primary Learner')->assertSee('Secondary Learner');
+        $this->get(route('academics.classes.index'))
+            ->assertOk()->assertSee('Primary 6')->assertSee('JS1')->assertSee('Add a class');
         $this->post(route('results.approve', $secondaryResult))->assertSessionHasNoErrors();
         $this->assertSame('Approved', $secondaryResult->fresh()->status);
     }
