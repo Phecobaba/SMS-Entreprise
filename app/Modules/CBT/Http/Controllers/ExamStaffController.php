@@ -30,7 +30,7 @@ class ExamStaffController extends Controller
         $data = $request->validate(['name' => ['required', 'in:Internal,Entrance,Mock,Practice,Assessment,Promotional']]);
         $workflow->createType($data['name'], $request->user());
 
-        return back()->with('status', 'Exam type ready.');
+        return redirect()->route('cbt.staff.index')->with('status', 'Exam type ready.');
     }
 
     public function exam(Request $request, ExamWorkflow $workflow): RedirectResponse
@@ -71,27 +71,27 @@ class ExamStaffController extends Controller
         ]);
         $workflow->addQuestion(Exam::findOrFail($exam), $data['text'], (float) $data['marks'], $data['explanation'] ?? null, $data['options'], (int) $data['correct_index'], $request->user());
 
-        return back()->with('status', 'Question added.');
+        return redirect()->route('cbt.staff.show', $exam)->with('status', 'Question added.');
     }
 
     public function publish(int $exam, Request $request, ExamWorkflow $workflow): RedirectResponse
     {
         $workflow->publish(Exam::findOrFail($exam), $request->user());
 
-        return back()->with('status', 'Exam published.');
+        return redirect()->route('cbt.staff.show', $exam)->with('status', 'Exam published.');
     }
 
     public function approve(int $exam, Request $request, ExamWorkflow $workflow): RedirectResponse
     {
         $workflow->approveRelease(Exam::findOrFail($exam), $request->user());
 
-        return back()->with('status', 'Result release approved.');
+        return redirect()->route('cbt.staff.show', $exam)->with('status', 'Result release approved.');
     }
 
     public function release(int $exam, Request $request, ExamWorkflow $workflow): RedirectResponse
     {
         $workflow->release(Exam::findOrFail($exam), $request->user());
 
-        return back()->with('status', 'Manual release activated.');
+        return redirect()->route('cbt.staff.show', $exam)->with('status', 'Manual release activated.');
     }
 }

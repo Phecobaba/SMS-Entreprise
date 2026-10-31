@@ -16,7 +16,7 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use BelongsToTenant, HasFactory, Notifiable;
 
-    protected $fillable = ['name', 'username', 'email', 'password', 'status'];
+    protected $fillable = ['name', 'username', 'email', 'password', 'must_change_password', 'last_signed_in_at', 'status'];
 
     protected $hidden = ['password', 'remember_token'];
 
@@ -25,6 +25,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'must_change_password' => 'boolean',
+            'last_signed_in_at' => 'datetime',
         ];
     }
 

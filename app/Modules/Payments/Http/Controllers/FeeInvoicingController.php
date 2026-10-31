@@ -8,6 +8,7 @@ use App\Modules\Academics\Models\AcademicTerm;
 use App\Modules\Academics\Models\Department;
 use App\Modules\Academics\Models\SchoolClass;
 use App\Modules\Academics\Models\Section;
+use App\Modules\Academics\Services\AcademicCalendar;
 use App\Modules\Admissions\Models\Student;
 use App\Modules\Core\TenantContext;
 use App\Modules\Payments\Models\FeeItem;
@@ -65,7 +66,7 @@ class FeeInvoicingController extends Controller
         ]);
         FeeItem::create($data);
 
-        return back()->with('status', 'Fee item added.');
+        return redirect()->route('fees.schedule.index')->with('status', 'Fee item added.');
     }
 
     public function destroyItem(FeeItem $item): RedirectResponse
@@ -75,7 +76,7 @@ class FeeInvoicingController extends Controller
         }
         $item->delete();
 
-        return back()->with('status', 'Fee item removed.');
+        return redirect()->route('fees.schedule.index')->with('status', 'Fee item removed.');
     }
 
     public function storeLine(Request $request): RedirectResponse
@@ -89,7 +90,8 @@ class FeeInvoicingController extends Controller
         }
         FeeScheduleLine::create($data);
 
-        return back()->with('status', 'Schedule line added. Changing it later will not change invoices already issued.');
+        return redirect()->route('fees.schedule.index', ['term' => $data['term_id']])
+            ->with('status', 'Schedule line added. Changing it later will not change invoices already issued.');
     }
 
     public function updateLine(FeeScheduleLine $line, Request $request): RedirectResponse
@@ -97,14 +99,17 @@ class FeeInvoicingController extends Controller
         $data = $request->validate(['amount_naira' => ['required', 'regex:/^(?:[0-9]{1,3}(?:,[0-9]{3})+|[0-9]+)(?:\.[0-9]{1,2})?$/'], 'is_required' => ['nullable', 'boolean']]);
         $line->update(['amount_kobo' => $this->kobo($data['amount_naira']), 'is_required' => $request->boolean('is_required')]);
 
-        return back()->with('status', 'Schedule price updated. Existing invoices were not changed.');
+        return redirect()->route('fees.schedule.index', ['term' => $line->term_id])
+            ->with('status', 'Schedule price updated. Existing invoices were not changed.');
     }
 
     public function destroyLine(FeeScheduleLine $line): RedirectResponse
     {
+        $termId = (int) $line->term_id;
         $line->delete();
 
-        return back()->with('status', 'Schedule line removed. Existing invoices were not changed.');
+        return redirect()->route('fees.schedule.index', ['term' => $termId])
+            ->with('status', 'Schedule line removed. Existing invoices were not changed.');
     }
 
     public function generate(): View
@@ -129,7 +134,9 @@ class FeeInvoicingController extends Controller
 
     public function notInvoiced(Request $request, FeeInvoicingService $service): View
     {
-        $termId = (int) ($request->integer('term') ?: AcademicTerm::latest('start_date')->value('id'));
+        $calendar = app(AcademicCalendar::class);
+        $defaultTerm = $calendar->termForInvoicing() ?? $calendar->termForSummary();
+        $termId = (int) ($request->integer('term') ?: $defaultTerm?->id);
         if ($termId) {
             AcademicTerm::findOrFail($termId);
         }
@@ -151,7 +158,7 @@ class FeeInvoicingController extends Controller
         AcademicTerm::findOrFail((int) $data['term_id']);
         $service->invoiceStudent($student, (int) $data['term_id'], $data['due_date'], $data['extras'] ?? [], $request->boolean('extras_separate'), $request->user());
 
-        return back()->with('status', 'Student invoice created.');
+        return redirect()->route('fees.not-invoiced.index', ['term' => $data['term_id']])->with('status', 'Student invoice created.');
     }
 
     private function lineData(Request $request): array

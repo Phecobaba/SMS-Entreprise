@@ -34,6 +34,18 @@ move it to "In Progress" before starting, update `docs/schema.md` if the
 task changes the schema, and move it to "Completed" in `PROGRESS.md` only
 once it meets the Definition of Done in `CONTRIBUTING.md`.
 
+## Local Database Safety
+
+- Automated tests must use SQLite in-memory only. `tests/TestCase.php`
+  deliberately fails before test database setup unless the resolved connection
+  is `sqlite` with `DB_DATABASE=:memory:`.
+- QA and browser checks must use a separate throwaway SQLite file such as
+  `database/qa.sqlite`, selected through an environment override. Delete it
+  after the check; `database/*.sqlite` is gitignored.
+- Never run `migrate:fresh`, seed QA fixtures, or point a test/browser runner at
+  `database/database.sqlite`. That file is the persistent local development
+  database.
+
 ## Reference Docs (read only the ones relevant to your current task)
 
 | File | Covers |

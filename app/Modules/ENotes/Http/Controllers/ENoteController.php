@@ -37,7 +37,7 @@ class ENoteController extends Controller
         ]);
         $service->upload($data, $request->user());
 
-        return back()->with('status', 'E-Note uploaded.');
+        return redirect()->route('enotes.index')->with('status', 'E-Note uploaded.');
     }
 
     public function download(int $note, Request $request, ENoteService $service): StreamedResponse

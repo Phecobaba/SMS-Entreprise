@@ -98,7 +98,7 @@ class ResultCardController extends Controller
         ]);
         $cards->setDefault((int) $data['term_id'], isset($data['section_id']) ? (int) $data['section_id'] : null, $data['comment_type'], trim($data['comment_text']), $request->user());
 
-        return back()->with('status', 'Term default comment saved.');
+        return redirect()->route('results.index')->with('status', 'Term default comment saved.');
     }
 
     public function comments(int $card, Request $request, ResultCards $cards): RedirectResponse
@@ -127,6 +127,6 @@ class ResultCardController extends Controller
             }
         });
 
-        return back()->with('status', 'Card comments saved.');
+        return redirect()->route('results.cards.show', $card)->with('status', 'Card comments saved.');
     }
 }

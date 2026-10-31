@@ -3,13 +3,12 @@
 namespace App\Modules\Core\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Admissions\Services\CandidateAccount;
-use App\Modules\Admissions\Services\StudentDirectory;
-use App\Modules\Assignments\Services\ParentAccountDirectory;
+use App\Modules\Core\Models\User;
+use App\Modules\Core\Services\LoginDestination;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
 class AuthController extends Controller
@@ -19,7 +18,7 @@ class AuthController extends Controller
         return view('core.login');
     }
 
-    public function login(Request $request): RedirectResponse
+    public function login(Request $request, LoginDestination $destination): RedirectResponse
     {
         $credentials = $request->validate([
             'identifier' => ['required_without:email', 'string', 'max:255'],
@@ -27,38 +26,23 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
         $identifier = trim($credentials['identifier'] ?? $credentials['email']);
-        $column = filter_var($identifier, FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+        $column = str_contains($identifier, '@') ? 'email' : 'username';
+        $user = User::query()->whereRaw('LOWER('.$column.') = ?', [strtolower($identifier)])->where('status', 'active')->first();
 
-        if (! Auth::attempt([$column => $identifier, 'password' => $credentials['password'], 'status' => 'active'], $request->boolean('remember'))) {
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             $field = $request->filled('identifier') ? 'identifier' : 'email';
 
-            return back()->withErrors([$field => 'These sign-in details are not correct.'])->onlyInput($field);
+            return back()->withErrors([$field => 'Check your email or username and your password, and try again.'])->onlyInput($field);
         }
+
+        Auth::login($user, $request->boolean('remember'));
 
         $request->session()->regenerate();
+        $user->forceFill(['last_signed_in_at' => now()])->save();
 
-        $destination = route('dashboard');
-        if (! Gate::allows('view_dashboard')) {
-            if (app(StudentDirectory::class)->forUser($request->user())) {
-                $destination = route('dashboard');
-            } elseif (app(ParentAccountDirectory::class)->existsForUser((int) Auth::id())) {
-                $destination = route('dashboard');
-            } elseif (app(CandidateAccount::class)->existsForUser((int) Auth::id())) {
-                $destination = route('admissions.mine');
-            } elseif (Gate::allows('mark_attendance')) {
-                $destination = route('attendance.index');
-            } elseif (Gate::allows('mark_assignments')) {
-                $destination = route('assignments.index');
-            } elseif (Gate::allows('upload_enotes')) {
-                $destination = route('enotes.index');
-            } elseif (Gate::allows('view_attendance_alerts')) {
-                $destination = route('attendance.alerts');
-            } elseif (Gate::allows('enter_results')) {
-                $destination = route('results.index');
-            }
-        }
+        $target = $destination->for($user);
 
-        return redirect()->intended($destination);
+        return $user->must_change_password ? redirect()->to($target) : redirect()->intended($target);
     }
 
     public function logout(Request $request): RedirectResponse

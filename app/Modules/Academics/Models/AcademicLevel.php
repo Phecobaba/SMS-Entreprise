@@ -11,7 +11,7 @@ class AcademicLevel extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['section_id', 'name'];
+    protected $fillable = ['section_id', 'name', 'registration_prefix'];
 
     public function section(): BelongsTo
     {

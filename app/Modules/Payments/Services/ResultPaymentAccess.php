@@ -45,7 +45,7 @@ class ResultPaymentAccess
         }
         if ($rule !== 'TermInvoicePaid' || ! Invoice::where('student_id', $card->student_id)
             ->where('term_id', $card->term_id)->where('kind', Invoice::KIND_TERM_FEE)
-            ->where('status', 'Paid')->whereHas('payment')->exists()) {
+            ->where('status', 'Paid')->exists()) {
             throw new AuthorizationException('The term tuition invoice must be paid before this result is available.');
         }
     }
@@ -59,7 +59,7 @@ class ResultPaymentAccess
         }
         $latest = Invoice::where('student_id', $studentId)->where('kind', Invoice::KIND_TERM_FEE)
             ->latest('id')->first();
-        if ($rule !== 'TermInvoicePaid' || ! $latest || $latest->status !== 'Paid' || ! $latest->payment()->exists()) {
+        if ($rule !== 'TermInvoicePaid' || ! $latest || $latest->status !== 'Paid') {
             throw new AuthorizationException('The latest tuition invoice must be paid before attendance is available.');
         }
     }

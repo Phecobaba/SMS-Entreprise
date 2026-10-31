@@ -6,6 +6,7 @@ use App\Modules\Academics\Models\AcademicLevel;
 use App\Modules\Academics\Models\ClassArm;
 use App\Modules\Academics\Models\SchoolClass;
 use App\Modules\Academics\Models\Section;
+use App\Modules\Academics\Models\Subject;
 use App\Modules\Admissions\Models\Candidate;
 use App\Modules\Core\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -52,6 +53,13 @@ class SectionAccess
         $armIds = $this->visibleArmIds($actor, $requestedSectionId);
 
         return $armIds === null ? $query : $query->whereIn('class_arm_id', $armIds);
+    }
+
+    public function scopeSubjects(Builder $query, User $actor, ?int $requestedSectionId = null): Builder
+    {
+        $ids = $this->allowedIds($actor, $requestedSectionId);
+
+        return $ids === null ? $query : $query->whereIn('section_id', $ids);
     }
 
     public function scopeResults(Builder $query, User $actor, ?int $requestedSectionId = null): Builder
@@ -113,6 +121,14 @@ class SectionAccess
         }
     }
 
+    public function assertSubject(User $actor, int $subjectId): void
+    {
+        $query = Subject::whereKey($subjectId);
+        if (! $this->scopeSubjects($query, $actor)->exists()) {
+            throw new AuthorizationException('You cannot access another section’s subject.');
+        }
+    }
+
     public function assertSection(User $actor, int $sectionId): void
     {
         if (! Section::whereKey($sectionId)->exists()) {
@@ -145,7 +161,7 @@ class SectionAccess
             return null;
         }
 
-        if ($actor->can('view_all_sections')) {
+        if ($actor->can('view_all_sections') || $actor->can('manage_academics')) {
             if ($requestedSectionId === null) {
                 return null;
             }

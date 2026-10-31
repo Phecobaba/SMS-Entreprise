@@ -60,6 +60,6 @@ class SchoolProfileController extends Controller
         $settings = SchoolSetting::firstOrCreate([]);
         $settings->fill($data)->save();
 
-        return back()->with('status', 'School profile updated.');
+        return redirect()->route('school-profile.edit')->with('status', 'School profile updated.');
     }
 }

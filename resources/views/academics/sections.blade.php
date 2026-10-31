@@ -19,6 +19,7 @@
                 <div class="ad-wide"><button class="oak-btn oak-btn-primary">Add section</button></div>
             </form>
         </section>
+        <section class="ad-card"><div class="ad-card-head"><div><h3>Levels come next</h3><p>Once a section exists, add its levels on the Levels tab. You choose the section when you create a level, and it cannot be changed afterwards.</p></div></div></section>
     @else
         <div class="ad-grid-2">
             @foreach($sections as $section)
@@ -35,15 +36,13 @@
                 </section>
             @endforeach
         </div>
-        <section class="ad-card oak-section"><div class="ad-card-head"><div><h2>Levels</h2><p>Moving a level moves its classes and students under the new section head. Past results and attendance stay unchanged.</p></div></div>
-            @if($levels->contains(fn($level) => $level->section_id === null))<div class="oak-notice oak-notice-warning"><strong>Assign every level.</strong>&nbsp; Section-scoped work is not ready while a level is unassigned.</div>@endif
+        <section class="ad-card oak-section"><div class="ad-card-head"><div><h2>Levels</h2><p>A Level's Section is fixed when it is created. If it is in the wrong section, delete it and create it again on the Levels tab.</p></div><a class="oak-btn oak-btn-quiet" href="{{ route('academics.levels.index') }}">Manage levels</a></div>
             @forelse($levels as $level)
-                <form class="ad-level-row" method="post" action="{{ route('academics.levels.section', $level) }}" onsubmit="return confirm('Move {{ addslashes($level->name) }} and all of its classes and students to this section? Nothing will be deleted.');">@csrf @method('PUT')
-                    <div><strong>{{ $level->name }}</strong><div class="ad-meta">{{ $level->classes_count }} {{ Str::plural('class', $level->classes_count) }}</div></div>
-                    <label><span class="sr-only">Section for {{ $level->name }}</span><select class="ad-inline-select" name="section_id" required><option value="">Choose section</option>@foreach($sections as $section)<option value="{{ $section->id }}" @selected($level->section_id === $section->id)>{{ $section->name }}</option>@endforeach</select></label>
-                    <button class="oak-btn oak-btn-secondary">Save</button>
-                </form>
-            @empty<div class="oak-empty"><strong>No levels yet</strong>Add levels from Sessions, terms & subjects.</div>@endforelse
+                <div class="ad-level-row">
+                    <div><strong>{{ $level->name }}</strong><div class="ad-meta">{{ $level->classes_count }} {{ Str::plural('class', $level->classes_count) }} · {{ $level->classes->sum('active_students_count') }} {{ Str::plural('student', $level->classes->sum('active_students_count')) }}</div></div>
+                    <span>{{ $level->section?->name }}</span>
+                </div>
+            @empty<div class="oak-empty"><strong>No levels yet</strong>Add levels from the Levels tab.</div>@endforelse
         </section>
         <div class="ad-bar"><button class="oak-btn oak-btn-primary" type="button" data-open-sheet="add-section-sheet">Add section</button></div>
         <x-oak.sheet id="add-section-sheet" labelledby="add-section-title"><div class="oak-sheet"><h2 id="add-section-title">Add a section</h2><form method="post" action="{{ route('academics.sections.store') }}" class="ad-form-grid">@csrf

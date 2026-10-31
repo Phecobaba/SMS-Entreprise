@@ -90,7 +90,9 @@ and a domain whose document root can be set to the application's
 2. Create `/home/CPANEL_USER/oakfield-sms/shared/.env` from
    `.env.production.example`, fill in the real URL, database, mail, and
    `DEFAULT_SCHOOL_ID` values, and generate `APP_KEY` locally with
-   `php artisan key:generate --show`.
+   `php artisan key:generate --show`. Back up that `APP_KEY` securely before
+   go-live and before every key rotation: saved Paystack credentials cannot be
+   decrypted without the same application key.
 3. Set the domain's cPanel document root to
    `/home/CPANEL_USER/oakfield-sms/current/public`.
 4. Add the deployment computer's public SSH key to the cPanel account.
@@ -99,6 +101,9 @@ and a domain whose document root can be set to the application's
    `QUEUE_CONNECTION=sync`; no persistent queue worker or Node server is
    required. If the purchased plan provides a different PHP CLI version,
    verify compatibility before changing the pinned 8.2.x release check.
+6. Sign in as a School Admin and set the final Test or Live Paystack keys on
+   the Payment gateway page. Do not copy final gateway secrets into source
+   files or deployment scripts.
 
 The `.env` file is never uploaded by the deployment command. Application
 storage is also shared between releases.
@@ -127,8 +132,13 @@ and archive creation without contacting the server, add `-ValidateOnly`.
 The command validates Composer metadata, runs the PHP tests, performs a clean
 npm install and production asset build, uploads an application archive, runs
 the database migrations, warms Laravel's caches, and switches the live
-release. Any failure before the symlink switch leaves the current release
-untouched.
+release. The remote preflight also requires `SESSION_DRIVER=database` before
+migrations: staff password resets and access changes revoke database session
+rows, so another driver would leave other devices signed in. Any failure
+before the symlink switch leaves the current release untouched. The existing
+local build/archive preflight lives in `deploy/deploy.ps1`; target-runtime
+checks, including PHP/GD and the session driver, live in
+`deploy/remote-deploy.sh`.
 
 After deployment, verify the trivial health endpoint:
 

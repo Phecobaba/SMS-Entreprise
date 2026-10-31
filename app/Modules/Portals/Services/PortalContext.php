@@ -76,6 +76,7 @@ class PortalContext
         return [
             'id' => $student->id,
             'name' => $student->user?->name ?? 'Student #'.$student->id,
+            'registration_number' => $student->registration_number,
             'class' => $class ? trim($class->name.' '.($student->classArm?->name ?? '')) : 'Class not assigned',
             'section' => $class?->level?->section?->name,
             'fees_due' => $feesDue,

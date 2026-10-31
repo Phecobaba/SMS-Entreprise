@@ -43,24 +43,25 @@ class CbtReleaseAndScoringTest extends TestCase
         $learner = User::create(['name' => 'Learner', 'email' => 'learner-cbt@example.test', 'password' => 'long-password-here', 'status' => 'active']);
         $role = Role::create(['name' => 'CBT Admin']);
         $permissions = [];
-        foreach (['manage_cbt', 'approve_cbt_results', 'enter_results', 'manage_result_settings'] as $name) {
-            $permissions[] = Permission::create(['name' => $name])->id;
+        foreach (['manage_cbt', 'approve_cbt_results', 'enter_results', 'manage_result_settings', 'view_all_sections'] as $name) {
+            $permissions[] = Permission::firstOrCreate(['name' => $name])->id;
         }
         $role->permissions()->attach($permissions);
         $admin->roles()->attach($role);
-        $level = AcademicLevel::create(['name' => 'Secondary']);
+        $section = Section::create(['name' => 'Secondary School', 'head_title' => 'Principal']);
+        $level = AcademicLevel::create(['section_id' => $section->id, 'name' => 'Secondary']);
         $class = SchoolClass::create(['academic_level_id' => $level->id, 'name' => 'JSS 1']);
         $arm = ClassArm::create(['class_id' => $class->id, 'name' => 'A']);
-        $subject = Subject::create(['name' => 'Mathematics']);
+        $subject = Subject::create(['section_id' => $section->id, 'name' => 'Mathematics']);
         ClassSubject::create(['class_id' => $class->id, 'subject_id' => $subject->id]);
         $session = AcademicSession::create(['name' => '2026/2027', 'start_date' => '2026-01-01', 'end_date' => '2026-12-31']);
         $term = AcademicTerm::create(['session_id' => $session->id, 'name' => 'First Term', 'start_date' => '2026-01-01', 'end_date' => '2026-03-31']);
         $student = Student::create(['user_id' => $learner->id, 'class_arm_id' => $arm->id, 'admission_date' => '2026-01-01']);
         $config = app(ResultConfiguration::class);
-        $component = $config->addComponent('Exam', 70);
-        $scheme = $config->addScheme('Secondary');
+        $component = $config->addComponent($section->id, 'Exam', 70);
+        $scheme = $config->addScheme($section->id, 'Secondary');
         $config->addBand($scheme->id, 0, 100, 'A', 'Recorded');
-        $config->addTemplate('Secondary', $level->id, null, $scheme->id, [$component->id]);
+        $config->addTemplate('Secondary', $section->id, $level->id, null, $scheme->id, [$component->id]);
 
         $workflow = app(ExamWorkflow::class);
         $type = $workflow->createType('Internal', $admin);
@@ -140,7 +141,7 @@ class CbtReleaseAndScoringTest extends TestCase
         $pipeline = app(AdmissionPipeline::class);
         $candidate = $pipeline->register(['name' => 'Candidate', 'email' => 'candidate-cbt@example.test', 'phone' => '08000000000', 'password' => 'long-password-here', 'applied_level_id' => $level->id]);
         $invoice = app(PaymentLedger::class)->invoice(['candidate_id' => $candidate->id, 'purpose' => 'Registration', 'amount_kobo' => 10000, 'due_date' => today()->toDateString()], $admin);
-        app(PaymentLedger::class)->manualPayment($invoice, $admin);
+        app(PaymentLedger::class)->settleManualSubmission($invoice, $invoice->amount_kobo, $admin);
         $candidateUser = User::findOrFail($candidate->user_id);
         $workflow = app(ExamWorkflow::class);
         $type = $workflow->createType('Entrance', $admin);

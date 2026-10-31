@@ -9,8 +9,8 @@ use App\Modules\Academics\Services\SectionAccess;
 use App\Modules\Admissions\Services\StudentDirectory;
 use App\Modules\Results\Models\Result;
 use App\Modules\Results\Models\ResultCard;
-use App\Modules\Results\Models\ResultTemplate;
 use App\Modules\Results\Services\ResultCsvImport;
+use App\Modules\Results\Services\ResultTemplateResolver;
 use App\Modules\Results\Services\ResultWorkflow;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -73,6 +73,7 @@ class ResultWorkflowController extends Controller
             'studentId' => $student,
             'studentName' => $names[$student] ?? 'Student #'.$student,
             'template' => $template,
+            'templateMessage' => $template ? null : $workflow->missingTemplateMessage($armId),
             ...$academics->options(),
             'subjects' => $subjects,
         ]);
@@ -98,7 +99,7 @@ class ResultWorkflowController extends Controller
         $data = $request->validate(['file' => ['required', 'file', 'mimes:csv,txt', 'max:2048']]);
         $count = $importer->import($data['file'], $request->user());
 
-        return back()->with('status', "CSV scores saved as drafts for {$count} result(s).");
+        return redirect()->route('results.index')->with('status', "CSV scores saved as drafts for {$count} result(s).");
     }
 
     public function show(int $result, StudentDirectory $students, ResultAcademicCatalog $academics, ResultTeachingAssignments $assignments, Request $request): View
@@ -113,7 +114,7 @@ class ResultWorkflowController extends Controller
 
         return view('results.show', [
             'result' => $result,
-            'template' => ResultTemplate::with('components.component')->findOrFail($result->result_template_id),
+            'template' => app(ResultTemplateResolver::class)->stored($result->result_template_id),
             'studentName' => $students->names([$result->student_id])[$result->student_id] ?? 'Student #'.$result->student_id,
             'labels' => $academics->labels([$result->subject_id], [$result->term_id]),
         ]);
@@ -126,21 +127,21 @@ class ResultWorkflowController extends Controller
         $record = Result::findOrFail($result);
         $workflow->saveDraft($record->student_id, $record->subject_id, $record->term_id, $scores, $request->user());
 
-        return back()->with('status', 'Draft scores saved.');
+        return redirect()->route('results.show', $result)->with('status', 'Draft scores saved.');
     }
 
     public function submit(int $result, Request $request, ResultWorkflow $workflow): RedirectResponse
     {
         $workflow->submit(Result::findOrFail($result), $request->user());
 
-        return back()->with('status', 'Result submitted for approval.');
+        return redirect()->route('results.show', $result)->with('status', 'Result submitted for approval.');
     }
 
     public function approve(int $result, Request $request, ResultWorkflow $workflow): RedirectResponse
     {
         $workflow->approve(Result::findOrFail($result), $request->user());
 
-        return back()->with('status', 'Result approved and locked.');
+        return redirect()->route('results.show', $result)->with('status', 'Result approved and locked.');
     }
 
     public function reject(int $result, Request $request, ResultWorkflow $workflow): RedirectResponse
@@ -148,6 +149,6 @@ class ResultWorkflowController extends Controller
         $data = $request->validate(['rejection_reason' => ['required', 'string', 'max:2000']]);
         $workflow->reject(Result::findOrFail($result), $request->user(), $data['rejection_reason']);
 
-        return back()->with('status', 'Result rejected for correction.');
+        return redirect()->route('results.show', $result)->with('status', 'Result rejected for correction.');
     }
 }

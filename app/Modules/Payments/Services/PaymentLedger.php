@@ -13,6 +13,7 @@ use App\Modules\Core\Models\User;
 use App\Modules\Core\TenantContext;
 use App\Modules\Notifications\Services\InAppNotifications;
 use App\Modules\Payments\Models\Invoice;
+use App\Modules\Payments\Models\ManualPaymentSubmission;
 use App\Modules\Payments\Models\Payment;
 use App\Modules\Payments\Models\PaymentAttempt;
 use Illuminate\Support\Facades\DB;
@@ -29,7 +30,8 @@ class PaymentLedger
 
     public function outstandingKobo(?User $viewer = null, ?int $sectionId = null): int
     {
-        $query = Invoice::where('status', 'Unpaid')->where('kind', Invoice::KIND_TERM_FEE);
+        $query = Invoice::with(['payment', 'partPayments.payment'])
+            ->where('status', '!=', 'Voided')->where('kind', Invoice::KIND_TERM_FEE);
         if ($viewer) {
             $armIds = app(SectionAccess::class)->visibleArmIds($viewer, $sectionId);
             if ($armIds !== null) {
@@ -38,12 +40,12 @@ class PaymentLedger
             }
         }
 
-        return (int) $query->sum('amount_kobo');
+        return (int) $query->get()->sum(fn (Invoice $invoice): int => app(InvoiceLifecycle::class)->balanceKobo($invoice));
     }
 
     public function dashboardSummary(): array
     {
-        $term = app(AcademicCalendar::class)->currentTerm();
+        $term = app(AcademicCalendar::class)->termForSummary();
 
         if (! $term) {
             return [
@@ -52,13 +54,15 @@ class PaymentLedger
                 'collected_kobo' => 0,
                 'recent' => collect(),
                 'not_invoiced_count' => 0,
+                'awaiting_approval_count' => ManualPaymentSubmission::where('status', ManualPaymentSubmission::STATUS_AWAITING)->count(),
             ];
         }
 
         return [
             'term' => trim($term->name.' · '.($term->session?->name ?? '')),
-            'outstanding_kobo' => (int) Invoice::where('term_id', $term->id)
-                ->where('kind', Invoice::KIND_TERM_FEE)->where('status', 'Unpaid')->sum('amount_kobo'),
+            'outstanding_kobo' => (int) Invoice::with(['payment', 'partPayments.payment'])->where('term_id', $term->id)
+                ->where('kind', Invoice::KIND_TERM_FEE)->where('status', '!=', 'Voided')->get()
+                ->sum(fn (Invoice $invoice): int => app(InvoiceLifecycle::class)->balanceKobo($invoice)),
             'collected_kobo' => (int) Payment::whereHas('invoice', fn ($query) => $query->where('term_id', $term->id))
                 ->sum('amount_kobo'),
             'recent' => Payment::with(['invoice.student.user', 'invoice.candidate'])
@@ -66,6 +70,7 @@ class PaymentLedger
                 ->latest('paid_at')->limit(4)->get(),
             'not_invoiced_count' => Student::active()->whereNotIn('id', Invoice::where('kind', Invoice::KIND_TERM_FEE)
                 ->where('term_id', $term->id)->select('student_id'))->count(),
+            'awaiting_approval_count' => ManualPaymentSubmission::where('status', ManualPaymentSubmission::STATUS_AWAITING)->count(),
         ];
     }
 
@@ -79,8 +84,9 @@ class PaymentLedger
         $isOwner = app(StudentDirectory::class)->belongsToUser($studentId, $viewer);
         $isWard = app(ParentAccountDirectory::class)->isWard($studentId, $viewer->id);
         abort_unless($isOwner || $isWard, 403);
-        $invoices = Invoice::with('payment')->where('student_id', $studentId)->latest('id')->limit(5)->get();
-        $latestTermInvoice = Invoice::where('student_id', $studentId)->where('kind', Invoice::KIND_TERM_FEE)
+        $invoices = Invoice::with(['lines', 'payment', 'attempts', 'awaitingManualSubmission', 'partPayments.payment', 'partPayments.attempts', 'partPayments.awaitingManualSubmission'])
+            ->where('student_id', $studentId)->whereNull('parent_invoice_id')->latest('id')->limit(5)->get();
+        $latestTermInvoice = Invoice::with(['awaitingManualSubmission', 'partPayments'])->where('student_id', $studentId)->where('kind', Invoice::KIND_TERM_FEE)
             ->latest('id')->first();
         $latestUnpaidTuition = $latestTermInvoice?->status === 'Unpaid' ? $latestTermInvoice : null;
 
@@ -88,8 +94,13 @@ class PaymentLedger
             'recent' => $invoices,
             'outstanding_kobo' => $this->termFeeOutstandingKobo($studentId),
             'latest_unpaid_tuition' => $latestUnpaidTuition,
-            'latest_unpaid_tuition_payable' => $latestUnpaidTuition && PaymentAttempt::where('invoice_id', $latestUnpaidTuition->id)
-                ->latest('id')->value('status') !== 'Pending',
+            'latest_unpaid_tuition_payable' => $latestUnpaidTuition && ! $latestUnpaidTuition->awaitingManualSubmission
+                && ! app(InvoiceLifecycle::class)->hasOpenParts($latestUnpaidTuition)
+                && app(PaystackCredentials::class)->isConfigured()
+                && PaymentAttempt::where('invoice_id', $latestUnpaidTuition->id)
+                    ->latest('id')->value('status') !== 'Pending',
+            'latest_unpaid_tuition_payable_kobo' => $latestUnpaidTuition
+                ? app(InvoiceLifecycle::class)->balanceKobo($latestUnpaidTuition) : null,
         ];
     }
 
@@ -97,8 +108,11 @@ class PaymentLedger
     {
         app(ResultPaymentAccess::class)->authorizeOwnership($studentId, $viewer);
         $readOnly = ! app(StudentDirectory::class)->isActive($studentId);
-        $rows = Invoice::with(['payment', 'attempts'])->where('student_id', $studentId)
-            ->when($readOnly, fn ($query) => $query->where('status', 'Paid')->whereHas('payment'))
+        $rows = Invoice::with(['lines', 'payment', 'attempts', 'awaitingManualSubmission', 'partPayments.payment', 'partPayments.attempts', 'partPayments.awaitingManualSubmission'])
+            ->where('student_id', $studentId)->whereNull('parent_invoice_id')
+            ->when($readOnly, fn ($query) => $query->where('status', 'Paid')->where(function ($paid) {
+                $paid->whereHas('payment')->orWhereHas('partPayments.payment');
+            }))
             ->latest('id')->paginate(20)->withQueryString();
 
         return [
@@ -106,6 +120,7 @@ class PaymentLedger
             'terms' => app(ResultAcademicCatalog::class)->labels([], $rows->pluck('term_id')->filter()->all())['terms'],
             'outstanding_kobo' => $readOnly ? 0 : $this->termFeeOutstandingKobo($studentId),
             'read_only' => $readOnly,
+            'online_payments_available' => app(PaystackCredentials::class)->isConfigured(),
         ];
     }
 
@@ -119,6 +134,7 @@ class PaymentLedger
             'outstanding_kobo' => 0,
             'latest_unpaid_tuition' => null,
             'latest_unpaid_tuition_payable' => false,
+            'latest_unpaid_tuition_payable_kobo' => null,
             'read_only' => true,
         ];
     }
@@ -142,21 +158,14 @@ class PaymentLedger
             return $outstanding;
         }
 
-        $invoices = Invoice::whereIn('student_id', $studentIds)->where('kind', Invoice::KIND_TERM_FEE)
-            ->get(['id', 'student_id', 'amount_kobo', 'status']);
+        $invoices = Invoice::with(['payment', 'partPayments.payment'])->whereIn('student_id', $studentIds)
+            ->where('kind', Invoice::KIND_TERM_FEE)->where('status', '!=', 'Voided')->get();
         if ($invoices->isEmpty()) {
             return $outstanding;
         }
 
-        $recorded = Payment::whereIn('invoice_id', $invoices->pluck('id'))
-            ->selectRaw('invoice_id, SUM(amount_kobo) as paid_kobo')
-            ->groupBy('invoice_id')
-            ->pluck('paid_kobo', 'invoice_id');
-
         foreach ($invoices as $invoice) {
-            if ($invoice->status !== 'Paid') {
-                $outstanding[$invoice->student_id] += max(0, $invoice->amount_kobo - (int) ($recorded[$invoice->id] ?? 0));
-            }
+            $outstanding[$invoice->student_id] += app(InvoiceLifecycle::class)->balanceKobo($invoice);
         }
 
         return $outstanding;
@@ -195,23 +204,29 @@ class PaymentLedger
         });
     }
 
-    public function manualPayment(Invoice $invoice, User $actor): Payment
+    public function settleManualSubmission(Invoice $invoice, int $amountKobo, User $actor): Payment
     {
-        if (! $actor->can('manage_payments')) {
-            throw ValidationException::withMessages(['payment' => 'Payment confirmation requires Bursar access.']);
+        if ($invoice->kind === Invoice::KIND_TERM_FEE && app(InvoiceLifecycle::class)->hasOpenParts($invoice)) {
+            throw ValidationException::withMessages(['payment' => 'Pay the open part-payment first, or ask the Bursar to void it.']);
+        }
+        if ($amountKobo !== app(InvoiceLifecycle::class)->balanceKobo($invoice)) {
+            throw ValidationException::withMessages(['payment' => 'The recorded amount does not match the invoice balance.']);
         }
 
-        return $this->settle($invoice, 'Manual', null, $actor);
+        return $this->settle($invoice, $amountKobo, 'Manual', null, $actor);
     }
 
     public function beginPaystack(Invoice $invoice, User $actor): PaymentAttempt
     {
-        $secret = config('services.paystack.secret_key');
-        if (! is_string($secret) || $secret === '') {
-            throw ValidationException::withMessages(['payment' => 'Paystack test keys are not configured yet.']);
-        }
+        $secret = app(PaystackCredentials::class)->secretKeyOrFail();
         if ($invoice->status !== 'Unpaid') {
             throw ValidationException::withMessages(['payment' => 'This invoice is already paid.']);
+        }
+        if ($invoice->manualSubmissions()->where('status', ManualPaymentSubmission::STATUS_AWAITING)->exists()) {
+            throw ValidationException::withMessages(['payment' => 'The recorded bank payment is awaiting approval. Do not pay this invoice again.']);
+        }
+        if ($invoice->kind === Invoice::KIND_TERM_FEE && app(InvoiceLifecycle::class)->hasOpenParts($invoice)) {
+            throw ValidationException::withMessages(['payment' => 'Pay the open part-payment first, or ask the Bursar to void it.']);
         }
         if (! $actor->can('manage_payments') && $invoice->student_id
             && ! app(StudentDirectory::class)->isActive($invoice->student_id)) {
@@ -228,15 +243,16 @@ class PaymentLedger
             throw ValidationException::withMessages(['payment' => 'An email address is needed for Paystack. Ask the school office to add one to your account.']);
         }
         $reference = 'oak-'.app(TenantContext::class)->id().'-'.Str::uuid();
+        $payableKobo = app(InvoiceLifecycle::class)->balanceKobo($invoice);
         $attempt = PaymentAttempt::create([
             'invoice_id' => $invoice->id, 'reference' => $reference,
-            'amount_kobo' => $invoice->amount_kobo, 'initiated_by' => $actor->id,
+            'amount_kobo' => $payableKobo, 'initiated_by' => $actor->id,
             'status' => 'Pending',
         ]);
         try {
             $response = Http::withToken($secret)->acceptJson()->timeout(15)
                 ->post(rtrim(config('services.paystack.base_url'), '/').'/transaction/initialize', [
-                    'email' => $email, 'amount' => $invoice->amount_kobo,
+                    'email' => $email, 'amount' => $payableKobo,
                     'currency' => 'NGN', 'reference' => $reference,
                     'callback_url' => route('payments.verify'),
                 ])->throw()->json();
@@ -255,10 +271,7 @@ class PaymentLedger
 
     public function verifyPaystack(string $reference): ?Payment
     {
-        $secret = config('services.paystack.secret_key');
-        if (! is_string($secret) || $secret === '') {
-            throw ValidationException::withMessages(['payment' => 'Paystack is not configured.']);
-        }
+        $secret = app(PaystackCredentials::class)->secretKeyOrFail();
         $attempt = PaymentAttempt::where('reference', $reference)->firstOrFail();
         $response = Http::withToken($secret)->acceptJson()->timeout(15)
             ->get(rtrim(config('services.paystack.base_url'), '/').'/transaction/verify/'.rawurlencode($reference))
@@ -277,12 +290,21 @@ class PaymentLedger
             throw ValidationException::withMessages(['payment' => 'Verified transaction does not match this invoice.']);
         }
 
-        return $this->settle($attempt->invoice()->firstOrFail(), 'Online', $reference, null);
+        return $this->settle(
+            $attempt->invoice()->firstOrFail(),
+            (int) $attempt->amount_kobo,
+            'Online',
+            $reference,
+            User::findOrFail($attempt->initiated_by),
+        );
     }
 
-    private function settle(Invoice $invoice, string $method, ?string $reference, ?User $actor): Payment
+    private function settle(Invoice $invoice, int $amountKobo, string $method, ?string $reference, User $actor): Payment
     {
-        return DB::transaction(function () use ($invoice, $method, $reference, $actor): Payment {
+        return DB::transaction(function () use ($invoice, $amountKobo, $method, $reference, $actor): Payment {
+            if ($invoice->parent_invoice_id) {
+                Invoice::whereKey($invoice->parent_invoice_id)->lockForUpdate()->firstOrFail();
+            }
             $locked = Invoice::whereKey($invoice->id)->lockForUpdate()->firstOrFail();
             $existing = Payment::where('invoice_id', $locked->id)->first();
             if ($existing) {
@@ -295,13 +317,20 @@ class PaymentLedger
             if ($locked->status !== 'Unpaid') {
                 throw ValidationException::withMessages(['payment' => 'This invoice cannot be settled.']);
             }
+            if ($locked->kind === Invoice::KIND_TERM_FEE && app(InvoiceLifecycle::class)->hasOpenParts($locked)) {
+                throw ValidationException::withMessages(['payment' => 'Pay the open part-payment first, or ask the Bursar to void it.']);
+            }
+            if ($amountKobo !== app(InvoiceLifecycle::class)->balanceKobo($locked)) {
+                throw ValidationException::withMessages(['payment' => 'The payment amount no longer matches the invoice balance.']);
+            }
             $payment = Payment::create([
-                'invoice_id' => $locked->id, 'amount_kobo' => $locked->amount_kobo,
+                'invoice_id' => $locked->id, 'amount_kobo' => $amountKobo,
                 'method' => $method, 'gateway_reference' => $reference,
-                'confirmed_by' => $actor?->id, 'paid_at' => now(),
+                'confirmed_by' => $actor->id, 'paid_at' => now(),
                 'receipt_number' => 'OAK-'.app(TenantContext::class)->id().'-'.str_pad((string) $locked->id, 8, '0', STR_PAD_LEFT),
             ]);
             $locked->update(['status' => 'Paid']);
+            app(InvoiceLifecycle::class)->syncParentAfterSettlement($locked, $actor);
             if ($reference) {
                 PaymentAttempt::where('reference', $reference)->update(['status' => 'Verified']);
             }
@@ -314,7 +343,7 @@ class PaymentLedger
                     $locked->student_id,
                     app(BillingRecipients::class)->userIdFor(null, $locked->student_id),
                     app(StudentDirectory::class)->names([$locked->student_id])[$locked->student_id],
-                    'Payment confirmed', $message,
+                    'Payment confirmed', $message, route('payments.mine.index', ['student' => $locked->student_id], false),
                 );
             } else {
                 app(InAppNotifications::class)->send([app(BillingRecipients::class)->userIdFor($locked->candidate_id, null)], 'Payment confirmed', $message);

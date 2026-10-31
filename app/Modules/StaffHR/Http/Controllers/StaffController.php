@@ -58,7 +58,7 @@ class StaffController extends Controller
         $data = $request->validate(['amount_kobo' => ['required', 'integer', 'min:1'], 'effective_from' => ['required', 'date']]);
         $records->addSalary(Staff::findOrFail($staff), (int) $data['amount_kobo'], $data['effective_from'], $request->user());
 
-        return back()->with('status', 'Salary history updated.');
+        return redirect()->route('staff.salary', $staff)->with('status', 'Salary history updated.');
     }
 
     public function discipline(int $staff, Request $request, StaffRecords $records): View
@@ -78,7 +78,7 @@ class StaffController extends Controller
         ]);
         StaffDisciplinaryLog::create($data + ['staff_id' => $staff, 'issued_by' => $request->user()->id]);
 
-        return back()->with('status', 'Disciplinary entry saved.');
+        return redirect()->route('staff.discipline', $staff)->with('status', 'Disciplinary entry saved.');
     }
 
     public function document(int $staff, Request $request): RedirectResponse
@@ -88,7 +88,7 @@ class StaffController extends Controller
         $path = $data['file']->store('staff-documents/'.$staff, 'local');
         StaffDocument::create(['staff_id' => $staff, 'document_type' => $data['document_type'], 'file_path' => $path, 'uploaded_at' => now()]);
 
-        return back()->with('status', 'Private staff document uploaded.');
+        return redirect()->route('staff.show', $staff)->with('status', 'Private staff document uploaded.');
     }
 
     public function download(int $staff, int $document)
@@ -111,6 +111,6 @@ class StaffController extends Controller
             $record->update(['status' => $data['exit_type'] === 'Sacked' ? 'Terminated' : $data['exit_type']]);
         });
 
-        return back()->with('status', 'Staff exit recorded.');
+        return redirect()->route('staff.show', $staff)->with('status', 'Staff exit recorded.');
     }
 }

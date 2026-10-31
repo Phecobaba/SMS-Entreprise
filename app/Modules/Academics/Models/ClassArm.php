@@ -3,6 +3,7 @@
 namespace App\Modules\Academics\Models;
 
 use App\Modules\Core\Models\Concerns\BelongsToTenant;
+use App\Modules\Core\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -15,5 +16,10 @@ class ClassArm extends Model
     public function schoolClass(): BelongsTo
     {
         return $this->belongsTo(SchoolClass::class, 'class_id');
+    }
+
+    public function formTeacher(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'form_teacher_user_id');
     }
 }

@@ -17,6 +17,10 @@
 /public/build
 /public/hot
 /public/storage
+/.tmp-chrome-*/
+/.tmp-edge-*/
+/*.zip
+/qa-*.jsonl
 /storage/*.key
 /storage/pail
 /vendor

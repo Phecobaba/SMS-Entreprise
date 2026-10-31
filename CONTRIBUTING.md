@@ -90,6 +90,18 @@ any control over the stopping point):
 - If you made a judgment call mid-task, log it in the Decisions Log even
   if the task itself isn't finished — don't lose that reasoning.
 
+## QA and Browser Database Isolation
+
+Automated tests run only against SQLite in-memory; the shared test base fails
+fast if the resolved database is anything else. Browser and manual QA checks
+must use a separate throwaway SQLite file, for example `database/qa.sqlite`,
+selected with an environment override for the QA process. Migrate and seed
+that file, perform the check, then delete it. `database/*.sqlite` is gitignored.
+
+Never run `migrate:fresh`, seed QA fixtures, or point a test or browser runner
+at `database/database.sqlite`. It is the persistent local development database,
+not test infrastructure.
+
 ## What NOT to Do
 
 - Don't introduce a new package/library without checking it's justified —

@@ -15,6 +15,8 @@ use App\Modules\Academics\Models\Subject;
 use App\Modules\Academics\Services\AcademicDeleteGuard;
 use App\Modules\Academics\Services\ClassOrderingService;
 use App\Modules\Academics\Services\SectionAccess;
+use App\Modules\Academics\Services\SubjectManagement;
+use App\Modules\Academics\Services\SubjectReferences;
 use App\Modules\Core\Services\AuditRecorder;
 use App\Modules\Core\TenantContext;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -45,34 +47,69 @@ class AcademicConfigurationController extends Controller
     public function sessions(): View
     {
         return view('academics.sessions', [
-            'sessions' => AcademicSession::withCount('terms')->orderByDesc('start_date')->limit(100)->get(),
+            'sessions' => AcademicSession::with(['terms' => fn ($query) => $query->orderBy('start_date')])
+                ->withCount('terms')->orderByDesc('start_date')->limit(100)->get(),
             'terms' => AcademicTerm::with('session')->orderByDesc('start_date')->limit(100)->get(),
             'sessionOptions' => AcademicSession::orderByDesc('start_date')->limit(100)->get(),
         ]);
     }
 
-    public function index(): View
+    public function index(Request $request, SectionAccess $sectionAccess): View
     {
+        $this->authorizeSubjects($request);
+        $actor = $request->user();
+        $canViewAll = $actor->can('manage_academics');
+        $sectionIds = $sectionAccess->sectionIds($actor);
+        $sections = Section::when(! $canViewAll, fn ($query) => $query->whereIn('id', $sectionIds))
+            ->orderBy('name')->limit(100)->get();
+        $sectionId = $canViewAll
+            ? ($request->filled('section') ? $request->integer('section') : null)
+            : $sections->first()?->id;
+        if ($sectionId) {
+            $sectionAccess->assertSection($actor, $sectionId);
+        }
+        $classIds = $sectionId
+            ? SchoolClass::whereHas('level', fn ($query) => $query->where('section_id', $sectionId))->pluck('id')
+            : SchoolClass::pluck('id');
+        $subjectQuery = Subject::with('section')
+            ->when($sectionId, fn ($query) => $query->where('section_id', $sectionId));
+
         return view('academics.configuration', [
-            'subjects' => Subject::orderBy('name')->paginate(15, ['*'], 'subjects_page'),
-            'assignments' => ClassSubject::with(['schoolClass', 'subject'])->latest()->paginate(15, ['*'], 'assignments_page'),
-            'classOptions' => SchoolClass::with('level')->orderBy('name')->limit(100)->get(),
-            'subjectOptions' => Subject::orderBy('name')->get(),
+            'subjects' => $subjectQuery->orderBy('name')->paginate(15, ['*'], 'subjects_page')->withQueryString(),
+            'assignments' => ClassSubject::with(['schoolClass', 'subject'])->whereIn('class_id', $classIds)->latest()->paginate(15, ['*'], 'assignments_page')->withQueryString(),
+            'classOptions' => SchoolClass::with('level')->whereIn('id', $classIds)->orderBy('name')->limit(100)->get(),
+            'subjectOptions' => Subject::when($sectionId, fn ($query) => $query->where('section_id', $sectionId))->orderBy('name')->limit(100)->get(),
+            'sections' => $sections,
+            'sectionId' => $sectionId,
+            'canViewAll' => $canViewAll,
+            'hasSection' => $canViewAll || $sectionId !== null,
         ]);
     }
 
     public function storeLevel(Request $request, TenantContext $context, SectionAccess $sections): RedirectResponse
     {
         $this->authorizeLevels($request);
+        if ($request->user()->can('manage_academics')) {
+            $sectionData = $request->validate([
+                'section_id' => ['required', 'integer', Rule::exists('sections', 'id')->where('school_id', $context->id())],
+            ]);
+            $sectionId = (int) $sectionData['section_id'];
+        } else {
+            $sectionId = (int) ($sections->sectionIds($request->user())[0] ?? 0);
+            if ($request->has('section_id') && (int) $request->input('section_id') !== $sectionId) {
+                throw new AuthorizationException('A head cannot create a level in another section.');
+            }
+        }
+        $sections->assertSection($request->user(), $sectionId);
+        $sectionName = Section::findOrFail($sectionId)->name;
+        $submittedName = trim((string) $request->input('name'));
         $data = $request->validate([
-            'section_id' => ['required', 'integer', Rule::exists('sections', 'id')->where('school_id', $context->id())],
             'name' => ['required', 'string', 'max:100', Rule::unique('academic_levels')->where('school_id', $context->id())],
-        ]);
-        $sections->assertSection($request->user(), (int) $data['section_id']);
+        ], ['name.unique' => "A level called {$submittedName} already exists in {$sectionName}. Choose a different name."]);
 
-        AcademicLevel::create(['section_id' => (int) $data['section_id'], 'name' => trim($data['name'])]);
+        AcademicLevel::create(['section_id' => $sectionId, 'name' => trim($data['name'])]);
 
-        return back()->with('status', 'Academic level added.');
+        return redirect()->route('academics.levels.index')->with('status', 'Academic level added.');
     }
 
     public function storeSession(Request $request, TenantContext $context): RedirectResponse
@@ -85,7 +122,7 @@ class AcademicConfigurationController extends Controller
 
         AcademicSession::create($data);
 
-        return back()->with('status', 'Academic session added.');
+        return redirect()->route('academics.sessions.index')->with('status', 'Academic session added.');
     }
 
     public function storeTerm(Request $request, TenantContext $context): RedirectResponse
@@ -101,7 +138,7 @@ class AcademicConfigurationController extends Controller
 
         AcademicTerm::create($data);
 
-        return back()->with('status', 'Term added.');
+        return redirect()->route('academics.sessions.index')->with('status', 'Term added.');
     }
 
     public function storeClass(Request $request, TenantContext $context, ClassOrderingService $ordering): RedirectResponse
@@ -125,7 +162,7 @@ class AcademicConfigurationController extends Controller
 
         $ordering->create($data, $request->user());
 
-        return back()->with('status', 'Class added.');
+        return redirect()->route('academics.classes.index')->with('status', 'Class added.');
     }
 
     public function updateClass(Request $request, SchoolClass $class, TenantContext $context, ClassOrderingService $ordering): RedirectResponse
@@ -146,7 +183,7 @@ class AcademicConfigurationController extends Controller
         $data['placement'] = Department::exists() ? ($data['placement'] ?? 'new') : 'new';
         $ordering->update($class, $data, $request->user());
 
-        return back()->with('status', 'Class updated.');
+        return redirect()->route('academics.classes.index')->with('status', 'Class updated.');
     }
 
     public function storeArm(Request $request, TenantContext $context, SectionAccess $sections): RedirectResponse
@@ -161,29 +198,25 @@ class AcademicConfigurationController extends Controller
         $sections->assertClass($request->user(), $class->id);
         ClassArm::create($data);
 
-        return back()->with('status', 'Class arm added.');
+        return redirect()->route('academics.classes.index')->with('status', 'Class arm added.');
     }
 
     public function updateLevel(Request $request, AcademicLevel $level, TenantContext $context, SectionAccess $sections, AuditRecorder $audit): RedirectResponse
     {
         $this->authorizeLevels($request);
         $sections->assertLevel($request->user(), $level->id);
-        $rules = ['name' => ['required', 'string', 'max:100', Rule::unique('academic_levels')->where('school_id', $context->id())->ignore($level->id)]];
-        if ($request->user()->can('manage_academics')) {
-            $rules['section_id'] = ['required', 'integer', Rule::exists('sections', 'id')->where('school_id', $context->id())];
+        if ($request->has('section_id') && (int) $request->input('section_id') !== (int) $level->section_id) {
+            throw new AuthorizationException('A level cannot be moved to another section. Delete it and create it in the correct section.');
         }
-        $data = $request->validate($rules);
+        $submittedName = trim((string) $request->input('name'));
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:100', Rule::unique('academic_levels')->where('school_id', $context->id())->ignore($level->id)],
+        ], ['name.unique' => "A level called {$submittedName} already exists in {$level->section?->name}. Choose a different name."]);
         $before = $level->only(['section_id', 'name']);
-        $after = ['name' => trim($data['name']), 'section_id' => $request->user()->can('manage_academics') ? (int) $data['section_id'] : $level->section_id];
-        if ($request->user()->can('manage_academics')) {
-            $sections->assertSection($request->user(), $after['section_id']);
-        } elseif ($request->has('section_id') && (int) $request->input('section_id') !== (int) $level->section_id) {
-            throw new AuthorizationException('A head cannot move a level to another section.');
-        }
-        $level->update($after);
-        $audit->record($request->user(), 'academic_level_updated', $level, ['before' => $before, 'after' => $after]);
+        $level->update(['name' => trim($data['name'])]);
+        $audit->record($request->user(), 'academic_level_updated', $level, ['before' => $before, 'after' => $level->only(['section_id', 'name'])]);
 
-        return back()->with('status', 'Level updated. Existing records were not changed.');
+        return redirect()->route('academics.levels.index')->with('status', 'Level updated. Existing records were not changed.');
     }
 
     public function destroyLevel(Request $request, AcademicLevel $level, SectionAccess $sections, AcademicDeleteGuard $guard, AuditRecorder $audit): RedirectResponse
@@ -195,7 +228,7 @@ class AcademicConfigurationController extends Controller
         $audit->record($request->user(), 'academic_level_deleted', $level, ['before' => $before]);
         $level->delete();
 
-        return back()->with('status', 'Level deleted. No school history was removed.');
+        return redirect()->route('academics.levels.index')->with('status', 'Level deleted. No school history was removed.');
     }
 
     public function updateArm(Request $request, ClassArm $arm, TenantContext $context, SectionAccess $sections, AuditRecorder $audit): RedirectResponse
@@ -206,7 +239,7 @@ class AcademicConfigurationController extends Controller
         $arm->update(['name' => trim($data['name'])]);
         $audit->record($request->user(), 'class_arm_updated', $arm, ['before' => $before, 'after' => $arm->only(['class_id', 'name'])]);
 
-        return back()->with('status', 'Class arm renamed. Existing records were not changed.');
+        return redirect()->route('academics.classes.index')->with('status', 'Class arm renamed. Existing records were not changed.');
     }
 
     public function destroyArm(Request $request, ClassArm $arm, SectionAccess $sections, AcademicDeleteGuard $guard, AuditRecorder $audit): RedirectResponse
@@ -217,7 +250,7 @@ class AcademicConfigurationController extends Controller
         $audit->record($request->user(), 'class_arm_deleted', $arm, ['before' => $before]);
         $arm->delete();
 
-        return back()->with('status', 'Class arm deleted. No school history was removed.');
+        return redirect()->route('academics.classes.index')->with('status', 'Class arm deleted. No school history was removed.');
     }
 
     public function updateSession(Request $request, AcademicSession $session, TenantContext $context, AuditRecorder $audit): RedirectResponse
@@ -230,7 +263,7 @@ class AcademicConfigurationController extends Controller
         $session->update($data);
         $audit->record($request->user(), 'academic_session_updated', $session, ['before' => $before, 'after' => $session->only(['name', 'start_date', 'end_date'])]);
 
-        return back()->with('status', 'Session updated. Existing records were not changed.');
+        return redirect()->route('academics.sessions.index')->with('status', 'Session updated. Existing records were not changed.');
     }
 
     public function destroySession(Request $request, AcademicSession $session, AcademicDeleteGuard $guard, AuditRecorder $audit): RedirectResponse
@@ -245,7 +278,7 @@ class AcademicConfigurationController extends Controller
         $audit->record($request->user(), 'academic_session_deleted', $session, ['before' => $session->only(['name', 'start_date', 'end_date']), 'term_ids' => $session->terms->pluck('id')->all()]);
         $session->delete();
 
-        return back()->with('status', 'Session and its unused terms deleted. Nothing else was removed.');
+        return redirect()->route('academics.sessions.index')->with('status', 'Session and its unused terms deleted. Nothing else was removed.');
     }
 
     public function updateTerm(Request $request, AcademicTerm $term, TenantContext $context, AuditRecorder $audit): RedirectResponse
@@ -259,7 +292,7 @@ class AcademicConfigurationController extends Controller
         $term->update($data);
         $audit->record($request->user(), 'academic_term_updated', $term, ['before' => $before, 'after' => $term->only(['session_id', 'name', 'start_date', 'end_date'])]);
 
-        return back()->with('status', 'Term updated. Existing records were not changed.');
+        return redirect()->route('academics.sessions.index')->with('status', 'Term updated. Existing records were not changed.');
     }
 
     public function destroyTerm(Request $request, AcademicTerm $term, AcademicDeleteGuard $guard, AuditRecorder $audit): RedirectResponse
@@ -269,22 +302,71 @@ class AcademicConfigurationController extends Controller
         $audit->record($request->user(), 'academic_term_deleted', $term, ['before' => $term->only(['session_id', 'name', 'start_date', 'end_date'])]);
         $term->delete();
 
-        return back()->with('status', 'Term deleted. No school history was removed.');
+        return redirect()->route('academics.sessions.index')->with('status', 'Term deleted. No school history was removed.');
     }
 
-    public function storeSubject(Request $request, TenantContext $context): RedirectResponse
+    public function storeSubject(Request $request, TenantContext $context, SectionAccess $sections, AuditRecorder $audit): RedirectResponse
     {
+        $this->authorizeSubjects($request);
+        if ($request->user()->can('manage_academics')) {
+            $sectionData = $request->validate([
+                'section_id' => ['required', 'integer', Rule::exists('sections', 'id')->where('school_id', $context->id())],
+            ]);
+            $sectionId = (int) $sectionData['section_id'];
+        } else {
+            $sectionId = (int) ($sections->sectionIds($request->user())[0] ?? 0);
+            if ($request->has('section_id') && (int) $request->input('section_id') !== $sectionId) {
+                throw new AuthorizationException('A head cannot create a subject in another section.');
+            }
+        }
+        $sections->assertSection($request->user(), $sectionId);
+        $sectionName = Section::findOrFail($sectionId)->name;
+        $submittedName = trim((string) $request->input('name'));
         $data = $request->validate([
-            'name' => ['required', 'string', 'max:100', Rule::unique('subjects')->where('school_id', $context->id())],
-        ]);
+            'name' => ['required', 'string', 'max:100', Rule::unique('subjects')->where('school_id', $context->id())->where('section_id', $sectionId)],
+        ], ['name.unique' => "A subject called {$submittedName} already exists in {$sectionName}. Choose a different name."]);
 
-        Subject::create($data);
+        $subject = Subject::create(['section_id' => $sectionId, 'name' => trim($data['name'])]);
+        $audit->record($request->user(), 'subject_created', $subject, ['after' => $subject->only(['section_id', 'name'])]);
 
-        return back()->with('status', 'Subject added.');
+        return redirect()->route('academics.setup', ['section' => $sectionId])->with('status', 'Subject added.');
     }
 
-    public function attachSubject(Request $request, TenantContext $context): RedirectResponse
+    public function updateSubject(Request $request, Subject $subject, TenantContext $context, SectionAccess $sections, AuditRecorder $audit): RedirectResponse
     {
+        $this->authorizeSubjects($request);
+        $sections->assertSubject($request->user(), $subject->id);
+        if ($request->has('section_id') && (int) $request->input('section_id') !== (int) $subject->section_id) {
+            throw new AuthorizationException('A subject cannot be moved to another section. Delete it and create it in the correct section.');
+        }
+        $sectionId = (int) $subject->section_id;
+        $submittedName = trim((string) $request->input('name'));
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:100', Rule::unique('subjects')->where('school_id', $context->id())->where('section_id', $sectionId)->ignore($subject->id)],
+        ], ['name.unique' => "A subject called {$submittedName} already exists in {$subject->section?->name}. Choose a different name."]);
+        $before = $subject->only(['section_id', 'name']);
+        $subject->update(['name' => trim($data['name'])]);
+        $audit->record($request->user(), 'subject_updated', $subject, ['before' => $before, 'after' => $subject->only(['section_id', 'name'])]);
+
+        return redirect()->route('academics.setup', ['section' => $sectionId])->with('status', 'Subject updated. Existing scores and history were not changed.');
+    }
+
+    public function destroySubject(Request $request, Subject $subject, SectionAccess $sections, SubjectManagement $management, AuditRecorder $audit): RedirectResponse
+    {
+        $this->authorizeSubjects($request);
+        $sections->assertSubject($request->user(), $subject->id);
+        $management->assertUnused($subject, 'deleted');
+        $sectionId = (int) $subject->section_id;
+        $before = $subject->only(['section_id', 'name']);
+        $audit->record($request->user(), 'subject_deleted', $subject, ['before' => $before]);
+        $subject->delete();
+
+        return redirect()->route('academics.setup', ['section' => $sectionId])->with('status', 'Subject deleted. No school history was removed.');
+    }
+
+    public function attachSubject(Request $request, TenantContext $context, SectionAccess $sections, SubjectReferences $references): RedirectResponse
+    {
+        $this->authorizeSubjects($request);
         $data = $request->validate([
             'class_id' => ['required', 'integer', Rule::exists('classes', 'id')->where('school_id', $context->id())],
             'subject_id' => ['required', 'integer', Rule::exists('subjects', 'id')->where('school_id', $context->id())],
@@ -292,9 +374,12 @@ class AcademicConfigurationController extends Controller
 
         SchoolClass::findOrFail($data['class_id']);
         Subject::findOrFail($data['subject_id']);
+        $sections->assertClass($request->user(), (int) $data['class_id']);
+        $sections->assertSubject($request->user(), (int) $data['subject_id']);
+        $references->assertClassSubjectSection((int) $data['class_id'], (int) $data['subject_id']);
         ClassSubject::firstOrCreate($data);
 
-        return back()->with('status', 'Subject assigned to class.');
+        return redirect()->route('academics.setup')->with('status', 'Subject assigned to class.');
     }
 
     private function authorizeLevels(Request $request): void
@@ -306,6 +391,11 @@ class AcademicConfigurationController extends Controller
     {
         abort_unless($request->user()->can('manage_academics') || $request->user()->can('manage_section_arms'), 403);
         $sections->assertClassArm($request->user(), $arm->id);
+    }
+
+    private function authorizeSubjects(Request $request): void
+    {
+        abort_unless($request->user()->can('manage_academics') || $request->user()->can('manage_section_subjects'), 403);
     }
 
     private function assertNotCurrent($startDate, $endDate, string $type): void

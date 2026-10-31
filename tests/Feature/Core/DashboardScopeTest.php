@@ -131,23 +131,25 @@ class DashboardScopeTest extends TestCase
         $primaryStudent = $this->student('Primary Learner', $primaryArm);
         $secondaryStudent = $this->student('Secondary Learner', $secondaryArm);
         $this->student('Second Secondary Learner', $secondaryArm);
-        $subject = Subject::create(['name' => 'Mathematics']);
-        $rejectedSubject = Subject::create(['name' => 'English']);
+        $subject = Subject::create(['section_id' => $primary->id, 'name' => 'Mathematics']);
+        $secondarySubject = Subject::create(['section_id' => $secondary->id, 'name' => 'Mathematics']);
+        $rejectedSubject = Subject::create(['section_id' => $secondary->id, 'name' => 'English']);
         ClassSubject::create(['class_id' => $primaryClass->id, 'subject_id' => $subject->id]);
-        ClassSubject::create(['class_id' => $secondaryClass->id, 'subject_id' => $subject->id]);
+        ClassSubject::create(['class_id' => $secondaryClass->id, 'subject_id' => $secondarySubject->id]);
         $teacherOne = $this->user('Shared Teacher');
         $teacherTwo = $this->user('Secondary Teacher');
         TeacherSubjectAssignment::create(['user_id' => $teacherOne->id, 'class_id' => $primaryClass->id, 'subject_id' => $subject->id]);
-        TeacherSubjectAssignment::create(['user_id' => $teacherOne->id, 'class_id' => $secondaryClass->id, 'subject_id' => $subject->id]);
-        TeacherSubjectAssignment::create(['user_id' => $teacherTwo->id, 'class_id' => $secondaryClass->id, 'subject_id' => $subject->id]);
+        TeacherSubjectAssignment::create(['user_id' => $teacherOne->id, 'class_id' => $secondaryClass->id, 'subject_id' => $secondarySubject->id]);
+        TeacherSubjectAssignment::create(['user_id' => $teacherTwo->id, 'class_id' => $secondaryClass->id, 'subject_id' => $secondarySubject->id]);
 
         $session = AcademicSession::create(['name' => '2026/2027', 'start_date' => today()->subMonth(), 'end_date' => today()->addMonths(8)]);
         $term = AcademicTerm::create(['session_id' => $session->id, 'name' => 'First Term', 'start_date' => today()->subMonth(), 'end_date' => today()->addMonths(2)]);
-        $scheme = GradingScheme::create(['name' => 'Default']);
-        $primaryTemplate = ResultTemplate::create(['academic_level_id' => $primaryLevel->id, 'grading_scheme_id' => $scheme->id, 'name' => 'Primary', 'scope_key' => 'level:'.$primaryLevel->id]);
-        $secondaryTemplate = ResultTemplate::create(['academic_level_id' => $secondaryLevel->id, 'grading_scheme_id' => $scheme->id, 'name' => 'Secondary', 'scope_key' => 'level:'.$secondaryLevel->id]);
+        $primaryScheme = GradingScheme::create(['section_id' => $primary->id, 'name' => 'Default']);
+        $secondaryScheme = GradingScheme::create(['section_id' => $secondary->id, 'name' => 'Default']);
+        $primaryTemplate = ResultTemplate::create(['section_id' => $primary->id, 'academic_level_id' => $primaryLevel->id, 'grading_scheme_id' => $primaryScheme->id, 'name' => 'Primary', 'scope_key' => 'level:'.$primaryLevel->id]);
+        $secondaryTemplate = ResultTemplate::create(['section_id' => $secondary->id, 'academic_level_id' => $secondaryLevel->id, 'grading_scheme_id' => $secondaryScheme->id, 'name' => 'Secondary', 'scope_key' => 'level:'.$secondaryLevel->id]);
         Result::create(['student_id' => $primaryStudent->id, 'class_arm_id' => $primaryArm->id, 'subject_id' => $subject->id, 'term_id' => $term->id, 'result_template_id' => $primaryTemplate->id, 'status' => 'Submitted', 'submitted_by' => $teacherOne->id]);
-        $secondaryResult = Result::create(['student_id' => $secondaryStudent->id, 'class_arm_id' => $secondaryArm->id, 'subject_id' => $subject->id, 'term_id' => $term->id, 'result_template_id' => $secondaryTemplate->id, 'status' => 'Submitted', 'submitted_by' => $teacherTwo->id]);
+        $secondaryResult = Result::create(['student_id' => $secondaryStudent->id, 'class_arm_id' => $secondaryArm->id, 'subject_id' => $secondarySubject->id, 'term_id' => $term->id, 'result_template_id' => $secondaryTemplate->id, 'status' => 'Submitted', 'submitted_by' => $teacherTwo->id]);
         Result::create(['student_id' => $secondaryStudent->id, 'class_arm_id' => $secondaryArm->id, 'subject_id' => $rejectedSubject->id, 'term_id' => $term->id, 'result_template_id' => $secondaryTemplate->id, 'status' => 'Rejected', 'submitted_by' => $teacherTwo->id]);
 
         AttendanceAlert::create(['class_arm_id' => $primaryArm->id, 'date' => today('Africa/Lagos'), 'session' => 'Morning', 'resolved' => false]);

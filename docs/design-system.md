@@ -93,7 +93,7 @@ teal progress indicator on both layouts.
 |---|---|
 | Teacher | Dashboard, Attendance, Results, Assignments, E-Notes |
 | Bursar | Dashboard, Payments |
-| Principal | Dashboard, Academics (Classes, Bulk subjects, Teacher assignments, Promotion), Results (approval), Attendance |
+| Principal | Dashboard, Academics (Classes, Levels, Subjects, Bulk subjects, Teacher assignments, Promotion), Results (approval), Attendance |
 | Admin | Dashboard, Academics, Admissions, Results, CBT, Attendance, Assignments, E-Notes, Payments, Staff HR, School Profile |
 | Parent | Dashboard, Results, Attendance, Payments, Assignments |
 | Student | Dashboard, Exams, Results, Assignments, Attendance, Fees, E-Notes |
@@ -198,6 +198,16 @@ the example values/names in the client HTML.
   `ad-action`, and `ad-queue` in `resources/css/app.css`; do not add a second
   Admin stylesheet. On short desktop viewports the brand and Sign out remain
   pinned while `.oak-sidebar-links` owns the vertical scroll.
+- **Invoice and Fees patterns**: staff Invoice detail uses one progress summary
+  (total, paid and balance), immutable line-item rows, linked part-payment and
+  receipt rows, and inline disclosure confirmations for create, adjustment and
+  void actions. Student/Parent Fees uses expandable invoice rows, the same
+  progress wording, nested parts and receipts, and the shared phone Pay sheet.
+  Only an open payable item presents Pay; pending approval/verification and
+  unavailable-online-payment states replace the action with plain-language
+  guidance. Signed adjustments show their reason, but payer views never expose
+  teller numbers, bank names or slip files. All money is formatted from integer
+  kobo into naira and every action target keeps the 44px minimum.
 - **Bulk academic assignment patterns**: the five-step Subject flow uses the
   shared `ad-stepper` on desktop and a short “Step N of 5” label on phones,
   then shows server-computed Added/Skipped/Failed figures. Teacher assignment

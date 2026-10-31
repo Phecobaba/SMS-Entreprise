@@ -7,13 +7,14 @@ use App\Modules\Academics\Services\ClassArmDirectory;
 use App\Modules\Academics\Services\ResultAcademicCatalog;
 use App\Modules\Academics\Services\ResultTeachingAssignments;
 use App\Modules\Academics\Services\SectionAccess;
+use App\Modules\Admissions\Models\Student;
 use App\Modules\Admissions\Services\StudentDirectory;
 use App\Modules\Core\Models\User;
 use App\Modules\Payments\Services\ResultPaymentAccess;
-use App\Modules\Results\Models\GradeBand;
 use App\Modules\Results\Models\Result;
 use App\Modules\Results\Models\ResultCard;
 use App\Modules\Results\Models\ResultCardCommentAudit;
+use App\Modules\Results\Models\ResultTemplate;
 use App\Modules\Results\Models\TermDefaultComment;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
@@ -101,18 +102,15 @@ class ResultCards
         $results = Result::with(['items.component', 'template'])
             ->where('student_id', $card->student_id)->where('term_id', $card->term_id)
             ->where('status', 'Approved')->orderBy('subject_id')->get();
-        $showSubjectRemarks = $results->contains(fn (Result $result): bool => (bool) $result->template?->show_subject_remarks);
-        $schemeIds = $results->filter(fn (Result $result): bool => (bool) $result->template?->show_subject_remarks)
-            ->pluck('template.grading_scheme_id')->unique()->values()->all();
-        $bands = GradeBand::whereIn('grading_scheme_id', $schemeIds)->get();
-        $subjectRemarks = $results->mapWithKeys(function (Result $result) use ($bands): array {
-            if (! $result->template?->show_subject_remarks) {
+        $resolver = app(ResultTemplateResolver::class);
+        $templates = $results->mapWithKeys(fn (Result $result): array => [$result->id => $resolver->storedFor($result)]);
+        $showSubjectRemarks = $templates->contains(fn (ResultTemplate $template): bool => (bool) $template->show_subject_remarks);
+        $subjectRemarks = $results->mapWithKeys(function (Result $result) use ($resolver): array {
+            $template = $resolver->storedFor($result);
+            if (! $template->show_subject_remarks) {
                 return [$result->id => null];
             }
-            $band = $bands->first(fn (GradeBand $band): bool => $band->grading_scheme_id === $result->template->grading_scheme_id
-                && $band->grade === $result->grade
-                && (float) $band->min_score <= (float) $result->percentage
-                && (float) $band->max_score >= (float) $result->percentage);
+            $band = app(GradeScale::class)->bandFor($template->grading_scheme_id, (float) $result->percentage);
 
             return [$result->id => $band?->remark];
         });
@@ -129,6 +127,7 @@ class ResultCards
             'showSubjectRemarks' => $showSubjectRemarks,
             'subjectRemarks' => $subjectRemarks,
             'studentName' => app(StudentDirectory::class)->names([$card->student_id])[$card->student_id] ?? 'Student #'.$card->student_id,
+            'registrationNumber' => Student::whereKey($card->student_id)->value('registration_number'),
             'subjects' => $subjectLabels['subjects'],
             'term' => $subjectLabels['terms'][$card->term_id] ?? 'Term #'.$card->term_id,
             'principalComment' => $card->principal_comment ?? ($defaults['Principal'] ?? ''),

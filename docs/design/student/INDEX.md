@@ -25,7 +25,8 @@ Read in this order: `CODEX_BRIEF.md` → `DESIGN_AMENDMENTS.md` → `screens/com
 | 10 | E-Notes | `screens/enotes.html` | `specs/enotes.md` | **Batch 2: ready** (new access path, test required) |
 | 11 | Notifications | `screens/notifications.html` | `specs/notifications.md` | **Batch 2: ready** |
 | 12 | Profile | `screens/profile.html` | `specs/profile.md` | **Batch 2: ready** (password change optional) |
-| 13 | Login (all roles) | `screens/login.html` | `specs/login.md` | **Batch 2: ready** |
+| 13 | Login (all roles) | `screens/login.html` | `specs/login.md` | **Batch 2: ready**; **re-issued in Batch 6** (three text lines, see `specs/login.md`) |
+| 13b | **Set your password** (first sign-in and after an Admin reset, every role) | `screens/set-password.html` | `specs/set-password.md` | **Batch 6: ready** (indexed in `admin/INDEX.md` row 17) |
 
 | 14 | Ward bar + switcher (every parent page) | `screens/parent-dashboard.html`, `components.html` | `specs/parent-ward.md` | **Batch 3: ready** |
 | 15 | Parent dashboard (2 children, 1 child, locked, empty, no child linked) | `screens/parent-dashboard.html` | `specs/parent-dashboard.md` | **Batch 3: ready**; **re-issued for attendance sessions: ready** |
@@ -66,7 +67,7 @@ existing `oak-*` vocabulary (`oak-app-shell`, `oak-sidebar`, `oak-metric`, `oak-
 |---|---|---|
 | `screens/fees.html` | Expandable invoices with line items, part-payments, receipts; "visit the bursar" line; Pay sheet names the amount; **Awaiting approval** state | `specs/fees.md` (update section) |
 | `screens/report-card.html` | Second comment label follows the section's head title; new "Primary: Head teacher" state; labels read "Form teacher's / Principal's / Proprietor's comment" | `specs/report-card.md` (update section) |
-| `screens/login.html` | Field is **Email or username** | `specs/login.md` (update section) |
+| `screens/login.html` | Field is **Email or username** (Batch 3). Batch 6: username hint, "Check your email or username" error, forgot-credentials wording | `specs/login.md` (update sections) |
 
 Parent navigation: desktop sidebar Dashboard, Results, Attendance, Fees, Assignments (+ My profile, Sign out). Phone tabs: Home, Results, Attendance, Fees + More (Assignments, Notifications, My profile, Sign out).
 In the design files, switching the child only changes the labels (name, class, section, head title); the sample data stays Jane's.
@@ -88,3 +89,8 @@ Parent screens not designed (by brief): exams, e-notes.
 
 ## Attendance sessions (re-issued 2026-10-12)
 Attendance is taken twice a day. Re-issued: `dashboard`, `parent-dashboard`, `attendance`, `parent-attendance` (rows 1, 7, 15, 18 above). New CSS: `shared/oak-attendance.css` only. Decisions and tests: `../ATTENDANCE_TWICE_DAILY.md` and `../admin/specs/attendance-sessions.md`. Excused sessions are excluded from the percentage (this closes the earlier open question).
+
+
+## Batch 6 follow-up reissue (2026-10-31)
+
+The previous index and Ready/Pending statuses above are preserved. New or corrected references: [Sign in](screens/login.html), [Forgot password](screens/forgot-password.html), [Reset password](screens/reset-password.html), [Password emails](screens/password-emails.html), [Student Account](screens/account.html). Admin-only email recovery is the first enabled build; other email accounts are future capability. The existing Student portal implementation is not replaced by these references.

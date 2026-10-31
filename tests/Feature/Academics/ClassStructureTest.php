@@ -134,11 +134,11 @@ class ClassStructureTest extends TestCase
     public function test_deletion_is_blocked_by_each_history_type_and_empty_class_is_deleted(): void
     {
         $f = $this->fixture();
-        $subject = Subject::create(['name' => 'Mathematics']);
+        $subject = Subject::create(['section_id' => $f['primary']->id, 'name' => 'Mathematics']);
         $session = AcademicSession::create(['name' => '2026/2027', 'start_date' => '2026-09-01', 'end_date' => '2027-07-31']);
         $term = AcademicTerm::create(['session_id' => $session->id, 'name' => 'First Term', 'start_date' => '2026-09-01', 'end_date' => '2026-12-18']);
-        $scheme = GradingScheme::create(['name' => 'Default']);
-        $template = ResultTemplate::create(['academic_level_id' => $f['primaryLevel']->id, 'grading_scheme_id' => $scheme->id, 'name' => 'Primary', 'scope_key' => 'level:'.$f['primaryLevel']->id]);
+        $scheme = GradingScheme::create(['section_id' => $f['primary']->id, 'name' => 'Default']);
+        $template = ResultTemplate::create(['section_id' => $f['primary']->id, 'academic_level_id' => $f['primaryLevel']->id, 'grading_scheme_id' => $scheme->id, 'name' => 'Primary', 'scope_key' => 'level:'.$f['primaryLevel']->id]);
         $protected = SchoolClass::create(['academic_level_id' => $f['primaryLevel']->id, 'name' => 'Protected', 'position' => 1]);
         $arm = ClassArm::create(['class_id' => $protected->id, 'name' => 'Gold']);
         $studentUser = User::create(['name' => 'Learner', 'email' => 'history-learner@example.test', 'password' => 'long-password-here', 'status' => 'active']);

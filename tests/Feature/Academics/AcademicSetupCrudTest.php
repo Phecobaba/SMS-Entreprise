@@ -59,9 +59,24 @@ class AcademicSetupCrudTest extends TestCase
         $this->assertDatabaseMissing('academic_levels', ['id' => $emptyLevel->id]);
     }
 
-    public function test_head_is_scoped_for_level_and_arm_and_cannot_move_a_level(): void
+    public function test_head_can_create_levels_only_in_own_section_and_level_section_is_immutable(): void
     {
         $f = $this->fixture();
+        $this->actingAs($f['head'])->post(route('academics.levels.store'), [
+            'section_id' => $f['primary']->id,
+            'name' => 'Nursery',
+        ])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('academic_levels', [
+            'section_id' => $f['primary']->id,
+            'name' => 'Nursery',
+        ]);
+        $this->post(route('academics.levels.store'), [
+            'section_id' => $f['secondary']->id,
+            'name' => 'Forged Secondary Level',
+        ])->assertForbidden();
+        $this->assertDatabaseMissing('academic_levels', ['name' => 'Forged Secondary Level']);
+
+        app(TenantContext::class)->set($f['school']->id);
         $primaryClass = SchoolClass::create(['academic_level_id' => $f['primaryLevel']->id, 'name' => 'Primary 1']);
         $secondaryClass = SchoolClass::create(['academic_level_id' => $f['secondaryLevel']->id, 'name' => 'JS1']);
         $primaryArm = ClassArm::create(['class_id' => $primaryClass->id, 'name' => 'A']);
@@ -73,14 +88,22 @@ class AcademicSetupCrudTest extends TestCase
         $this->put(route('academics.arms.update', $secondaryArm), ['name' => 'Gold'])->assertForbidden();
         $this->delete(route('academics.arms.destroy', $secondaryArm))->assertForbidden();
         $this->put(route('academics.levels.update', $f['primaryLevel']), ['name' => 'Primary', 'section_id' => $f['secondary']->id])->assertForbidden();
+        $this->actingAs($f['admin'])->put(route('academics.levels.update', $f['primaryLevel']), [
+            'name' => 'Primary',
+            'section_id' => $f['secondary']->id,
+        ])->assertForbidden();
+        $this->assertSame($f['primary']->id, $f['primaryLevel']->fresh()->section_id);
 
-        $this->put(route('academics.arms.update', $primaryArm), ['name' => 'Gold'])->assertSessionHasNoErrors();
+        $this->actingAs($f['head'])->put(route('academics.arms.update', $primaryArm), ['name' => 'Gold'])->assertSessionHasNoErrors();
         $this->assertDatabaseHas('class_arms', ['id' => $primaryArm->id, 'name' => 'Gold']);
 
         app(TenantContext::class)->set($f['school']->id);
         $unassigned = User::create(['name' => 'Unassigned Head', 'email' => 'unassigned-setup@example.test', 'password' => 'long-password-here']);
         $unassigned->roles()->attach($f['head']->roles()->firstOrFail());
-        $this->actingAs($unassigned)->get(route('academics.levels.index'))->assertOk()->assertSee('No section assigned')->assertDontSee('Primary School · 1 class');
+        $this->actingAs($unassigned)->get(route('academics.levels.index'))->assertOk()
+            ->assertSee('No section assigned')->assertDontSee('Add a level')->assertDontSee('Primary School');
+        $this->get(route('academics.setup'))->assertOk()
+            ->assertSee('No section assigned')->assertDontSee('Add a subject')->assertDontSee('Primary School');
     }
 
     public function test_current_dates_history_preservation_and_session_cascade_rules(): void
@@ -100,9 +123,9 @@ class AcademicSetupCrudTest extends TestCase
         $arm = ClassArm::create(['class_id' => $class->id, 'name' => 'A']);
         $studentUser = User::create(['name' => 'History Pupil', 'email' => 'history-setup@example.test', 'password' => 'long-password-here']);
         $student = Student::create(['user_id' => $studentUser->id, 'class_arm_id' => $arm->id, 'admission_date' => '2024-01-01']);
-        $subject = Subject::create(['name' => 'Mathematics']);
-        $scheme = GradingScheme::create(['name' => 'Default']);
-        $template = ResultTemplate::create(['academic_level_id' => $f['primaryLevel']->id, 'grading_scheme_id' => $scheme->id, 'name' => 'Primary', 'scope_key' => 'level:'.$f['primaryLevel']->id]);
+        $subject = Subject::create(['section_id' => $f['primary']->id, 'name' => 'Mathematics']);
+        $scheme = GradingScheme::create(['section_id' => $f['primary']->id, 'name' => 'Default']);
+        $template = ResultTemplate::create(['section_id' => $f['primary']->id, 'academic_level_id' => $f['primaryLevel']->id, 'grading_scheme_id' => $scheme->id, 'name' => 'Primary', 'scope_key' => 'level:'.$f['primaryLevel']->id]);
         $result = Result::create(['student_id' => $student->id, 'class_arm_id' => $arm->id, 'subject_id' => $subject->id, 'term_id' => $pastTerm->id, 'result_template_id' => $template->id, 'status' => 'Draft']);
         $attendance = AttendanceRecord::create(['student_id' => $student->id, 'class_arm_id' => $arm->id, 'date' => '2024-02-01', 'session' => 'Morning', 'status' => 'Present', 'marked_by' => $f['admin']->id]);
         $invoice = Invoice::create(['student_id' => $student->id, 'term_id' => $pastTerm->id, 'purpose' => 'Tuition', 'amount_kobo' => 100000, 'due_date' => '2024-02-01', 'status' => 'Unpaid', 'created_by' => $f['admin']->id]);
@@ -147,7 +170,7 @@ class AcademicSetupCrudTest extends TestCase
         $adminRole = Role::create(['name' => 'School Admin']);
         $adminRole->permissions()->attach(collect(['manage_academics', 'view_all_sections'])->map(fn ($name) => Permission::firstOrCreate(['name' => $name])->id));
         $headRole = Role::create(['name' => 'Principal']);
-        $headRole->permissions()->attach(collect(['manage_section_levels', 'manage_section_arms', 'approve_results'])->map(fn ($name) => Permission::firstOrCreate(['name' => $name])->id));
+        $headRole->permissions()->attach(collect(['manage_section_levels', 'manage_section_subjects', 'manage_section_arms', 'approve_results'])->map(fn ($name) => Permission::firstOrCreate(['name' => $name])->id));
         $admin->roles()->attach($adminRole);
         $head->roles()->attach($headRole);
         $primary = Section::create(['name' => 'Primary School', 'head_title' => 'Head Teacher']);

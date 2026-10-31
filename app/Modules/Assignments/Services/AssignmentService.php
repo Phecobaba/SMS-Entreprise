@@ -10,8 +10,12 @@ use App\Modules\Assignments\Models\Assignment;
 use App\Modules\Assignments\Models\AssignmentSubmission;
 use App\Modules\Assignments\Models\ParentProfile;
 use App\Modules\Assignments\Models\ParentStudent;
+use App\Modules\Core\Models\Role;
 use App\Modules\Core\Models\User;
+use App\Modules\Core\Services\AuditRecorder;
 use App\Modules\Core\Services\SchoolUserDirectory;
+use App\Modules\Core\Services\TemporaryCredentials;
+use App\Modules\Core\TenantContext;
 use App\Modules\Notifications\Services\InAppNotifications;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -74,12 +78,26 @@ class AssignmentService
         ParentStudent::firstOrCreate(['parent_id' => $parent->id, 'student_id' => $studentId]);
     }
 
-    public function createParentWithWard(array $data): void
+    public function createParentWithWard(array $data, User $actor): array
     {
-        DB::transaction(function () use ($data): void {
-            $user = app(SchoolUserDirectory::class)->createActive($data['name'], $data['email'], $data['password']);
+        $temporary = app(TemporaryCredentials::class)->generate();
+
+        $user = DB::transaction(function () use ($data, $actor, $temporary): User {
+            $user = new User;
+            $user->fill(['name' => trim($data['name']), 'username' => strtolower(trim($data['username'])),
+                'email' => filled($data['email'] ?? null) ? strtolower(trim($data['email'])) : null,
+                'must_change_password' => true, 'status' => 'active']);
+            $user->setRawAttributes(array_merge($user->getAttributes(), ['password' => app(TemporaryCredentials::class)->hash($temporary)]));
+            $user->save();
+            $role = Role::firstOrCreate(['name' => 'Parent']);
+            $user->roles()->syncWithoutDetaching([$role->id => ['school_id' => app(TenantContext::class)->id()]]);
             $this->linkWard($user->id, (int) $data['student_id']);
+            app(AuditRecorder::class)->record($actor, 'parent_account_created', $user, ['student_id' => (int) $data['student_id']]);
+
+            return $user;
         });
+
+        return ['user' => $user, 'temporary_password' => $temporary];
     }
 
     public function staffList(User $actor)

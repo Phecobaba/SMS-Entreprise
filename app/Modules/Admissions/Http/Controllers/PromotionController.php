@@ -72,7 +72,7 @@ class PromotionController extends Controller
             (int) $data['destination_class_id'], (int) $data['destination_arm_id'],
         );
 
-        return back()->with('status', 'Student moved. Past results and attendance were unchanged.');
+        return redirect()->route('academics.promotion.index')->with('status', 'Student moved. Past results and attendance were unchanged.');
     }
 
     private function pageData(Request $request, PromotionCatalog $catalog, PromotionService $promotion): array

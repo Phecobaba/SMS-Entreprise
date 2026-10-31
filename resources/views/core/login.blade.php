@@ -11,13 +11,13 @@
         @if($errors->any())<div class="oak-notice oak-notice-danger" role="alert"><x-icon name="alert-triangle" /><span>{{ $errors->first() }}</span></div>@endif
         @if(session('retry_after'))<div class="oak-notice oak-notice-warning" role="alert" data-retry-seconds="{{ (int) session('retry_after') }}"><x-icon name="clock" /><span>Too many attempts. Try again in <strong data-retry-count>{{ (int) session('retry_after') }}</strong> seconds.</span></div>@endif
         <form method="post" action="{{ route('login.store') }}" class="lg-form">@csrf
-            <div class="oak-field"><label for="identifier">Email or username</label><input id="identifier" name="identifier" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required value="{{ old('identifier') }}" @error('identifier') aria-invalid="true" @enderror></div>
+            <div class="oak-field"><label for="identifier">Email or username</label><input id="identifier" name="identifier" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required value="{{ old('identifier') }}" @error('identifier') aria-invalid="true" @enderror><small>Students and parents: use the username on your slip. It does not matter if you type capital letters.</small></div>
             <div class="oak-field"><label for="password">Password</label><div class="lg-pw"><input id="password" name="password" type="password" autocomplete="current-password" required><button type="button" aria-label="Show password" aria-pressed="false" onclick="const p=document.getElementById('password');const show=p.type==='password';p.type=show?'text':'password';this.setAttribute('aria-pressed',String(show));this.setAttribute('aria-label',show?'Hide password':'Show password')"><x-icon name="eye" /></button></div></div>
             <label class="lg-check"><input name="remember" type="checkbox" value="1"> Keep me signed in on this device</label>
             <button class="oak-btn oak-btn-primary oak-btn-block" type="submit" @if(session('retry_after')) disabled @endif>Sign in</button>
         </form>
-        <p class="oak-sub">Forgot your password? Ask the school office to reset it.</p>
-        <a class="oak-link" href="{{ route('home') }}">Back to the school website</a>
+        <p class="oak-sub">Forgot your username or password? Ask the school office. An Admin will give you a new temporary password.</p>
+        <a class="oak-link ac-login-back" href="{{ route('home') }}">Back to the school website</a>
     </div></main>
 </div>
 <script>const throttle=document.querySelector('[data-retry-seconds]');if(throttle){let left=Number(throttle.dataset.retrySeconds);const button=document.querySelector('.lg-form [type="submit"]');const count=throttle.querySelector('[data-retry-count]');const timer=setInterval(()=>{left=Math.max(0,left-1);count.textContent=String(left);if(left===0){clearInterval(timer);button.disabled=false;throttle.hidden=true}},1000)}</script>

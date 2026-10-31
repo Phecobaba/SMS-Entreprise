@@ -55,6 +55,7 @@ class PaymentReconciliationTest extends TestCase
         $school = School::create(['name' => 'Oakfield']);
         config()->set('tenancy.default_school_id', $school->id);
         config()->set('services.paystack.secret_key', 'sk_test_local_fake_only');
+        config()->set('services.paystack.public_key', 'pk_test_local_fake_only');
         app(TenantContext::class)->set($school->id);
         $bursar = User::create(['name' => 'Bursar', 'email' => 'bursar@example.test', 'password' => 'long-password-here']);
         $learner = User::create(['name' => 'Learner', 'email' => 'learner-pay@example.test', 'password' => 'long-password-here']);

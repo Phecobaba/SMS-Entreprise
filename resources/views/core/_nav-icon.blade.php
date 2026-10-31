@@ -13,6 +13,8 @@
         'Notifications' => 'bell',
         'Admissions' => 'plus',
         'Staff HR' => 'user',
+        'Students' => 'user',
+        'Registration numbers' => 'list-check',
         'School Profile' => 'school',
         default => 'info-circle',
     };

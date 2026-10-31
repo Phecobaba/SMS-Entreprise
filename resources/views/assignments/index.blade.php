@@ -15,7 +15,7 @@
 <select name="parent_user_id" class="rounded border p-2" required><option value="">Parent login</option>@foreach($users as $user)<option value="{{ $user->id }}">{{ $user->name }} ({{ $user->email }})</option>@endforeach</select>
 <select name="student_id" class="rounded border p-2" required><option value="">Student</option>@foreach($students as $student)<option value="{{ $student->id }}">{{ $student->user?->name }}</option>@endforeach</select><button class="rounded border p-2">Link parent and student</button></form>{{ $students->links() }}</section>@endcan
 @can('manage_assignments')<section class="mt-8"><h2 class="font-semibold">Create a parent login</h2><form method="post" action="{{ route('assignments.parents.store') }}" class="mt-2 grid gap-3">@csrf
-<input name="name" placeholder="Parent name" class="rounded border p-2" required><input type="email" name="email" placeholder="Email" class="rounded border p-2" required><input type="password" name="password" placeholder="Temporary password (12+ characters)" minlength="12" class="rounded border p-2" required>
+<input name="name" placeholder="Parent name" class="rounded border p-2" required><input name="username" placeholder="Username" class="rounded border p-2" required><input type="email" name="email" placeholder="Email (optional)" class="rounded border p-2">
 <select name="student_id" class="rounded border p-2" required><option value="">Student</option>@foreach($students as $student)<option value="{{ $student->id }}">{{ $student->user?->name }}</option>@endforeach</select><button class="rounded bg-blue-700 p-2 text-white">Create parent and link ward</button></form></section>@endcan
 </main>@include('core._shell-end')
 @livewireScripts

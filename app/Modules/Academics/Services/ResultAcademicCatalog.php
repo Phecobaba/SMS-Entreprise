@@ -7,6 +7,7 @@ use App\Modules\Academics\Models\AcademicTerm;
 use App\Modules\Academics\Models\ClassArm;
 use App\Modules\Academics\Models\ClassSubject;
 use App\Modules\Academics\Models\SchoolClass;
+use App\Modules\Academics\Models\Section;
 use App\Modules\Academics\Models\Subject;
 use App\Modules\Core\Models\User;
 use Illuminate\Validation\ValidationException;
@@ -15,6 +16,7 @@ class ResultAcademicCatalog
 {
     public function assertClassSubject(int $classId, int $subjectId): void
     {
+        app(SubjectReferences::class)->assertClassSubjectSection($classId, $subjectId);
         if (! ClassSubject::where('class_id', $classId)->where('subject_id', $subjectId)->exists()) {
             throw ValidationException::withMessages(['subject_id' => 'This subject is not offered by the class.']);
         }
@@ -22,6 +24,7 @@ class ResultAcademicCatalog
 
     public function assertExamSubject(int $classId, int $subjectId): void
     {
+        app(SubjectReferences::class)->assertClassSubjectSection($classId, $subjectId);
         if (! ClassSubject::where('class_id', $classId)->where('subject_id', $subjectId)->exists()) {
             throw ValidationException::withMessages(['subject_id' => 'Assign this subject to the class before creating an exam.']);
         }
@@ -34,10 +37,16 @@ class ResultAcademicCatalog
         }
     }
 
-    public function assertTemplateScope(int $levelId, ?int $classId): void
+    public function assertTemplateScope(int $sectionId, ?int $levelId, ?int $classId): void
     {
-        if (! AcademicLevel::whereKey($levelId)->exists()) {
-            throw ValidationException::withMessages(['academic_level_id' => 'Choose an academic level in this school.']);
+        if (! Section::whereKey($sectionId)->exists()) {
+            throw ValidationException::withMessages(['section_id' => 'Choose a Section in this school.']);
+        }
+        if ($levelId === null && $classId !== null) {
+            throw ValidationException::withMessages(['class_id' => 'Choose an academic level before choosing a class override.']);
+        }
+        if ($levelId !== null && ! AcademicLevel::whereKey($levelId)->where('section_id', $sectionId)->exists()) {
+            throw ValidationException::withMessages(['academic_level_id' => 'Choose an academic level from the template’s Section.']);
         }
         if ($classId !== null && ! SchoolClass::whereKey($classId)->where('academic_level_id', $levelId)->exists()) {
             throw ValidationException::withMessages(['class_id' => 'The class must belong to the selected academic level.']);
@@ -76,18 +85,18 @@ class ResultAcademicCatalog
         ];
     }
 
-    public function options(?User $viewer = null): array
+    public function options(?User $viewer = null, ?int $requestedSectionId = null): array
     {
         $levels = AcademicLevel::query();
         $classes = SchoolClass::query();
         if ($viewer) {
-            app(SectionAccess::class)->scopeLevels($levels, $viewer);
-            app(SectionAccess::class)->scopeClasses($classes, $viewer);
+            app(SectionAccess::class)->scopeLevels($levels, $viewer, $requestedSectionId);
+            app(SectionAccess::class)->scopeClasses($classes, $viewer, $requestedSectionId);
         }
 
         return [
-            'levels' => $levels->orderBy('name')->get(),
-            'classes' => $classes->with('level')->orderBy('name')->get(),
+            'levels' => $levels->with('section')->orderBy('name')->get(),
+            'classes' => $classes->with('level.section')->orderBy('name')->get(),
             'subjects' => Subject::orderBy('name')->get(),
             'terms' => AcademicTerm::with('session')->orderByDesc('start_date')->get(),
         ];

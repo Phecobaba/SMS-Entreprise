@@ -3,11 +3,14 @@
 namespace App\Modules\Admissions\Models;
 
 use App\Modules\Academics\Models\ClassArm;
+use App\Modules\Assignments\Models\ParentProfile;
 use App\Modules\Core\Models\Concerns\BelongsToTenant;
 use App\Modules\Core\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Student extends Model
 {
@@ -19,7 +22,7 @@ class Student extends Model
 
     public const STATUS_GRADUATED = 'Graduated';
 
-    protected $fillable = ['user_id', 'class_arm_id', 'candidate_id', 'status', 'awaiting_from_class_arm_id', 'awaiting_admission_at', 'admission_date'];
+    protected $fillable = ['registration_number', 'user_id', 'class_arm_id', 'candidate_id', 'status', 'awaiting_from_class_arm_id', 'awaiting_admission_at', 'admission_date'];
 
     protected function casts(): array
     {
@@ -44,5 +47,16 @@ class Student extends Model
     public function awaitingFromClassArm(): BelongsTo
     {
         return $this->belongsTo(ClassArm::class, 'awaiting_from_class_arm_id');
+    }
+
+    public function parents(): BelongsToMany
+    {
+        return $this->belongsToMany(ParentProfile::class, 'parent_student', 'student_id', 'parent_id')
+            ->withPivot('school_id');
+    }
+
+    public function registrationHistory(): HasMany
+    {
+        return $this->hasMany(StudentRegistrationNumberHistory::class)->latest('changed_at');
     }
 }

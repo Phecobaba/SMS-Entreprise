@@ -41,6 +41,7 @@ class ParentPortalTrustTest extends TestCase
         $this->post(route('notifications.read', ['notification' => $otherNotice->id, 'student' => $own->id]))->assertNotFound();
 
         config()->set('services.paystack.secret_key', 'sk_test_local_fake_only');
+        config()->set('services.paystack.public_key', 'pk_test_local_fake_only');
         $this->post(route('payments.mine.begin', ['invoice' => $invoice->id, 'student' => $own->id]))
             ->assertSessionHasErrors('payment');
         app(TenantContext::class)->set($parent->school_id);
@@ -62,6 +63,7 @@ class ParentPortalTrustTest extends TestCase
         [$parent, $own] = $this->fixture();
         $invoice = Invoice::where('student_id', $own->id)->firstOrFail();
         config()->set('services.paystack.secret_key', 'sk_test_local_fake_only');
+        config()->set('services.paystack.public_key', 'pk_test_local_fake_only');
         $attempt = PaymentAttempt::create(['invoice_id' => $invoice->id, 'reference' => 'oak-test-redirect',
             'amount_kobo' => $invoice->amount_kobo, 'initiated_by' => $parent->id, 'status' => 'Pending']);
         Http::fake(['api.paystack.co/transaction/verify/*' => Http::response(['status' => true,

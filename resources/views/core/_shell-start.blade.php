@@ -49,6 +49,7 @@
             @endforeach
         </nav>
         <div class="oak-sidebar-foot">
+            @if($oakIsStaff)<a href="{{ route('account.show') }}" wire:navigate><x-icon name="user" /><span>Account</span></a>@endif
             @if($oakIsStudent || $oakIsParent)<a href="{{ route('profile.mine', $oakIsParent && $oakStudentQuery ? ['student' => $oakStudentQuery] : []) }}" wire:navigate><x-icon name="user" /><span>My profile</span></a>@endif
             <form method="post" action="{{ route('logout') }}">@csrf<button type="submit"><x-icon name="logout" /><span>Sign out</span></button></form>
         </div>

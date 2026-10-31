@@ -2,6 +2,7 @@
 
 namespace App\Modules\Assignments\Models;
 
+use App\Modules\Academics\Models\ClassArm;
 use App\Modules\Academics\Models\Subject;
 use App\Modules\Core\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
@@ -21,5 +22,10 @@ class Assignment extends Model
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class);
+    }
+
+    public function classArm(): BelongsTo
+    {
+        return $this->belongsTo(ClassArm::class, 'class_arm_id');
     }
 }

@@ -43,14 +43,6 @@ class SectionAdministration
         return Department::create(['name' => trim($name)]);
     }
 
-    public function assignLevel(AcademicLevel $level, Section $section, User $actor): AcademicLevel
-    {
-        Gate::forUser($actor)->authorize('view_all_sections');
-        $level->update(['section_id' => $section->id]);
-
-        return $level->refresh();
-    }
-
     public function assignDepartment(SchoolClass $class, ?Department $department, User $actor): SchoolClass
     {
         Gate::forUser($actor)->authorize('view_all_sections');

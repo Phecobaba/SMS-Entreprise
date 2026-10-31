@@ -61,27 +61,28 @@ class ResultApprovalLockTest extends TestCase
 
         $section = Section::create(['name' => 'Secondary School', 'head_title' => 'Principal']);
         $section->heads()->attach($principal, ['school_id' => $school->id]);
+        $section->heads()->attach($teacher, ['school_id' => $school->id]);
         $level = AcademicLevel::create(['section_id' => $section->id, 'name' => 'Secondary']);
         $class = SchoolClass::create(['academic_level_id' => $level->id, 'name' => 'JSS 1']);
         $arm = ClassArm::create(['class_id' => $class->id, 'name' => 'A', 'form_teacher_user_id' => $formTeacher->id]);
-        $subject = Subject::create(['name' => 'Mathematics']);
+        $subject = Subject::create(['section_id' => $section->id, 'name' => 'Mathematics']);
         ClassSubject::create(['class_id' => $class->id, 'subject_id' => $subject->id]);
-        $otherSubject = Subject::create(['name' => 'English']);
+        $otherSubject = Subject::create(['section_id' => $section->id, 'name' => 'English']);
         ClassSubject::create(['class_id' => $class->id, 'subject_id' => $otherSubject->id]);
-        app(ResultTeachingAssignments::class)->assign($teacher->id, $class->id, $subject->id);
+        app(ResultTeachingAssignments::class)->assign($teacher->id, $class->id, $subject->id, $principal);
         $session = AcademicSession::create(['name' => '2026/2027', 'start_date' => '2026-01-01', 'end_date' => '2026-12-31']);
         $term = AcademicTerm::create(['session_id' => $session->id, 'name' => 'First Term', 'start_date' => '2026-01-01', 'end_date' => '2026-03-31']);
-        $student = Student::create(['user_id' => $learner->id, 'class_arm_id' => $arm->id, 'candidate_id' => null, 'admission_date' => '2026-01-01']);
+        $student = Student::create(['user_id' => $learner->id, 'class_arm_id' => $arm->id, 'candidate_id' => null, 'registration_number' => 'REG-CARD-100', 'admission_date' => '2026-01-01']);
 
         $configuration = app(ResultConfiguration::class);
-        $ca = $configuration->addComponent('CA1', 15);
-        $ca2 = $configuration->addComponent('CA2', 15);
-        $assignment = $configuration->addComponent('Assignment', 20);
-        $exam = $configuration->addComponent('Exam', 50);
-        $scheme = $configuration->addScheme('Secondary grading');
-        $configuration->addBand($scheme->id, 0, 49.99, 'F', 'Needs improvement');
+        $ca = $configuration->addComponent($section->id, 'CA1', 15);
+        $ca2 = $configuration->addComponent($section->id, 'CA2', 15);
+        $assignment = $configuration->addComponent($section->id, 'Assignment', 20);
+        $exam = $configuration->addComponent($section->id, 'Exam', 50);
+        $scheme = $configuration->addScheme($section->id, 'Secondary grading');
+        $configuration->addBand($scheme->id, 0, 49, 'F', 'Needs improvement');
         $configuration->addBand($scheme->id, 50, 100, 'A', 'Passed');
-        $template = $configuration->addTemplate('Secondary default', $level->id, null, $scheme->id, [$ca->id, $ca2->id, $assignment->id, $exam->id]);
+        $template = $configuration->addTemplate('Secondary default', $section->id, $level->id, null, $scheme->id, [$ca->id, $ca2->id, $assignment->id, $exam->id]);
         $this->assertTrue($template->show_subject_remarks);
 
         $this->actingAs($principal)->get(route('results.configuration'))->assertOk()->assertSee('Secondary default');
@@ -132,7 +133,8 @@ class ResultApprovalLockTest extends TestCase
         app(TenantContext::class)->set($school->id);
         $this->assertSame('Form teacher only', $card->fresh()->class_teacher_comment);
         $this->assertSame($formTeacher->id, ResultCardCommentAudit::where('result_card_id', $card->id)->where('comment_type', 'Class Teacher')->firstOrFail()->user_id);
-        $this->actingAs($principal)->get(route('results.cards.show', $card))->assertOk()->assertSee('Class broadsheet');
+        $this->actingAs($principal)->get(route('results.cards.show', $card))->assertOk()
+            ->assertSee('Class broadsheet')->assertSee('Registration number:')->assertSee('REG-CARD-100');
         app(TenantContext::class)->set($school->id);
         $commentPermission = Permission::create(['name' => 'add_principal_comment']);
         $proprietorPermission = Permission::create(['name' => 'add_proprietor_comment']);
@@ -164,17 +166,18 @@ class ResultApprovalLockTest extends TestCase
             'purpose' => 'Tuition', 'amount_kobo' => 2500000,
             'due_date' => today()->toDateString(),
         ], $principal);
-        $this->actingAs($principal)->post(route('payments.manual', $invoice))->assertSessionHasNoErrors();
+        app(PaymentLedger::class)->settleManualSubmission($invoice, $invoice->amount_kobo, $principal);
         app(TenantContext::class)->set($school->id);
         $this->assertSame('Paid', $invoice->fresh()->status);
         $this->assertSame(2500000, Payment::where('invoice_id', $invoice->id)->firstOrFail()->amount_kobo);
         $this->actingAs($learner)->get(route('results.mine.show', $card))->assertOk()
-            ->assertSee('Mathematics')->assertDontSee('Class broadsheet')->assertDontSee('Results workspace');
+            ->assertSee('Mathematics')->assertSee('Registration number:')->assertSee('REG-CARD-100')
+            ->assertDontSee('Class broadsheet')->assertDontSee('Results workspace');
         $this->get(route('results.mine.pdf', $card))->assertOk();
         app(TenantContext::class)->set($school->id);
         foreach (range(2, 20) as $number) {
             $failing = $number === 2;
-            $extraSubject = Subject::create(['name' => 'Secondary Subject '.$number]);
+            $extraSubject = Subject::create(['section_id' => $section->id, 'name' => 'Secondary Subject '.$number]);
             ClassSubject::create(['class_id' => $class->id, 'subject_id' => $extraSubject->id]);
             $extra = Result::create([
                 'student_id' => $student->id, 'class_arm_id' => $arm->id, 'subject_id' => $extraSubject->id,

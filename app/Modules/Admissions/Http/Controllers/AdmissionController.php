@@ -8,6 +8,8 @@ use App\Modules\Academics\Services\SectionAccess;
 use App\Modules\Admissions\Models\AdmissionChecklistItem;
 use App\Modules\Admissions\Models\Candidate;
 use App\Modules\Admissions\Services\AdmissionPipeline;
+use App\Modules\Core\Models\School;
+use App\Modules\Core\Services\PasswordRules;
 use App\Modules\Core\TenantContext;
 use App\Modules\Payments\Services\PaymentLedger;
 use Illuminate\Http\RedirectResponse;
@@ -30,8 +32,9 @@ class AdmissionController extends Controller
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->where('school_id', $context->id())],
             'phone' => ['required', 'string', 'max:40'],
             'applied_level_id' => ['nullable', 'integer', Rule::exists('academic_levels', 'id')->where('school_id', $context->id())],
-            'password' => ['required', 'string', 'min:12', 'confirmed'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
+        app(PasswordRules::class)->validate($data['password'], null, School::findOrFail($context->id())->name);
         $candidate = $pipeline->register($data);
         Auth::loginUsingId($candidate->user_id);
         $request->session()->regenerate();
@@ -52,7 +55,7 @@ class AdmissionController extends Controller
         $candidate = Candidate::where('user_id', Auth::id())->firstOrFail();
         $pipeline->respond($candidate, $data['response'], $request->user());
 
-        return back()->with('status', 'Your response was recorded.');
+        return redirect()->route('admissions.mine')->with('status', 'Your response was recorded.');
     }
 
     public function index(Request $request, SectionAccess $sections): View
@@ -86,7 +89,7 @@ class AdmissionController extends Controller
         app(SectionAccess::class)->assertCandidate($request->user(), $candidate);
         $pipeline->recordExamTaken(Candidate::findOrFail($candidate), $request->user());
 
-        return back()->with('status', 'Exam attendance recorded.');
+        return redirect()->route('admissions.show', $candidate)->with('status', 'Exam attendance recorded.');
     }
 
     public function examOutcome(int $candidate, AdmissionPipeline $pipeline, Request $request): RedirectResponse
@@ -95,7 +98,7 @@ class AdmissionController extends Controller
         $data = $request->validate(['outcome' => ['required', Rule::in(['Passed', 'Failed'])]]);
         $pipeline->recordExamOutcome(Candidate::findOrFail($candidate), $request->user(), $data['outcome']);
 
-        return back()->with('status', 'Manual exam outcome recorded.');
+        return redirect()->route('admissions.show', $candidate)->with('status', 'Manual exam outcome recorded.');
     }
 
     public function addChecklistItem(AdmissionPipeline $pipeline, Request $request): RedirectResponse
@@ -103,7 +106,7 @@ class AdmissionController extends Controller
         $data = $request->validate(['label' => ['required', 'string', 'max:255', Rule::unique('admission_checklist_items')->where('school_id', app(TenantContext::class)->id())]]);
         $pipeline->addChecklistItem($data['label']);
 
-        return back()->with('status', 'Checklist item added to active candidates.');
+        return redirect()->route('admissions.index')->with('status', 'Checklist item added to active candidates.');
     }
 
     public function checklist(int $candidate, int $item, AdmissionPipeline $pipeline, Request $request): RedirectResponse
@@ -112,7 +115,7 @@ class AdmissionController extends Controller
         $data = $request->validate(['is_complete' => ['required', 'boolean']]);
         $pipeline->setChecklist(Candidate::findOrFail($candidate), AdmissionChecklistItem::findOrFail($item), $request->user(), (bool) $data['is_complete']);
 
-        return back()->with('status', 'Checklist updated.');
+        return redirect()->route('admissions.show', $candidate)->with('status', 'Checklist updated.');
     }
 
     public function offer(int $candidate, AdmissionPipeline $pipeline, Request $request): RedirectResponse
@@ -121,7 +124,7 @@ class AdmissionController extends Controller
         $data = $request->validate(['response_deadline' => ['required', 'date', 'after_or_equal:today']]);
         $pipeline->extendOffer(Candidate::findOrFail($candidate), $request->user(), $data['response_deadline']);
 
-        return back()->with('status', 'Offer extended.');
+        return redirect()->route('admissions.show', $candidate)->with('status', 'Offer extended.');
     }
 
     public function lapse(int $candidate, AdmissionPipeline $pipeline, Request $request): RedirectResponse
@@ -129,7 +132,7 @@ class AdmissionController extends Controller
         app(SectionAccess::class)->assertCandidate($request->user(), $candidate);
         $pipeline->lapse(Candidate::findOrFail($candidate));
 
-        return back()->with('status', 'Expired offer marked lapsed.');
+        return redirect()->route('admissions.show', $candidate)->with('status', 'Expired offer marked lapsed.');
     }
 
     public function convert(int $candidate, AdmissionPipeline $pipeline, Request $request): RedirectResponse
@@ -142,6 +145,6 @@ class AdmissionController extends Controller
         ]);
         $pipeline->convert(Candidate::findOrFail($candidate), $request->user(), (int) $data['class_arm_id'], (bool) ($data['override'] ?? false), $data['override_reason'] ?? null);
 
-        return back()->with('status', 'Candidate converted to student.');
+        return redirect()->route('admissions.show', $candidate)->with('status', 'Candidate converted to student.');
     }
 }

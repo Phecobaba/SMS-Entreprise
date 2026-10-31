@@ -61,6 +61,7 @@ composer install
 copy .env.example .env
 php artisan key:generate
 php artisan migrate
+php artisan db:seed --class=DemoDataSeeder
 npm install
 npm run build
 php artisan serve
@@ -68,6 +69,27 @@ php artisan serve
 
 Run checks with `php artisan test`. Production deployment instructions are
 in `docs/deployment.md`.
+
+For the local demo dataset, set these local `.env` keys to passwords of at
+least 12 characters before running `DemoDataSeeder`: `DEMO_ADMIN_PASSWORD`,
+`DEMO_TEACHER_PASSWORD`, `DEMO_PRINCIPAL_PASSWORD`, `DEMO_BURSAR_PASSWORD`,
+`DEMO_STUDENT_PASSWORD`, `DEMO_PARENT_PASSWORD`, and
+`DEMO_CANDIDATE_PASSWORD`. Values stay only in `.env`; never commit them.
+
+Staff temporary passwords use `TEMPORARY_PASSWORD_BCRYPT_ROUNDS` (default
+`10`) so one-time account creation and resets are cheaper than the normal
+`BCRYPT_ROUNDS` setting. Passwords chosen by users always use the normal cost.
+User-chosen passwords are at least eight characters and cannot be the username,
+school name, current/temporary password, all digits, or a listed common
+password. Production deployments require `SESSION_DRIVER=database` so account
+changes can revoke other sessions reliably.
+The seeder is idempotent and refuses to run outside `APP_ENV=local`.
+
+Tests use SQLite in-memory and fail fast if configured otherwise. Browser or
+manual QA must use a throwaway, gitignored SQLite file such as
+`database/qa.sqlite` through an environment override; migrate/seed that file
+for the check and delete it afterwards. Never run `migrate:fresh`, tests, or QA
+seeding against the persistent `database/database.sqlite` development file.
 
 After configuring the school ID and database, provision the first account
 interactively with `php artisan oakfield:bootstrap-admin "School Name"

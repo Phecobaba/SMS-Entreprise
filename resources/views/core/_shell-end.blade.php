@@ -19,6 +19,9 @@
             <a class="oak-list-row oak-more-row" href="{{ route('notifications.index', $oakIsParent && $oakStudentQuery ? ['student' => $oakStudentQuery] : []) }}" wire:navigate><span><span class="oak-more-icon"><x-icon name="bell" /></span>Notifications</span><span class="oak-more-tail">@if($oakUnread)<span class="oak-status-pill oak-status-new">{{ $oakUnread }} new</span>@endif<x-icon name="chevron-right" /></span></a>
             <a class="oak-list-row oak-more-row" href="{{ route('profile.mine', $oakIsParent && $oakStudentQuery ? ['student' => $oakStudentQuery] : []) }}" wire:navigate><span><span class="oak-more-icon"><x-icon name="user" /></span>My profile</span><x-icon name="chevron-right" /></a>
         @endif
+        @if($oakIsStaff)
+            <a class="oak-list-row oak-more-row" href="{{ route('account.show') }}" wire:navigate><span><span class="oak-more-icon"><x-icon name="user" /></span>Account</span><x-icon name="chevron-right" /></a>
+        @endif
         <form method="post" action="{{ route('logout') }}">@csrf<button class="oak-list-row oak-more-row oak-more-signout" type="submit"><span><span class="oak-more-icon"><x-icon name="logout" /></span>Sign out</span></button></form>
         <div class="oak-sheet-actions"><button class="oak-btn oak-btn-quiet" type="button" data-close-sheet>Close</button></div>
     </div>

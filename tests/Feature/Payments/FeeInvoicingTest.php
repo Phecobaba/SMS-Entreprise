@@ -207,7 +207,10 @@ class FeeInvoicingTest extends TestCase
         FeeScheduleLine::create(['term_id' => $later->id, 'scope_type' => 'level', 'academic_level_id' => $data['level']->id,
             'fee_item_id' => $item->id, 'amount_kobo' => 5000000, 'is_required' => true]);
 
-        $this->assertSame($later->id, app(AcademicCalendar::class)->currentTerm()?->id);
+        $calendar = app(AcademicCalendar::class);
+        $this->assertSame($later->id, $calendar->currentTerm()?->id);
+        $this->assertSame($later->id, $calendar->termForInvoicing()?->id);
+        $this->assertSame($later->id, $calendar->termForSummary()?->id);
         $this->assertStringContainsString('Later Start', app(PaymentLedger::class)->dashboardSummary()['term']);
         $this->assertSame($later->id, app(FeeInvoicingService::class)->automaticallyInvoice($data['student'], $data['bursar'])?->term_id);
 
@@ -216,6 +219,52 @@ class FeeInvoicingTest extends TestCase
         $context = app(PortalContext::class)->for($request);
         $overview = app(PortalOverview::class)->for($data['studentUser'], null, $context);
         $this->assertSame('Later Start, '.$data['session']->name, $overview['term_context']);
+    }
+
+    public function test_gap_enrolment_uses_the_next_term_and_is_idempotent(): void
+    {
+        $this->travelTo(Carbon::parse('2027-01-15 12:00:00', 'Africa/Lagos'));
+        $data = $this->context();
+        $nextSession = AcademicSession::create(['name' => '2027/2028', 'start_date' => '2027-01-01', 'end_date' => '2027-12-31']);
+        $nextTerm = AcademicTerm::create(['session_id' => $nextSession->id, 'name' => 'Next Term', 'start_date' => '2027-02-01', 'end_date' => '2027-04-30']);
+        $item = FeeItem::create(['name' => 'Tuition']);
+        FeeScheduleLine::create(['term_id' => $nextTerm->id, 'scope_type' => 'level', 'academic_level_id' => $data['level']->id,
+            'fee_item_id' => $item->id, 'amount_kobo' => 5000000, 'is_required' => true]);
+
+        $service = app(FeeInvoicingService::class);
+        $invoice = $service->automaticallyInvoice($data['student'], $data['bursar']);
+        $this->assertSame($nextTerm->id, $invoice?->term_id);
+        $this->assertNull($service->automaticallyInvoice($data['student'], $data['bursar']));
+        $this->assertSame(1, Invoice::where('student_id', $data['student']->id)->where('term_id', $nextTerm->id)->count());
+    }
+
+    public function test_no_upcoming_term_creates_nothing_and_keeps_the_student_not_invoiced(): void
+    {
+        $this->travelTo(Carbon::parse('2027-01-15 12:00:00', 'Africa/Lagos'));
+        $data = $this->context();
+
+        $this->assertNull(app(AcademicCalendar::class)->termForInvoicing());
+        $this->assertNull(app(FeeInvoicingService::class)->automaticallyInvoice($data['student'], $data['bursar']));
+        $this->assertSame(0, Invoice::where('student_id', $data['student']->id)->count());
+        $this->actingAs($data['bursar'])->get(route('fees.not-invoiced.index'))
+            ->assertOk()->assertSee($data['studentUser']->name);
+    }
+
+    public function test_bursar_summary_in_a_gap_uses_the_most_recently_ended_term(): void
+    {
+        $this->travelTo(Carbon::parse('2027-01-15 12:00:00', 'Africa/Lagos'));
+        $data = $this->context();
+        $older = AcademicTerm::create(['session_id' => $data['session']->id, 'name' => 'Older Term', 'start_date' => '2026-01-01', 'end_date' => '2026-04-30']);
+        Invoice::create(['student_id' => $data['student']->id, 'term_id' => $older->id, 'purpose' => 'Old tuition',
+            'amount_kobo' => 9000000, 'due_date' => '2026-04-01', 'status' => 'Unpaid', 'created_by' => $data['bursar']->id]);
+        Invoice::create(['student_id' => $data['student']->id, 'term_id' => $data['term']->id, 'purpose' => 'Tuition',
+            'amount_kobo' => 5000000, 'due_date' => '2026-11-01', 'status' => 'Unpaid', 'created_by' => $data['bursar']->id]);
+
+        $summary = app(PaymentLedger::class)->dashboardSummary();
+        $this->assertStringContainsString($data['term']->name, $summary['term']);
+        $this->assertSame(5000000, $summary['outstanding_kobo']);
+        $this->actingAs($data['bursar'])->get(route('dashboard'))
+            ->assertOk()->assertSeeText($data['term']->name);
     }
 
     public function test_later_enrolment_is_automatically_invoiced_when_a_required_schedule_exists(): void
@@ -277,6 +326,7 @@ class FeeInvoicingTest extends TestCase
         $bursar = User::create(['name' => 'Bursar', 'email' => 'bursar'.uniqid().'@example.test', 'password' => 'long-password-here']);
         $role = Role::create(['name' => 'Bursar']);
         $role->permissions()->attach(Permission::firstOrCreate(['name' => 'manage_fee_schedule']));
+        $role->permissions()->attach(Permission::firstOrCreate(['name' => 'manage_payments']));
         $bursar->roles()->attach($role);
         $studentUser = User::create(['name' => 'Learner', 'email' => 'learner'.uniqid().'@example.test', 'password' => 'long-password-here']);
         $level = AcademicLevel::create(['name' => 'Primary']);

@@ -11,7 +11,6 @@ use App\Modules\Admissions\Services\StudentDirectory;
 use App\Modules\Core\Models\User;
 use App\Modules\Notifications\Services\InAppNotifications;
 use App\Modules\Results\Models\AssessmentComponent;
-use App\Modules\Results\Models\GradeBand;
 use App\Modules\Results\Models\Result;
 use App\Modules\Results\Models\ResultAuditLog;
 use App\Modules\Results\Models\ResultItem;
@@ -66,12 +65,11 @@ class ResultWorkflow
         return $this->saveDraft($studentId, $subjectId, $termId, [$componentId => $score], $actor);
     }
 
-    public function templateForStudent(int $studentId): ResultTemplate
+    public function templateForStudent(int $studentId): ?ResultTemplate
     {
         $armId = app(StudentDirectory::class)->classArmId($studentId);
-        $placement = app(ResultAcademicCatalog::class)->placement($armId);
 
-        return $this->templateFor($placement['class_id'], $placement['academic_level_id']);
+        return app(ResultTemplateResolver::class)->forClassArm($armId);
     }
 
     public function saveDraft(int $studentId, int $subjectId, int $termId, array $scores, User $actor): Result
@@ -91,8 +89,11 @@ class ResultWorkflow
             $academic = app(ResultAcademicCatalog::class)->resultContext($armId, $subjectId, $termId);
             app(ResultTeachingAssignments::class)->assertMayEnter($actor, $academic['class_id'], $subjectId);
             $template = $result
-                ? $this->templateById($result->result_template_id)
-                : $this->templateFor($academic['class_id'], $academic['academic_level_id']);
+                ? app(ResultTemplateResolver::class)->storedFor($result)
+                : app(ResultTemplateResolver::class)->forClassArm($armId);
+            if (! $template) {
+                throw ValidationException::withMessages(['result_template' => $this->missingTemplateMessage($armId)]);
+            }
             $maxima = $this->maxima($template);
             if ($scores === []) {
                 throw ValidationException::withMessages(['scores' => 'Enter at least one component score.']);
@@ -134,7 +135,8 @@ class ResultWorkflow
             if ($result->status !== 'Draft' && $result->status !== 'Rejected') {
                 throw ValidationException::withMessages(['result' => 'Only a draft or rejected result can be submitted.']);
             }
-            $template = $this->templateById($result->result_template_id);
+            $template = app(ResultTemplateResolver::class)->storedFor($result);
+            app(GradeScale::class)->assertComplete($template->grading_scheme_id);
             $maxima = $this->maxima($template);
             $items = ResultItem::where('result_id', $result->id)->get();
             if ($items->count() !== count($maxima) || $items->pluck('assessment_component_id')->diff(array_keys($maxima))->isNotEmpty()) {
@@ -142,8 +144,7 @@ class ResultWorkflow
             }
             $total = (float) $items->sum('score');
             $percentage = round($total / array_sum($maxima) * 100, 2);
-            $band = GradeBand::where('grading_scheme_id', $template->grading_scheme_id)
-                ->where('min_score', '<=', $percentage)->where('max_score', '>=', $percentage)->first();
+            $band = app(GradeScale::class)->bandFor($template->grading_scheme_id, $percentage);
             if (! $band) {
                 throw ValidationException::withMessages(['grade' => 'The grading scheme has no band for this score. Complete the grade bands first.']);
             }
@@ -205,20 +206,12 @@ class ResultWorkflow
         return Result::whereKey($result->id)->lockForUpdate()->firstOrFail();
     }
 
-    private function templateById(int $id): ResultTemplate
+    public function missingTemplateMessage(int $classArmId): string
     {
-        return ResultTemplate::with('components.component')->findOrFail($id);
-    }
+        $arm = ClassArm::with('schoolClass')->findOrFail($classArmId);
+        $class = $arm->schoolClass?->name ?? 'this class';
 
-    private function templateFor(int $classId, int $levelId): ResultTemplate
-    {
-        $template = ResultTemplate::with('components.component')->where('scope_key', 'class:'.$classId)->first()
-            ?? ResultTemplate::with('components.component')->where('scope_key', 'level:'.$levelId)->first();
-        if (! $template) {
-            throw ValidationException::withMessages(['result_template' => 'Configure a result template for this class or academic level first.']);
-        }
-
-        return $template;
+        return "No result template applies to {$class}. Ask your head or the school office to set one up.";
     }
 
     private function maxima(ResultTemplate $template): array

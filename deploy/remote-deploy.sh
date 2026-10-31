@@ -51,6 +51,10 @@ ln -s "$shared_path/.env" "$release_path/.env"
 
 cd "$release_path"
 composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+if ! php -r 'require "vendor/autoload.php"; $app = require "bootstrap/app.php"; $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); exit(config("session.driver") === "database" ? 0 : 1);'; then
+    echo 'SESSION_DRIVER must be database. Password resets cannot revoke other sessions safely with another driver.' >&2
+    exit 78
+fi
 # Shared hosting commonly serves PHP as a different Unix identity from the
 # SSH deploy user. Keep code world-readable, but do not follow the private
 # shared .env or writable storage symlinks while setting release permissions.

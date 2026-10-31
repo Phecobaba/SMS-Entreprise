@@ -54,13 +54,343 @@ exit-gap closure is recorded below. Phase 5 is **not formally complete**;
 only the owner may mark it complete.
 
 Local SQLite has seven separate demo accounts (Admin, Teacher, Principal,
-Student, Parent, Candidate, Bursar) for hands-on review. The first six were
-created on 2026-10-04 and the Bursar was added on 2026-10-09.
-The demo Teacher is assigned to the existing class arm and subject; the
-demo Parent is linked to the demo Student. Existing accounts were not reset.
-Passwords were delivered to the requester, not stored in this repository.
+Student, Parent, Candidate, Bursar) for hands-on review. `DemoDataSeeder`
+rebuilds them idempotently only in the local environment, using password
+values from ignored `.env` keys. The demo Principal is assigned to Secondary
+through `section_user`, the demo Teacher has a class/subject assignment, and
+the demo Parent is linked to the demo Student. Passwords are never stored in
+this repository.
 
 ## Completed
+
+- **Batch 6B follow-up: registration-number visibility and payment search
+  (completed 2026-10-31)** — The current number now appears, when present, on
+  staff and portal report cards, the printable card, staff Invoice detail,
+  Student/Parent Fees and receipt history, Record payment results and the
+  one-time Student credentials slip. Record payment searches name, username,
+  current number and number history case-insensitively under tenant scope.
+  Composer is pinned to platform PHP 8.2.0. Added direct coverage for prefix
+  validation, typed-number permission, audited Student name/email/username
+  edits (including Set username), document rendering, historical-number lookup
+  and cross-school isolation. Isolated QA at 1280px/390px found no page-level
+  overflow and displayed the new number on every requested page; existing
+  compact links/form controls remain below 44px on Invoice detail and the
+  staff report-card page and were not restyled in this bounded follow-up. The
+  throwaway database/profile were removed. Composer validation passes with
+  only the existing unbounded-Livewire warning; Pint passes; full PHP 8.2
+  suite: **130 tests / 1,390 assertions**.
+
+- **Batch 6, part B: Students and registration numbers (completed 2026-10-31)**
+  — Added school/Section/Level prefix settings, minimum zero-padding, optional
+  issue year, locked movement policy, concurrency-safe sequence rows and
+  permanently reserved number history. Candidate conversion and the demo
+  seeder allocate through the shared engine. Admin now has paginated Students,
+  Add student, one-time Student/Parent credentials, Student identity/sign-in/
+  number management and registration-number settings; Heads may change only a
+  current pupil in their Section, while Awaiting admission remains Admin-only.
+  Existing Parent reuse creates no credentials, all resets revoke sessions,
+  and D15 is labelled Admission requirements with the existing logged override.
+  Browser QA on a deleted throwaway SQLite database passed every requested page
+  at 1280px and 390px with no overflow, no measured action below 44px, and no
+  credential page in Back history. Pint, Blade compilation and Vite pass; full
+  PHP 8.2 suite: **127 tests / 1,357 assertions**.
+
+- **Batch 6 part A follow-up and documentation tidy (completed 2026-10-31)**
+  — Registered the mandatory password-change middleware as Livewire-persistent
+  and proved a flagged user is redirected on a real update request. Added one
+  shared eight-character password policy for set-password, staff Account and
+  bootstrap; generated credentials remain 12 characters. Role/Section changes
+  now revoke the target's database sessions and remember token, and the last
+  active Admin cannot be demoted. The plain-POST credentials response remains
+  outside Livewire state, uses no-store, clears the password on page exit and
+  replaces its history entry on Done. Remote deployment now fails before
+  migration unless the session driver is database. Owner decisions, superseded
+  rows, Next Up and resolved Blocker wording are current. Twenty-hash CLI loops
+  measured bcrypt cost 10 at mean 0.148s (0.118–0.236) and cost 12 at mean
+  0.563s (0.439–0.905) on PHP 8.3.32 without Xdebug or OPcache. Pint, Blade
+  compilation and Vite pass; full suite: **119 tests / 1,288 assertions**.
+
+- **Batch 6, part A: account foundations, sign-in, staff accounts and the
+  staff Account page (completed 2026-10-27)** — Added Admin-only staff account
+  creation/access permissions, server-enforced role rank and Section rules,
+  school-wide lower-case usernames with case-insensitive sign-in, one-time
+  no-store credentials, configurable lower-cost temporary hashes, mandatory
+  first-password middleware, reset/session revocation and a shared throttled
+  change-own-password service. Admin can add staff, reset another account and
+  change its role/Section; every staff role has an Account page, and Sign-in
+  rules includes a non-reserving username checker. Generic audit rows now
+  snapshot actor id/name/role without rewriting older rows. Existing Staff HR
+  remains the separate employment/salary/document workflow. The three design
+  backups contained no newer material and were moved outside the repository.
+  Browser QA on a throwaway SQLite database passed Login, Add staff, one-time
+  credentials/print, Staff access, Account, Sign-in rules and Set password at
+  1280px and 390px with no horizontal overflow or effective target below
+  44px; all QA data/artifacts were removed. Temporary bcrypt cost 10 averaged
+  0.219 seconds/hash and normal cost 12 averaged 0.484 seconds/hash on this
+  machine. Pint, Blade compilation and Vite pass; full suite: **116 tests /
+  1,267 assertions**.
+
+- **Retire and replace for Result templates (owner decision 2026-10-26;
+  completed 2026-10-27)** — Used templates can now be retired between Terms
+  by an Admin or a Section-scoped Head. Retirement retains the historical
+  `scope_key`, nulls a separately unique `active_scope_key`, records who/when
+  and the Result count in `audit_logs`, and frees the scope for one active
+  replacement. Current-Term use blocks retirement with a counted message;
+  unused templates remain deletable instead. New Results ignore retired
+  templates while existing drafts, submissions and report cards keep their
+  stored template. Active configuration shows retirement eligibility, a
+  confirmation sheet and broader-template pupil warnings; retired templates
+  appear read-only in a collapsed list. Restore remains deferred. Browser QA
+  on a throwaway database passed the current-term refusal, eligible sheet and
+  Retired list at 1280px and 390px with no horizontal overflow or effective
+  target below 44px; all QA artifacts were deleted. Production assets, Pint,
+  Blade compilation and the full suite pass: **110 tests / 1,177 assertions**.
+
+- **Section-wide result templates (owner decision 2026-10-26)** — Result
+  templates now belong to an immutable Section and may cover every Level in
+  it, one Level, or one class in that Level. A single resolver applies the
+  class → Level → Section-wide precedence for entry and CSV creation, while
+  submission and report cards continue through the Result's stored template
+  so later overrides never rewrite history. Duplicate scopes, cross-Section
+  configuration and used-template scope changes are refused server-side; a
+  missing template produces the agreed plain-language entry message. The
+  two-stage migration mechanically backfills `section_id` from each existing
+  template's Level, then requires it; no migration command was needed. Schema,
+  decision log, form/list scope labels and conditional class selection are
+  updated without redesigning the page. Browser QA on a throwaway database at
+  1280px and 390px found no horizontal overflow or effective target below
+  44px; the database and browser artifacts were removed. Production assets,
+  Blade compilation, Pint and the full suite pass: **107 tests / 1,157
+  assertions**.
+
+- **Owner-testing redirect and whole-number grade-band fixes (2026-10-26)**
+  — successful saves and deletes now redirect to an explicit list, parent,
+  detail, or originating Attendance page with a status message instead of
+  relying on browser history; the deleted Grade scale/Band 404 is covered by
+  redirect-target tests for Grade scales, Bands, Components and Templates.
+  Grade-band bounds render and pre-fill as whole numbers, numerically whole
+  input such as `60.00` is accepted and stored as `60`, and fractional bounds
+  remain invalid. Focused Results tests pass (4 tests / 72 assertions); Pint
+  and the full suite pass: **103 tests / 1,142 assertions**.
+
+- **Section ownership of Result configuration (2026-10-26)** — Grade scales
+  and assessment components now belong to one immutable Section. Result
+  templates enforce one Section across their Level, Grade scale and every
+  component. Admin retains school-wide `manage_result_settings`; Heads receive
+  `manage_section_result_settings` and can manage only their assigned Section,
+  with a locked state when none is assigned. The staged migration adds nullable
+  ownership, the audited `oakfield:migrate-result-sections` command assigns or
+  splits existing configuration while repointing templates, Result items and
+  CBT exams without changing marks, and the final migration requires ownership.
+  The local database was backed up, then Migration A, dry run, real command and
+  Migration B were completed in order. Browser QA covered Admin, assigned Head,
+  unassigned Head and result-locked states at 1280px and 390px; no page-level
+  horizontal overflow or effective target below 44px was found, and an internal
+  desktop-sidebar x-scrollbar was removed. The throwaway database, screenshots
+  and browser profiles were deleted. Production assets build in 5.92 seconds;
+  Pint and the full suite pass: **103 tests / 1,125 assertions**.
+
+- **Owner-testing fixes: grade scales and Section-scoped teacher assignments
+  (2026-10-26)** — Grading schemes are now shown as Grade scales and have
+  audited Admin-only edit/delete actions with result/template locks. Bands use
+  inclusive whole-number bounds, must be adjacent without overlap, display
+  coverage/incomplete gaps, and all grade/remark lookup uses half-up
+  whole-number rounding; incomplete scales cannot submit Results. Active,
+  qualified teacher candidates are resolved consistently from `section_user`,
+  subject assignments and form-teacher arms. Heads are restricted to their
+  Section; Admin sees that Section first and qualified Other teachers second;
+  inactive and unqualified users are rejected server-side. Head/Admin class
+  assignment review now includes each arm's form teacher plus subject teachers,
+  supports audited removal/replacement, previews entered-Result counts, and
+  preserves those Results. Empty-roster CSV import is unavailable with an
+  explanation. Existing non-integer data was not rewritten. Design-system QA
+  at 1280px and 390px passed without horizontal overflow or effective tap
+  targets below 44px, and the throwaway QA database/profile were removed.
+  Pint and the full suite pass: **99 tests / 1,084 assertions**.
+
+- **Result configuration locks and form-teacher assignment correction
+  (2026-10-25)** — Admin-only `manage_result_settings` edit/delete routes and
+  existing edit-sheet/delete-confirmation patterns now cover Result templates,
+  grade bands and assessment components. Result-backed configuration returns
+  the required counted lock message on direct requests; components also retain
+  template-reference protection, and band edits/deletes preserve a contiguous,
+  non-overlapping scale. Every successful edit/delete is audit-logged and the
+  existing subject-remarks toggle remains available. Form-teacher assignment
+  now requires `manage_attendance`, not `mark_attendance`: Admin acts across
+  Sections, Heads act only in assigned Sections, candidates still require
+  `mark_attendance`, and replacements record previous/new teachers in
+  `audit_logs`. Marking remains limited to Admin or the arm's current form
+  teacher. Focused direct-request coverage includes used/unused configuration,
+  gap/overlap refusal, Section scope, assignment permission/audit, non-form and
+  replaced-teacher refusal, and Head marking refusal. Schema and deferred-
+  polish notes are current; Pint, Blade rendering and the full suite pass:
+  **96 tests / 1,036 assertions**.
+
+- **Default role catalog and Phase 5 dashboard remeasurement (2026-10-25)**
+  — `DefaultRoleCatalog` now supplies the same additive defaults to real-school
+  bootstrap, demo seeding and the existing-role migration for School Admin,
+  Principal, Teacher, Bursar, Student and Parent. Student/Parent remain
+  profile-driven with no permissions. Non-demo HTTP coverage proves the Head
+  can open Dashboard and approve a submitted Result, the Teacher can open
+  Dashboard and enter/submit a Result, and the Bursar can open Dashboard and
+  record a teller payment; none receives Admin-only permissions. The migration
+  writes nothing before bootstrap, adds missing defaults to roles that exist
+  and preserves a custom grant. Read-only local HTTP measurements are Admin
+  38, Head 48, Teacher 23, Bursar 18, Student 52 and Parent 57 queries. Student
+  is +8 and Parent +14 versus the earlier record; the excess is fixed Batch 5
+  Invoice/Payment/part-payment relationship and ownership checking, while the
+  ward-growth guard remains constant, so no N+1 pattern was found. No query
+  optimization was made. Role ranks/assignability remain deferred to Batch 6.
+  Pint passes; full suite: **93 tests / 982 assertions**.
+
+- **Bursar default payment permissions and Phase 5 status refresh
+  (2026-10-25)** — Real-school bootstrap now creates a Bursar role with
+  `manage_payments` and `manage_fee_schedule`; migration `2026_10_25_000100`
+  backfills those grants onto every existing Bursar role. Neither path grants
+  `approve_payments` or `manage_payment_gateway`. Focused coverage proves both
+  new-school and existing-role behavior (2 tests / 8 assertions). The Level
+  nullability launch step and generic Session/Term delete-sheet polish are
+  recorded. The Phase 5 exit evidence was refreshed against Batch 5 without
+  changing its formal status. Pint passes; full suite: **93 tests / 946
+  assertions**.
+
+- **Academic setup front-end alignment and Batch 5 follow-up verification
+  (2026-10-24)** — Admin Levels and Subjects now match the re-issued Section-
+  ownership references, including required create-time Section selection,
+  immutable read-only edit labels, Section-named delete/error copy, all-Section
+  Subject filtering and per-row tags. Head variants are fixed to the assigned
+  Section with matching create/edit/locked copy. Sections shows read-only Level
+  ownership plus class/active-student counts and a Manage levels link; Sessions
+  are grouped with their Terms and current/future/past labels. Academic
+  navigation and Promotion access wording are aligned. Added the two-way
+  Paystack mode-mismatch and no-credential webhook assertions; the existing
+  no-key test confirms the Bursar Invoice detail state. QA at 1280px/390px had
+  no horizontal overflow or sub-44px visible target across the requested
+  screens/states; the throwaway database/profile were deleted. The ordinary
+  Head Staff-link gap is recorded below. Blade cache, Pint and Vite pass; full
+  suite: **91 tests / 938 assertions**. Phase 5 remains not formally complete.
+
+- **Batch 5 part 4: Paystack gateway settings (2026-10-24)** — Added the
+  Admin-only `manage_payment_gateway` permission and per-school saved public
+  key, encrypted write-only secret, last-four mask, derived Test/Live mode and
+  changed-by/time metadata. `PaystackCredentials` is now the single
+  saved-first/environment-fallback resolver for availability, initialization,
+  verification, connection testing and webhook HMAC verification. Key changes
+  require the Admin's current password, are rate-limited, audited without
+  values and notify other Admins; Bursars see only the locked state. Missing or
+  unreadable keys remove every payer/Bursar Pay control and refuse initiation
+  server-side while manual teller payments remain available. The settings page
+  includes the real webhook URL, encryption recovery warning and a timeout-
+  bounded read-only `GET /transaction?perPage=1&page=1` connection check.
+  Official Paystack documentation confirmed the API Keys & Webhooks setting.
+  The throwaway QA database was deleted after the environment-key state passed
+  1280px/390px comparison with no horizontal overflow or sub-44px interactive
+  target; the deliberate difference from the reference is an inline plain POST
+  password field rather than its scripted confirmation sheet. Pint and Vite
+  pass; full suite: **91 tests / 924 assertions**. Phase 5 remains not formally
+  complete.
+
+- **Batch 5 part 3: invoice lifecycle and payer Fees pages (2026-10-23)** —
+  Added same-school linked part-payment Invoices, separate settlement and
+  receipts, signed reasoned adjustment lines, guarded part/whole-Invoice void,
+  and row-locked parent settlement through one `InvoiceLifecycle` service.
+  Open parts reserve the allocatable balance and block direct parent payment;
+  settled parts reduce all-Term arrears once, while only final parent-Invoice
+  settlement unlocks Results and Attendance. Bursar/Admin Invoice detail now
+  shows lines, progress, parts, receipts and audit history; paginated Student
+  and Parent Fees pages show expandable lines, part states, attempts, manual
+  approval states and payer-owned Pay actions. Part-2 approval notifications
+  now have explicit linked-Parent coverage, and record/approve/reject/automatic
+  approval audit evidence is asserted. No permission was added:
+  `manage_fee_schedule` remains the invoicing/lifecycle permission,
+  `manage_payments` collects money, and `approve_payments` decides queued bank
+  payments. Schema and design-system guidance are current. The isolated QA
+  database was deleted after 1280px/390px checks of Invoice detail, the open
+  create-part form and both payer pages found no overflow or sub-44px target.
+  Blade compilation, Pint and Vite pass; full suite: **86 tests / 858
+  assertions**. Phase 5 remains not formally complete.
+
+- **Documentation tidy (2026-10-23)** — Aligned Graduated/Awaiting portal
+  wording and Batch 5 references, replaced the missing backend-handoff pointer,
+  reordered the real remaining work, marked superseded Subject pauses without
+  deleting their history, and recorded outstanding academic/payment visual
+  comparisons. Reference HTML was deliberately left unchanged for the design
+  agent. Documentation only; no code, migrations or tests changed or ran.
+
+- **Immutable Level/Subject Sections and Head Level creation (2026-10-23)** —
+  Level and Subject Sections are now selected only at creation and are
+  immutable afterward for both Admin and Heads. The Admin-only Level
+  reassignment route, controller/service path and Sections-screen control were
+  removed, as were the Admin Section selectors on Level and Subject edit
+  sheets. Direct edit requests with a different Section are refused. Heads
+  create Levels and Subjects only in their assigned Section through the
+  existing `manage_section_levels` and `manage_section_subjects` permissions;
+  Admin selects any same-school Section at creation. Sessions, Terms, existing
+  data and delete blockers are unchanged. Schema and design specs record the
+  owner decision and the earlier Subject-move allowance remains in the
+  decision log marked superseded. Focused tests pass (**6 tests / 111
+  assertions**); Pint and Blade compilation pass; the full suite passes (**80
+  tests / 815 assertions**). Phase 5 remains not formally complete.
+
+- **Local environment recovery and QA database isolation (2026-10-23)** â€”
+  Preserved the contaminated SQLite file outside the repository, rebuilt the
+  permitted local development database through every migration (including
+  manual payments and both Subject stages), and restored school ID 1 with an
+  idempotent local-only `DemoDataSeeder`. The seven `.env`-password demo
+  accounts, Oakfield branding, two Sections, arranged Classes/Arms,
+  Section-owned Subjects, current Session/Term, Teacher assignment,
+  Student/Parent/Candidate profiles, fee schedule and term Invoice are present.
+  `tests/TestCase.php` now rejects every database except SQLite in-memory and
+  PHPUnit forces that configuration; the persistent-database probe fails fast
+  before `RefreshDatabase`. Browser/QA guidance now requires a separate
+  gitignored throwaway SQLite file. The Windows public-storage junction was
+  created. `/`, `/login`, the logo, all six dashboard landings and the
+  Candidate admission landing pass through the running app. Pint passes and
+  the exact full suite passes (**80 tests / 807 assertions**).
+
+- **Batch 5 part 2: manual bank-teller payments and one-step approval
+  (2026-10-23)** — Replaced immediate manual settlement with tenant-scoped
+  `manual_payment_submissions`: bank, normalized race-safe teller key, paid
+  date, exact integer-kobo balance, optional private JPG/PNG/PDF evidence,
+  recorder, decision and rejection reason. `manage_payments` records while the
+  new Admin-only `approve_payments` permission approves/rejects and changes the
+  default-off `school_settings.one_step_payment_approval` control. Approval is
+  row-locked and creates one settlement/receipt; rejection preserves the log,
+  releases the teller key and notifies the recorder. One-step changes are
+  audited and notify other Admins without changing existing queued rows. The
+  Student/Parent Fees page shows the approved awaiting copy and recorded
+  method/date/amount, exposes no bank/teller/photo, and hides Pay; the Bursar
+  dashboard now links its live Awaiting approval count. Teller evidence is
+  stored below `storage/app/private/manual-payment-slips` with random names,
+  content-checked JPG/PNG/PDF only and a 3 MB limit, and is served only through
+  the authenticated queue-viewer route. Focused coverage: **7 tests / 58
+  assertions**; the full suite passes (**80 tests / 807 assertions**). Blade,
+  Pint and the production Vite build pass. Phase 5 is not marked complete.
+
+- **Subject ownership by Section (2026-10-23)** — Subjects have a mandatory
+  same-school Section and are unique per School/Section. The two-stage
+  migration and audited `oakfield:migrate-subject-sections` command provide a
+  read-only dry run, deterministic splitting/copying, per-module history
+  repointing and idempotent re-runs. Admin manages any Section; Heads use
+  `manage_section_subjects` for both bulk Subject assignment and Subject
+  create/edit/delete within their assigned Section. Direct, bulk and Teacher
+  assignment paths reject cross-Section Subjects. The Subjects screen matches
+  the approved reference for Admin and Head at 1360px and 390px with no
+  horizontal overflow. Tailwind scanning is restricted to application source
+  folders; the production build completes in 4.54s with no warnings. Focused
+  tests pass (3 tests / 47 assertions), Blade and Pint pass, and the full suite
+  passes (**73 tests / 752 assertions**).
+
+- **Batch 5 part 1, 7a calendar fallbacks (2026-10-23)** — Added central
+  `AcademicCalendar::termForInvoicing()` and `termForSummary()` fallbacks.
+  Automatic enrolment invoicing now uses the earliest upcoming Term during a
+  gap and remains silent and idempotent when no applicable schedule or Term
+  exists. The Bursar dashboard uses and labels the most recently ended Term
+  during a gap, while the Not invoiced list shares the calendar selection and
+  still lists pupils when no future Term exists. The current-Term overlap rule,
+  Student portal label, all-Term arrears, Parent status pill and deletion
+  protection are unchanged. Focused tests pass (15 tests / 67 assertions);
+  Pint and the full suite pass (**70 tests / 705 assertions**).
 
 - **Batch 5 part 1, 7a gap closure (2026-10-20)** — Fee schedule create/update
   now accepts comma-formatted Naira with up to two decimal places, converts it
@@ -103,7 +433,9 @@ Passwords were delivered to the requester, not stored in this repository.
   Promotion, while fixed phone tabs are unchanged. Subjects remain deliberately
   paused because their present schema is school-wide and the owner-required
   existing-row Section mapping is not known; the screen states that limitation
-  instead of silently reshaping data. The requested Levels/Subjects/Sessions
+  instead of silently reshaping data. **Superseded 2026-10-23:** the Subject
+  ownership migration and Section-scoped management work resolved this pause.
+  The requested Levels/Subjects/Sessions
   reference HTML files were not present, so the delivered shared Admin patterns
   were reused. New focused coverage passes (12 tests / 90 assertions); Pint,
   Blade compilation, Vite production build and the exact full suite pass
@@ -623,15 +955,20 @@ Passwords were delivered to the requester, not stored in this repository.
 
 ## In Progress
 
-- Nothing currently in progress.
+_None._
 
 ## Next Up (see `PHASES.md`)
 
-- CBT bulk upload and guarded delete (remaining Admin foundations F).
-- Accounts, students, bulk import and registration numbers.
+1. Batch 6C: all-or-nothing synchronous Student/Parent import.
+2. Batch 6D: Head Staff, Activity log, staff ticker events and disable sign-in.
+3. CBT bulk upload and guarded delete.
+4. Promotion 5c: registration-number reassignment and history.
+5. Final full-test pass.
 
 ## Deferred polish (attendance)
 
+- Assign form teacher lives only on the Daily attendance page; consider adding
+  it to the Classes screen.
 - Attendance alerts lack the Admin Section switcher and the Head Section
   badge.
 - Alerts lack the Today/Earlier date pill.
@@ -649,15 +986,43 @@ Passwords were delivered to the requester, not stored in this repository.
 - The Preview promotion button is enabled while a destination still says
   “Choose a class”; the server rejects the incomplete destination.
 
+## Deferred polish (academic setup)
+
+- Restore a retired Result template.
+- Duplicate a template as a starting point for a new one.
+- Refine the Head Result configuration screen against the design agent's Head
+  variant when that reference is delivered.
+- The Head phone More design includes Staff, but no Section-scoped Head Staff
+  page or permission has been delivered. The navigation definition exposes it
+  only to a Head who independently holds `manage_staff_records`; ordinary
+  Heads do not receive access to the Admin Staff HR page.
+- Session and Term delete sheets remain generic until the server returns the
+  relevant blocking counts.
+
 ## Deferred polish (fees and invoicing)
 
-- The Bursar **Awaiting approval** dashboard card belongs to the later manual
-  payment approval work; no substitute count was invented in part 1.
+- Batch 5 part 2 had no desktop/phone browser comparison.
+- Payment-gateway password confirmation uses an accessible inline field, not
+  the reference desktop confirmation sheet/mobile bottom sheet.
+- Invoice lifecycle confirmations use accessible inline disclosure panels;
+  matching the reference desktop modal and phone bottom-sheet/loading treatment
+  is deferred because it is not required for the production rules.
 - Custom per-student amounts for schedule extras remain undecided; part 1 uses
   the schedule amount exactly.
 - Fee-item/schedule-line creation and per-student invoicing use responsive
   inline cards instead of the references' desktop sheets/mobile bottom sheets;
   the preview, validation and live-total behavior is present.
+
+## Deferred polish (accounts)
+
+- Student and Parent Account pages follow their design in a later Batch 6
+  part; the shared change-own-password service is ready for them.
+- Self-service forgot-password follows the delivered design later. Current
+  recovery remains an Admin-issued one-time temporary password.
+- Staff HR fixes remain for Batch 6D: label the date and file inputs; present
+  salary in naira rather than kobo; correct the salary form/table at 390px;
+  add an edit route for an employment record; remove the duplicate “Add staff”
+  action; and link a newly created account to its Staff HR record.
 
 ## Student Design Batch 2 Verification Gate (2026-10-10)
 
@@ -772,6 +1137,25 @@ batch-2 findings above remain the baseline.
   C/D data and approval flow do not exist yet. No second stylesheet or
   design-only State bar was shipped. No unresolved visual overflow remains.
 
+## Phase 5 Exit Criteria Refresh (2026-10-25)
+
+- **Parent/Student UX — Met:** the combined dashboard still exposes latest
+  Results, Attendance and payment state, including the Batch 5 all-Term balance
+  and status-only Parent fee indicator.
+- **Pagination — Met:** the earlier full list audit remains valid; Batch 5's
+  activity-growing Invoice, payment, approval, payer Fees and not-invoiced
+  lists are paginated. Bounded structural catalogs retain documented caps.
+- **No core-dashboard N+1 — Met:** one read-only HTTP method measured Admin 38,
+  Head 48, Teacher 23, Bursar 18, Student 52 and Parent 57 queries. The existing
+  automated guard remains constant from one to three wards. The Student/Parent
+  increase is a fixed Batch 5 payment relationship/ownership cost rather than
+  growth per ward; no optimization was made in this task.
+- **Trust-sensitive tests — Met:** the full suite passes at **93 tests / 982
+  assertions**.
+
+This evidence refresh does **not** mark Phase 5 formally complete; only the
+owner may do that.
+
 ## Phase 5 Exit Criteria Check (2026-10-09)
 
 - **Parent/Student UX:** a temporary two-ward HTTP fixture verified a Parent
@@ -820,6 +1204,36 @@ Phase 4 exit criteria are verified below for historical handoff context.
 
 | Date | Decision | Reason | Source file |
 |------|----------|--------|-------------|
+| 2026-10-31 | A pupil's current registration number appears on report cards, receipts, invoice detail and one-time sign-in slips. Record payment finds a pupil by the current number or any number in registration history, case-insensitively and within the school. | Keeps the identifier visible at the points where staff and families reconcile identity and preserves lookup after a number change. | Owner decision for the Batch 6B follow-up |
+| 2026-10-31 | Registration-number prefixes may be configured at School, Section and Level and resolve Level → Section → School. Number width is minimum zero-padding only: values grow beyond it without truncation, and format changes affect only future issues. Optional years use the calendar year at creation; a number never encodes Class/Level text and a Graduated pupil keeps the last number. | Defines stable, non-semantic identifiers that do not break when the sequence grows or the pupil moves. | Owner decisions and amendment for Batch 6 part B |
+| 2026-10-31 | The locked move-prefix choice is: keep digits/change prefix (Oakfield default), issue from the destination prefix's counter, or keep the full number. Choices 1 and 3 share one school counter; choice 2 uses one counter per prefix. Issued and historical numbers are never reused; Admin may advance but not rewind a counter. Prefix application during Promotion remains 5c. | Makes concurrency, movement and historical lookup deterministic without prematurely changing Promotion. | Owner decisions for Batch 6 part B |
+| 2026-10-31 | Admin may change any registration number; a Head may change only a current pupil in their Section; Awaiting-admission changes are Admin-only until Incoming/Promotion 5c. Every change writes registration history and the audit trail. | Keeps the mutable identifier recoverable and Section-scoped while the receiving-Section workflow is not yet available. | Owner decisions for Batch 6 part B |
+| 2026-10-31 | Admin-created and Admin-reset Student/Parent accounts receive one-time credentials and must set a password at first sign-in. Converted Candidates retain their chosen login and are not forced. One Parent family login may link to multiple pupils; linking an existing Parent creates no credentials. | Reuses the account foundation without replacing a Candidate's known secret or multiplying family accounts. | Owner decisions for Batch 6 part B |
+| 2026-10-31 | Batch 6B delivers the Admin Students list, one-at-a-time Add student and one Student identity/sign-in/number page. Class movement stays in Promotion/Classes; import is 6C; Graduated/Awaiting portal behavior is reported but not expanded. D15 is now labelled “Admission requirements” and conversion still requires every item unless Admin records an override reason. | Keeps the part within its approved screen and workflow boundary. | Owner decisions for Batch 6 part B |
+| 2026-10-31 | Minimum password length is eight for every account. One shared rule rejects the username, temporary/current password, normalized school name, all-digit values and a bounded common-password list; it imposes no symbol or mixed-case rule. Generated temporary passwords remain 12 characters. Candidate and Parent creation adopt the shared rule in 6B. | Keeps one understandable policy across staff and future Student/Parent account flows without weakening one-time credential handling. | Owner decisions for Batch 6 part A follow-up |
+| 2026-10-31 | The last active School Admin cannot be demoted, disabled or removed through any path. Admins will be able to disable/re-enable logins and a Staff HR exit will disable sign-in in 6D; neither is built in this follow-up. Sole-Admin recovery will use the later self-service forgot-password flow. | Prevents an ordinary access change from leaving the school without an administrator while keeping 6D and recovery work bounded. | Owner decisions for Batch 6 part A follow-up |
+| 2026-10-31 | Build order is 6B Students/registration numbers, 6C import, 6D Head Staff/Activity log/disable sign-in, then CBT bulk upload and guarded delete. | Replaces the previous Next Up ordering with the owner's delivery sequence. | Owner decisions for Batch 6 part A follow-up |
+| 2026-10-31 | The 6C import row cap will be derived from measured password-hash time and the server execution limit and shown on the import page; no cap is chosen during part A. | Avoids guessing a synchronous workload limit before the import exists or the target host is measured. | Owner decisions for Batch 6 part A follow-up |
+| 2026-10-31 | A Parent has one family login, using their own username or email, with a child switcher. | Keeps authentication tied to the adult rather than creating one login per child. | Owner decisions for Batch 6 |
+| 2026-10-31 | Import is synchronous and all-or-nothing; temporary passwords are never queued; the browser builds the download and it is never stored. “Skipped” means an exact duplicate only. | Prevents partial enrolment and avoids retaining plaintext credential files on the server. | Owner decisions for Batch 6 |
+| 2026-10-31 | Discipline entries are append-only; a correction is a new entry. A teacher belonging to both Sections is visible to both Heads with every discipline entry. | Preserves HR history while making dual-Section oversight explicit. | Owner decisions for Batch 6 |
+| 2026-10-31 | Students and Parents change their own password through the shared service. Self-service forgot-password is wanted for accounts with an email; accounts without one ask the school office. | Replaces the earlier omission/deferred-recovery wording with the approved recovery boundary. | Owner decisions for Batch 6 |
+| 2026-10-31 | Registration-number prefixes may be set at School, Section and Level; resolution is Level, then Section, then School. The school locks one of three choices for a pupil moving to a Level with a different prefix. Numbers are never reused or class-encoded; Admin may set the next number but never below the highest issued. | Replaces the earlier Secondary-renumbering and Section-prefix-only decisions with one deterministic numbering policy. | Owner decisions for Batch 6 |
+| 2026-10-27 | Staff role order is School Admin > Principal (Head) > Bursar > Teacher. Only Admin manages staff accounts; a changer cannot grant above their rank, and only Admin may grant unranked custom roles. A Head has exactly one Section, a Teacher one or more, and Admin/Bursar none. New usernames are 3–30 lower-case permitted characters, contain no `@`, and are school-wide case-insensitive; existing accounts are not backfilled. New generic audit rows snapshot actor id/name/role. Temporary passwords use a configurable lower hash cost while self-chosen passwords use the normal cost. | Establishes one reusable, server-enforced account foundation for the remaining Batch 6 work without changing existing email-only accounts. | Owner decisions for Batch 6 part A |
+| 2026-10-26 | A used Result template may be retired only between Terms, remains read-only historical configuration, and releases its scope for one active replacement. New Results ignore retired templates; existing Results retain them for editing, submission and report cards. There is no restore action yet. | Lets a school change configuration over time without rewriting historical Results or creating duplicate active scope choices. | Owner decision: Retire and replace Result templates |
+| 2026-10-26 | A Result template applies Section-wide, to one Level, or to one Class within a Level. Class wins over Level, which wins over Section-wide; at most one **active** template exists per scope. Results retain their stored template, so later or more-specific templates never alter existing Results or report cards. **The original all-time uniqueness wording is superseded by the Retire-and-replace decision above.** | Gives each Section a reusable default with narrow overrides while preserving historical scoring and printing. | Owner decision: Section-wide result templates |
+| 2026-10-26 | Every successful save/delete redirects to an explicit stable list, parent, detail or originating page with a status message; Grade-band bounds accept numerically whole input and are cast/rendered as integers while fractional values remain invalid. | Prevents redirects back to method-only or deleted-resource URLs and removes misleading `.00` padding without changing score precision. | Owner-testing redirect and whole-number grade-band fixes |
+| 2026-10-26 | Assessment components and Grade scales belong to exactly one immutable Section; a wrong item is deleted and recreated. A template's Level, Grade scale and every component must share a Section. Heads manage only their assigned Section through `manage_section_result_settings`; Admin retains school-wide `manage_result_settings`. | Allows Primary, Nursery/Kindergarten and Secondary configuration to differ without cross-Section mixing or granting Heads the broader Admin Results permission. | Owner decision: Section ownership of result configuration |
+| 2026-10-26 | Grade scales, bands, templates and components may be edited/deleted by `manage_result_settings` only until a Result uses them. Grade-band bounds are inclusive whole numbers; adjacent bands meet at 20/21, grading rounds percentages to the nearest whole number with halves up, and an incomplete scale blocks submission with its uncovered marks named. **The Admin-only permission wording is superseded by the later 2026-10-26 Section-ownership decision above; the locks and whole-number rules remain current.** | Makes every attainable percentage grade consistently and preserves historical configuration once used. | Owner testing fixes |
+| 2026-10-26 | A teacher belongs to a Section through `section_user`, a subject assignment in that Section, or a form-teacher arm there. Head pickers allow only active, qualified teachers in their Section; Admin sees those first and may choose qualified Other teachers. A dual-Section teacher appears in both. | Gives one server-side rule to every form- and subject-teacher picker without adding staff Sections before Batch 6. | Owner testing fixes |
+| 2026-10-26 | A subject-teacher assignment may be replaced in one reviewed save. The preview names the count of entered Results affected; removal/replacement never deletes those Results and every change is audited with previous/new teacher IDs. | Resolves the former remove-and-save-first open question and keeps historical marks independent of current teaching authorization. | Owner testing fixes |
+| 2026-10-25 | Result templates, grade bands and assessment components may be edited or deleted by `manage_result_settings` only until a Result uses them; used configuration is locked and a new template is created for later Terms. Component deletion also requires no template reference, and band changes must preserve a gap-free, non-overlapping scale. **Superseded in part by the 2026-10-26 whole-number Grade scale decision above.** | Preserves the configuration that produced historical scores and the live grade-band subject remarks while allowing correction before use. | Owner result-configuration and form-teacher fix task |
+| 2026-10-25 | One additive `DefaultRoleCatalog` defines real and demo defaults for School Admin, Principal, Teacher, Bursar, Student and Parent. Student/Parent portal access remains profile-driven with no permissions. Existing-role migration adds missing defaults and removes nothing; role rank/assignability waits for Batch 6. | Prevents demo-only staff access and gives Batch 6 one reusable role list without prematurely defining delegation hierarchy. | Owner role-provisioning task |
+| 2026-10-24 | Paystack credentials resolve from encrypted per-school saved keys first and matching environment keys second. `manage_payment_gateway` is Admin-only; Bursars see a locked state. An unreadable saved secret disables online payment and shows the Admin “The saved keys can't be read. Please enter them again.” while payers receive only the ordinary not-set-up message. | Keeps one credential source for initialize, verify and webhook HMAC, prevents silent fallback after an application-key change, and never exposes a secret. | Batch 5 part 4 implementation |
+| 2026-10-23 | A Bursar may add a signed Invoice adjustment only with a required reason and audit entry, never reducing the total to zero or below settled plus open part-payments. A term Invoice with a settled part-payment cannot be voided, with no override. While any linked part-payment is open, direct payment of the whole remaining parent Invoice is blocked server-side; only the linked open part may be paid until every part is settled or voided. | Keeps corrections auditable, preserves settled money, and prevents concurrent whole-plus-part collection from overpaying a term Invoice. | Owner decision for Batch 5 part 3 |
+| 2026-10-23 | Reuse `manage_fee_schedule` as the invoicing permission for Invoice detail, linked part-payment creation/void, adjustments and whole-Invoice void; keep `manage_payments` for collecting money and `approve_payments` for maker/checker decisions. Store lifecycle history in existing `audit_logs` rather than a second history table. | Preserves the existing Admin/Bursar responsibility split without adding an overlapping permission or duplicate audit source. | Batch 5 part 3 implementation |
+| 2026-10-23 | Tests use SQLite in-memory only and fail fast otherwise. Browser/manual QA uses a separate gitignored throwaway SQLite file such as `database/qa.sqlite`, which is deleted after the check; QA must never refresh or seed `database/database.sqlite`. | The persistent local database was replaced by Subject-screen QA fixture data (school ID 9 and two QA users). The exact runner was not recoverable, but allowing QA to share the dev file was the contamination path. | Local environment diagnosis and recovery task |
+| 2026-10-23 | Manual bank payments must equal the Invoice balance exactly and use a separate submission until approved; non-rejected normalized teller numbers are school-wide once-only, while rejection retains the log and releases the number for reuse. One-step approval lives in `school_settings`, is Admin-only, defaults off, and notifies every other Admin whenever changed. | Preserves maker/checker control, prevents duplicate settlement under races, keeps rejected evidence auditable and makes removal of the approval control visible to peer Admins. | Owner decision for Batch 5 part 2 |
 | 2026-10-20 | Manual payments must settle the exact Invoice balance; partial manual payments are not allowed and must use the linked part-payment flow. Rejecting a manual payment releases its teller number for the Bursar to record again. | Keeps manual settlement deterministic while allowing rejected evidence to be corrected without permanently consuming the teller reference. | Owner decision for Batch 5 payment work |
 | 2026-10-20 | Bursars may add Invoice adjustments only with a required reason; an adjustment may never reduce the Invoice total to zero or below the sum of settled and open part-payments. | Preserves an auditable reason and prevents an adjustment from invalidating money already settled or committed. | Owner decision for Batch 5 payment work |
 | 2026-10-20 | A term Invoice with any settled part-payment cannot be voided, with no Admin override. | Settled financial history is immutable. | Owner decision for Batch 5 payment work |
@@ -827,8 +1241,12 @@ Phase 4 exit criteria are verified below for historical handoff context.
 | 2026-10-20 | The Parent “Fees due” status pill uses the same all-Term `termFeeOutstandingKobo()` balance as the portal: it appears only when term-fee arrears exceed zero and never exposes an amount; one-off Invoices do not trigger it. | Keeps the compact Parent status consistent with the detailed ledger without leaking amounts in the child switcher. | Owner decision for Batch 5 part 1, 7a gap closure |
 | 2026-10-20 | Portal outstanding is the sum of the balance of every Student term-fee Invoice across all Terms, counting each Invoice once, subtracting all recorded Payments and treating paid Invoices as zero; one-off and other Invoice kinds remain excluded. Result locking remains isolated to the viewed Term's term-fee Invoice. | Shows real arrears without allowing an earlier debt to lock a later paid Term or unrelated charges to affect the result gate. | Owner decision for Batch 5 part 1, 7a remainder |
 | 2026-10-20 | Resolve the current Term centrally as the date-containing Term with the latest start date in Africa/Lagos. Payment summary, automatic invoicing and Student portal context use that resolver; deletion deliberately continues protecting every date-containing Term. | Makes overlapping Term behaviour deterministic without weakening history protection. | Owner decision for Batch 5 part 1, 7a remainder |
+| 2026-10-23 | When no Term contains today, automatic invoicing uses the earliest future Term; if none exists it creates nothing and the pupil remains Not invoiced. The Bursar summary instead uses the most recently ended Term and labels it; if none has ended it shows zero figures. A date-containing Term with the latest start date still wins during overlaps, every date-containing Term remains deletion-protected, and portal arrears and the Parent “Fees due” pill remain all-Term calculations. | Gives enrolment and Bursar reporting deliberate but different gap-between-Term behaviours while keeping all date selection in `AcademicCalendar`. | Owner decision for Batch 5 part 1, 7a follow-up |
+| 2026-10-23 | **Superseded later on 2026-10-23:** Every Subject belongs to exactly one Section and names are unique per School and Section. Existing one-Section Subjects are assigned there; cross-Section Subjects are split per Section and every class-linked reference is repointed by the Class's Section; unused Subjects are copied into every Section. Subject creation requires a Section, Heads manage only their assigned Section, Admin may manage any Section, and only Admin may move an unattached Subject between Sections. The move allowance is superseded; the historical migration rules remain valid. | Removes shared Subjects while preserving class assignments, teacher assignments, scores and history. | Owner decision for Subject ownership by Section |
+| 2026-10-23 | A Level or Subject's Section is selected at creation and is immutable afterward; a wrong record is deleted and recreated. Heads create, edit and delete Levels and Subjects only in their assigned Section through the existing `manage_section_levels` and `manage_section_subjects` permissions; Admin acts in any Section. Sessions and Terms remain Admin-only. | Removes ambiguous ownership changes and keeps every runtime mutation Section-scoped without broadening Head access to school-wide academic setup. | Owner decision for immutable Level/Subject Sections |
+| 2026-10-23 | `manage_section_subjects` covers both bulk Subject assignment and Subject create/edit/delete for Heads within their assigned Section. | Keeps one narrowly scoped Head permission for all Section-owned Subject management without granting school-wide Academics access. | Subject ownership close-out |
 | 2026-10-20 | Admin may edit/delete Levels and Class Arms in any Section; Heads use `manage_section_levels` and `manage_section_arms` only in assigned Sections. Sessions and Terms remain Admin-only; current date-containing Sessions/Terms cannot be deleted; date ranges may overlap but end must be after start; Levels have no independent order. Fee schedule copy preserves prices with no uplift. | Owner decisions for the academic setup small-items pass | `docs/design/admin/specs/academic-setup.md`; owner task dated 2026-10-18 |
-| 2026-10-20 | Pause Subject ownership/edit/delete work until every existing school-wide Subject has an explicit Section assignment. The smallest safe change is a nullable `subjects.section_id` same-school foreign key, an explicit owner-approved assignment for every existing row, then a non-null constraint and Section-scoped uniqueness; do not infer ownership from current Class assignments because a Subject may currently be attached across Sections. | The current schema stores Subjects with only `school_id` and `name`, while the owner has now decided every Subject belongs to exactly one Section; silently assigning existing data would reshape live ownership. | `app/Modules/Academics/Database/Migrations/2026_10_03_000100_create_academics_tables.php`; owner task dated 2026-10-18 |
+| 2026-10-20 | **Superseded 2026-10-23 by the completed Subject ownership work:** Pause Subject ownership/edit/delete work until every existing school-wide Subject has an explicit Section assignment. The smallest safe change is a nullable `subjects.section_id` same-school foreign key, an explicit owner-approved assignment for every existing row, then a non-null constraint and Section-scoped uniqueness; do not infer ownership from current Class assignments because a Subject may currently be attached across Sections. | The current schema stores Subjects with only `school_id` and `name`, while the owner has now decided every Subject belongs to exactly one Section; silently assigning existing data would reshape live ownership. | `app/Modules/Academics/Database/Migrations/2026_10_03_000100_create_academics_tables.php`; owner task dated 2026-10-18 |
 | 2026-10-19 | Fee schedule lines add across matching Level, Class and Department scopes; when the same fee item matches more than once, the most specific Class, then Department, then Level line wins; required lines are always invoiced and optional extras are selected explicitly | Makes overlapping schedules deterministic without double-charging the same fee item | `docs/design/admin/specs/fee-schedule.md`; owner decision for Batch 5 |
 | 2026-10-19 | An in-use fee item cannot be removed; copying a previous schedule is deferred; active Students without a Class are skipped and counted during invoice generation | Preserves invoice snapshots and keeps bulk generation honest without inventing an automatic placement or copy workflow | `docs/design/admin/specs/fee-schedule.md`; `docs/design/admin/specs/invoices-generate.md`; owner decision for Batch 5 |
 | 2026-10-18 | Name the Head permissions `manage_section_subjects` and `manage_section_teacher_assignments`; keep Admin access on `manage_academics` and `manage_result_settings`; reject a conflicting second-Teacher assignment until the existing assignment is explicitly removed | Gives heads only the two Section-scoped workflows without exposing Results configuration, while avoiding an undocumented silent replacement | `docs/design/admin/specs/bulk-subjects.md`; `docs/design/admin/specs/teacher-assignments.md` |
@@ -843,7 +1261,7 @@ Phase 4 exit criteria are verified below for historical handoff context.
 | 2026-10-17 | Heads may perform bulk Subject assignment, Teacher assignment, and create/edit/delete Classes within their own Section; Admin may act in any Section, with scope enforced server-side | Replaces the earlier Admin-only/read-only design decision with owner-confirmed Section-scoped write access | `docs/design/admin/CODEX_BRIEF.md`; `docs/design/admin/specs/academic-classes.md`; `docs/design/admin/specs/bulk-subjects.md`; `docs/design/admin/specs/teacher-assignments.md` |
 | 2026-10-17 | Run scheduled tasks in Africa/Lagos while keeping stored timestamps in UTC | School deadlines use local civil time without changing the database timestamp standard | `docs/design/admin/specs/attendance-sessions.md` |
 | 2026-10-17 | Add a nullable same-site relative `url` column to notifications | Enables safe notification deep links without allowing cross-site targets | `docs/briefs/ADMIN_FOUNDATIONS_BRIEF.md` §D13 |
-| 2026-10-17 | Keep a pupil's registration number by default; optionally assign a new Secondary number at acceptance; enforce school-wide uniqueness, preserve old numbers as searchable history, and log every change; afterward Admin or the head of the pupil's current Section may change it | Preserves identity history while supporting a Secondary numbering scheme under Section-scoped authority | `docs/design/admin/specs/incoming-admissions.md` |
+| 2026-10-17 | **Superseded 2026-10-31:** Keep a pupil's registration number by default; optionally assign a new Secondary number at acceptance; enforce school-wide uniqueness, preserve old numbers as searchable history, and log every change; afterward Admin or the head of the pupil's current Section may change it. The current Batch 6 prefix-resolution, locked move-choice and Admin sequence rules replace this wording. | Preserves the historical decision while pointing to the newer owner-approved registration-number policy. | `docs/design/admin/specs/incoming-admissions.md`; owner Batch 6 decision |
 | 2026-10-11 / 2026-10-17 | Use one school-wide Class sequence for promotion; default to the next Class by order in the same Department when possible and the same Arm name or first Arm; the last Class of the school moves Students to Graduated with history retained, no undo and a separate single-Student move; Heads promote only within their own Section and the server refuses out-of-scope moves; the last Class of a Section followed by another Section moves pupils immediately to Awaiting admission, removing them from that Section's lists, rosters, counts and automatic invoicing until the Secondary Head or Admin accepts them into an editable Class/Arm or marks them not continuing (Graduated); the flow is manual only with no scheduled lapse or Session/Term link | Consolidates the owner-approved promotion, cross-Section handoff, scope and defaults without inventing unresolved edge cases | `docs/design/admin/specs/promotion.md`; `docs/design/admin/specs/incoming-admissions.md` |
 | 2026-10-19 | Graduated pupils, and parents viewing a Graduated pupil, retain read-only, payment-gated Attendance for the last 30 recorded school days alongside past report cards and paid receipts; Awaiting-admission pupils remain restricted to past report cards and receipts | Records the owner's explicit widening of the earlier Graduated portal-access decision while keeping Awaiting admission restricted |
 | 2026-10-12 | Take Attendance in Morning and Afternoon sessions; null legacy rows count as both with no backfill; each Section's Head sets its alert times (Admin any Section, every change logged), defaulting to Morning 08:00 and Afternoon 14:00; the page defaults by Africa/Lagos noon but saves the chosen tab; Heads/Admin may mark a whole Section session not held for a date, suppressing its alert and excluding it from percentages; Excused is excluded, there is no whole-day shortcut or school calendar, and the alert job runs every five minutes | Confirms the complete twice-daily Attendance behavior and closes the Morning-time and Excused-percentage decisions | `docs/design/ATTENDANCE_TWICE_DAILY.md`; `docs/design/admin/specs/attendance-sessions.md` |
@@ -851,7 +1269,7 @@ Phase 4 exit criteria are verified below for historical handoff context.
 | 2026-10-11 | Portal report cards expose only the learner's own average and position, never the class broadsheet; locked HTML contains no scores, positions, subjects or percentages | The approved Student/Parent designs and privacy requirement supersede the old shared staff view |
 | 2026-10-11 | Exclude Excused days from the Student/Parent attendance percentage denominator; Late still counts as present | Excused is not an absence and the old denominator incorrectly lowered attendance for an excusal |
 | 2026-10-11 | **Superseded:** keep notifications without a `url` or type field and without deep links for this portal batch | Superseded by the 2026-10-17 decision to add a nullable same-site relative `url`; no notification type field was approved |
-| 2026-10-11 | Omit optional Student/Parent self-service change-password card for this release; school-office reset remains the sign-in guidance | Both approved profile specs mark this card optional and the Admin brief defines authorized reset separately |
+| 2026-10-11 | **Superseded 2026-10-31:** Omit optional Student/Parent self-service change-password card for this release; school-office reset remains the sign-in guidance. Students and Parents will instead change their own password through the shared service; email-backed accounts receive the later forgot-password flow. | Preserves the earlier portal-batch decision while recording the newer Batch 6 owner direction. |
 | 2026-10-11 | Linked Parents may pay open invoices for their own children; extend and test `BillingRecipients::owns()` without weakening its existing owner checks | Owner resolved the Student batch-2 payer-scope difference; see `docs/design/student/CODEX_BRIEF.md` Batch 3 |
 | 2026-10-11 | Carry validated `?student={id}` on every Parent link, default to the first linked child, optionally remember the last choice in session, and replace the auto-submit select with the ward bar/dialog (none for one child) | Owner decision; every request must verify `isWard`; see `docs/design/student/specs/parent-ward.md` |
 | 2026-10-11 | Show a status-only “Fees due” switcher pill only for an own child with a real actionable unpaid invoice, never an amount | Owner decision; see `docs/design/student/specs/parent-ward.md` |
@@ -863,7 +1281,7 @@ Phase 4 exit criteria are verified below for historical handoff context.
 | 2026-10-10 | D3 — bulk subject assignment is level/optional-department/class/subject scoped, previewed, idempotent, and removal preserves historical Results | Owner decision; see `docs/briefs/ADMIN_FOUNDATIONS_BRIEF.md` §D3 |
 | 2026-10-10 | D4 — bulk teacher assignment works by Teacher or by Class, only for offered Class/Subject pairs, with preview/idempotency and history-preserving removal | Owner decision; see `docs/briefs/ADMIN_FOUNDATIONS_BRIEF.md` §D4 |
 | 2026-10-10 | D5 — dynamic forms hide irrelevant inputs while the server also clears/ignores them and validates only relevant fields | Owner decision; see `docs/briefs/ADMIN_FOUNDATIONS_BRIEF.md` §D5 |
-| 2026-10-10 | D6 — Admin creates Staff/Student identity and record together; school-unique nullable usernames support login; temporary passwords require first-login change; authorized Admin reset replaces deferred self-service recovery; role assignment is bounded | Owner decision; see `docs/briefs/ADMIN_FOUNDATIONS_BRIEF.md` §D6 |
+| 2026-10-10 | **Superseded in part 2026-10-31:** D6 — Admin creates Staff/Student identity and record together; school-unique nullable usernames support login; temporary passwords require first-login change; authorized Admin reset was to replace deferred self-service recovery; role assignment is bounded. Admin reset remains, but it no longer replaces recovery: email-backed accounts will receive self-service forgot-password. | Owner decision; see `docs/briefs/ADMIN_FOUNDATIONS_BRIEF.md` §D6 and the newer Batch 6 recovery decision. |
 | 2026-10-10 | D7 — support single/CSV Student enrolment, concurrency-safe school-unique registration-number formats with optional section prefixes and manual override, Guardian linking, automatic scheduled-fee invoicing, and a Bursar Not-invoiced list | Owner decision; see `docs/briefs/ADMIN_FOUNDATIONS_BRIEF.md` §D7 |
 | 2026-10-10 | D8 — add permissioned Fee Items/Schedules, required versus optional lines, immutable issued Invoice lines, logged corrections, idempotent bulk generation, one term Invoice per Student, and naira-only presentation | Owner decision; see `docs/briefs/ADMIN_FOUNDATIONS_BRIEF.md` §D8; the cross-sibling Parent fees view remains open |
 | 2026-10-10 | D9 — manual bank-teller Payments capture bank/teller/date/amount/photo, enforce globally single-use teller numbers, and require Admin approval unless a school setting enables single-step settlement | Owner decision; see `docs/briefs/ADMIN_FOUNDATIONS_BRIEF.md` §D9 |
@@ -910,7 +1328,7 @@ Phase 4 exit criteria are verified below for historical handoff context.
 | 2026-10-03 | Require at least one configured checklist item for ordinary conversion and a distinct `override_admission_checklist` permission for exceptions | Prevents an empty checklist from silently satisfying the gate and keeps override authority separate from routine admissions work |
 | 2026-10-03 | Lapse expired unanswered offers in the existing cron-driven Laravel scheduler and permit an immediate staff lapse action | Enforces response deadlines without assuming a persistent worker on cPanel |
 | 2026-10-03 | Treat Approved results as locked; store `locked_at`, percentage, and grade, and normalize component totals to 100 for grading | Matches the documented four-state workflow while making direct-request edit locks and scheme lookups explicit |
-| 2026-10-03 | Use level-wide result templates with an optional class-specific override and an ordered component pivot | Allows a common grading configuration per level without duplicating it for every class, while supporting class exceptions |
+| 2026-10-03 | Use level-wide result templates with an optional class-specific override and an ordered component pivot. **Superseded by the 2026-10-26 Section-wide/Level/Class scope decision above.** | Allows a common grading configuration per level without duplicating it for every class, while supporting class exceptions |
 | 2026-10-03 | Split result permissions into settings, score entry, and approval; use a module service for each Academic and Admissions lookup | Keeps approval authority independent of entry and preserves module boundaries while Staff HR/teacher assignments are not yet built |
 | 2026-10-03 | Snapshot each result's class arm and template at first score entry | Later class moves or template changes must not silently alter historical term results or broadsheet grouping |
 | 2026-10-03 | Assign score-entry users to a class/subject in Academics; Results settings managers may enter across assignments | Gives teachers server-enforced scope before Results entry is opened beyond school admins while retaining a practical admin correction path |
@@ -945,28 +1363,18 @@ silently:
 
 1. How promotion works for schools with three Sections.
 2. How to correct a pupil sent to **Awaiting admission** by mistake.
-3. Who may edit the registration number of a pupil still Awaiting admission
-   (proposal: Secondary Head and Admin only).
-4. When a source Class has a Department but the next step has no Class with
+3. When a source Class has a Department but the next step has no Class with
    that Department, whether another destination should be suggested (5a
    currently requires an explicit choice).
-5. The Class deletion rule (proposal: block deletion while the Class or its
-   Arms have Students, Results, Attendance or Invoices).
-6. Whether a deleted Class's name may be reused immediately.
-7. Class-step combinations with a Class that has no Department while another
+4. Whether a deleted Class's name may be reused immediately.
+5. Class-step combinations with a Class that has no Department while another
    Class on the same step has a Department.
-8. Attendance: whether “not held” needs a reason note; what happens to marks
-   made before a session is declared not held; how older unfixable alerts are
-   handled; and whether removing today's not-held entry re-raises an alert.
-9. Teacher assignments: when another Teacher is chosen for a Class/Subject
-    pair that already has one, should Save replace the current Teacher in one
-    step or continue to require an explicit remove-and-save first?
-10. Business: the original 12-week timeline and original price remain
+6. Attendance: whether “not held” needs a reason note and how older unfixable
+   alerts are handled. Marks made before not-held stay recorded but are not
+   counted, and today's removable entry follows the existing alert generator;
+   those parts are resolved.
+7. Business: the original 12-week timeline and original price remain
     unconfirmed.
-11. Academic setup: assign every existing school-wide Subject explicitly to
-    one Section before adding a non-null `subjects.section_id` and enabling
-    Section-scoped Subject create/edit/delete for Heads. Do not infer the
-    mapping from present Class assignments because a Subject may span Sections.
 
 ## Deferred Until Hosting Exists
 
@@ -978,9 +1386,30 @@ silently:
 
 ## Go-Live Checklist
 
+- Select PHP 8.2 or higher in cPanel before deployment; Laravel 12 and the
+  Composer platform requirement do not support PHP 7.x or 8.0/8.1.
+- Back up before running the staged Result-configuration Section migration on
+  a populated database: Migration A, dry run, audited real command, then
+  Migration B.
+- Set each Section's head title (Principal or Head Teacher) before printing
+  report cards.
+- Before launch, run a one-time migration making `levels.section_id` required
+  once no Level without a Section exists (as was done for Subjects).
+- Back up the production `APP_KEY` securely. Saved Paystack keys cannot be
+  decrypted if that application key is lost or changed.
+- Set the final Paystack keys through the Admin Payment gateway page after the
+  production environment is live; do not place them in source or deployment
+  scripts.
+- On a populated database, back up first, run Migration A only, then
+  `php artisan oakfield:migrate-subject-sections --dry-run`, review the counts,
+  run the real command with `--actor=<admin-user-id>`, and only then run
+  Migration B. Never run a plain all-migrations command for this change on a
+  populated database.
 - Deploy the twice-daily attendance change outside school hours. An arm that
   was already marked as a whole day cannot be split into sessions for that
   day.
+- Configure outgoing email before the later self-service forgot-password flow
+  is enabled.
 
 ## External Gateway Proof Record
 
@@ -993,7 +1422,6 @@ silently:
 
 ---
 
-_Last updated: 2026-10-20 — Phase 4 is complete; Phase 5 is substantially
-built but not formally complete. Academic setup safeguards and fee-schedule
-copy are complete except for the explicitly blocked Subject ownership mapping;
-later Batch 5 payment work remains._
+_Last updated: 2026-10-31 — Phase 4 is complete; Phase 5 is substantially
+built but not formally complete. Batch 5 parts 1–4 are built; the remaining
+owner-ordered work is listed under Next Up._

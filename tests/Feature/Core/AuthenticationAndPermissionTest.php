@@ -24,28 +24,47 @@ class AuthenticationAndPermissionTest extends TestCase
 
         $permissions = collect([
             'view_all_sections', 'mark_attendance', 'view_attendance_alerts', 'enter_results',
+            'manage_academics', 'manage_result_settings', 'manage_promotions',
+            'manage_section_classes', 'manage_section_levels', 'manage_section_subjects',
+            'manage_section_teacher_assignments', 'manage_staff_records', 'approve_results',
         ])->mapWithKeys(fn (string $name) => [$name => Permission::firstOrCreate(['name' => $name])]);
         $adminRole = Role::create(['name' => 'School Admin']);
         $adminRole->permissions()->attach($permissions->only([
             'view_all_sections', 'mark_attendance', 'view_attendance_alerts',
+            'manage_academics', 'manage_result_settings', 'manage_promotions',
         ])->pluck('id'));
         $teacherRole = Role::create(['name' => 'Teacher']);
         $teacherRole->permissions()->attach($permissions->only([
             'mark_attendance', 'enter_results',
         ])->pluck('id'));
+        $headRole = Role::create(['name' => 'Principal']);
+        $headRole->permissions()->attach($permissions->only([
+            'approve_results', 'manage_promotions', 'manage_section_classes', 'manage_section_levels',
+            'manage_section_subjects', 'manage_section_teacher_assignments', 'manage_staff_records',
+        ])->pluck('id'));
 
         $admin = User::create(['name' => 'Admin', 'email' => 'admin@example.test', 'password' => 'password']);
         $teacher = User::create(['name' => 'Teacher', 'email' => 'teacher@example.test', 'password' => 'password']);
+        $head = User::create(['name' => 'Head', 'email' => 'head@example.test', 'password' => 'password']);
         $admin->roles()->attach($adminRole);
         $teacher->roles()->attach($teacherRole);
+        $head->roles()->attach($headRole);
 
         $navigation = app(AppNavigation::class);
         $adminItems = collect($navigation->items($admin));
         $teacherItems = collect($navigation->items($teacher));
+        $headItems = collect($navigation->items($head));
 
         $this->assertSame(route('attendance.index'), $adminItems->firstWhere('label', 'Attendance')['url']);
         $this->assertSame(route('attendance.alerts'), $adminItems->firstWhere('label', 'Alerts')['url']);
         $this->assertSame(route('attendance.index'), $teacherItems->firstWhere('label', 'Attendance')['url']);
+        foreach (['Academics', 'Bulk subjects', 'Teacher assignments', 'Promotion'] as $label) {
+            $this->assertSame('Academics', $adminItems->firstWhere('label', $label)['group']);
+        }
+        $this->assertSame(
+            ['Classes', 'Levels', 'Subjects', 'Bulk subjects', 'Teacher assignments', 'Promotion', 'Staff'],
+            $headItems->where('group', 'Academics')->pluck('label')->values()->all(),
+        );
     }
 
     public function test_login_is_scoped_to_the_school_and_dashboard_requires_a_permission(): void

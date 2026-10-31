@@ -7,9 +7,10 @@ use App\Modules\Academics\Models\Section;
 use App\Modules\Academics\Services\ClassArmDirectory;
 use App\Modules\Academics\Services\FormTeacherAssignments;
 use App\Modules\Academics\Services\SectionAccess;
+use App\Modules\Academics\Services\SectionTeacherDirectory;
 use App\Modules\Admissions\Services\StudentDirectory;
+use App\Modules\Attendance\Models\AttendanceSessionNotHeld;
 use App\Modules\Attendance\Services\AttendanceService;
-use App\Modules\Core\Services\SchoolUserDirectory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -17,14 +18,21 @@ use Illuminate\View\View;
 
 class AttendanceController extends Controller
 {
-    public function index(Request $request, FormTeacherAssignments $assignments, StudentDirectory $students, SchoolUserDirectory $users): View
+    public function index(Request $request, FormTeacherAssignments $assignments, StudentDirectory $students, SectionTeacherDirectory $teachers): View
     {
+        abort_unless($request->user()->can('mark_attendance') || $request->user()->can('manage_attendance'), 403);
         $arms = $assignments->armsFor($request->user());
+
+        $candidateGroups = collect();
+        if (Gate::allows('manage_attendance')) {
+            $candidateGroups = $arms->map(fn ($arm) => $arm->schoolClass?->level?->section_id)->filter()->unique()
+                ->mapWithKeys(fn ($sectionId): array => [(int) $sectionId => $teachers->candidates((int) $sectionId, SectionTeacherDirectory::FORM_PERMISSION, $request->user()->can('view_all_sections'))]);
+        }
 
         return view('attendance.index', [
             'arms' => $arms,
             'counts' => $students->countsByArmIds($arms->pluck('id')->all()),
-            'users' => Gate::allows('manage_attendance') ? $users->activeOptions() : collect(),
+            'formTeacherCandidateGroups' => $candidateGroups,
             'today' => today('Africa/Lagos')->toDateString(),
         ]);
     }
@@ -54,7 +62,8 @@ class AttendanceController extends Controller
         ]);
         $attendance->markDay($arm, $data['date'], $data['session'], $data['statuses'], $request->user());
 
-        return back()->with('status', $data['session'].' full-class attendance saved.');
+        return redirect()->route('attendance.day', ['arm' => $arm, 'date' => $data['date'], 'session' => $data['session']])
+            ->with('status', $data['session'].' full-class attendance saved.');
     }
 
     public function lock(int $arm, Request $request, AttendanceService $attendance): RedirectResponse
@@ -62,16 +71,17 @@ class AttendanceController extends Controller
         $data = $request->validate(['date' => ['required', 'date_format:Y-m-d'], 'session' => ['required', 'in:Morning,Afternoon']]);
         $attendance->lockDay($arm, $data['date'], $data['session'], $request->user());
 
-        return back()->with('status', $data['session'].' is locked. Attendance can no longer be changed.');
+        return redirect()->route('attendance.day', ['arm' => $arm, 'date' => $data['date'], 'session' => $data['session']])
+            ->with('status', $data['session'].' is locked. Attendance can no longer be changed.');
     }
 
     public function assign(Request $request, FormTeacherAssignments $assignments): RedirectResponse
     {
         $data = $request->validate(['class_arm_id' => ['required', 'integer'], 'user_id' => ['required', 'integer']]);
         app(SectionAccess::class)->assertClassArm($request->user(), (int) $data['class_arm_id']);
-        $assignments->assign((int) $data['class_arm_id'], (int) $data['user_id']);
+        $assignments->assign((int) $data['class_arm_id'], (int) $data['user_id'], $request->user());
 
-        return back()->with('status', 'Form teacher assigned.');
+        return redirect()->route('attendance.index')->with('status', 'Form teacher assigned.');
     }
 
     public function alerts(Request $request, AttendanceService $attendance, ClassArmDirectory $arms): View
@@ -133,16 +143,25 @@ class AttendanceController extends Controller
         ]);
         $attendance->updateSectionSettings($section, $data['morning_due_at'], $data['afternoon_due_at'], $request->user());
 
-        return back()->with('status', 'Attendance alert times saved. The change was logged.');
+        return redirect()->route('attendance.settings', ['section' => $section])
+            ->with('status', 'Attendance alert times saved. The change was logged.');
     }
 
     public function markNotHeld(int $section, Request $request, AttendanceService $attendance): RedirectResponse
     {
-        $data = $request->validate(['date' => ['required', 'date_format:Y-m-d'], 'session' => ['required', 'in:Morning,Afternoon,Both']]);
+        $data = $request->validate([
+            'date' => ['required', 'date_format:Y-m-d'],
+            'session' => ['required', 'in:Morning,Afternoon,Both'],
+            'return_to' => ['nullable', 'in:alerts,settings'],
+        ]);
         $report = $attendance->markNotHeld($section, $data['date'], $data['session'], $request->user());
         $alertLabel = $report['open_alerts'] === 1 ? 'open alert was' : 'open alerts were';
 
-        return back()->with([
+        $redirect = ($data['return_to'] ?? 'settings') === 'alerts'
+            ? redirect()->route('attendance.alerts')
+            : redirect()->route('attendance.settings', ['section' => $section]);
+
+        return $redirect->with([
             'status' => "The selected session was marked not held. {$report['open_alerts']} {$alertLabel} cleared. It is left out of attendance percentages; existing marks stay on record but are not counted. The change was logged.",
             'notHeldReport' => $report,
         ]);
@@ -150,8 +169,10 @@ class AttendanceController extends Controller
 
     public function removeNotHeld(int $entry, Request $request, AttendanceService $attendance): RedirectResponse
     {
+        $sectionId = (int) AttendanceSessionNotHeld::findOrFail($entry)->section_id;
         $attendance->removeNotHeld($entry, $request->user());
 
-        return back()->with('status', 'The not-held entry was removed and the change was logged.');
+        return redirect()->route('attendance.settings', ['section' => $sectionId])
+            ->with('status', 'The not-held entry was removed and the change was logged.');
     }
 }

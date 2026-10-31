@@ -228,6 +228,7 @@ class AdmissionPipeline
             $student = Student::create(['user_id' => $candidate->user_id, 'class_arm_id' => $armId, 'candidate_id' => $candidate->id, 'admission_date' => today()]);
             $role = Role::firstOrCreate(['name' => 'Student']);
             User::findOrFail($candidate->user_id)->roles()->syncWithoutDetaching([$role->id]);
+            app(RegistrationNumbers::class)->assignAutomatic($student, $actor);
             $this->transition($candidate, 'Offer Accepted', 'Converted to Student', $actor, $override ? trim($reason) : 'Checklist complete', $override);
             app(FeeInvoicingService::class)->automaticallyInvoice($student, $actor);
 

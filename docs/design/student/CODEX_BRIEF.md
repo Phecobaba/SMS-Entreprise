@@ -94,3 +94,7 @@ Heads seeing a section-scoped Staff list · what a parent sees if a recorded pay
 # Attendance sessions (morning and afternoon): student and parent screens
 Build after the backend in `docs/design/admin/CODEX_BRIEF.md` ("Attendance sessions") exists. Re-issued and ready: `screens/dashboard.html`, `screens/parent-dashboard.html`, `screens/attendance.html`, `screens/parent-attendance.html`; new CSS `shared/oak-attendance.css` (move it into `resources/css/app.css`).
 `portalSummary` must return the last **30 school days** with both sessions; the percentage is (Present + Late) / (Present + Late + Absent) sessions, with Excused, not-held and not-yet-marked sessions excluded. A day with no session held is not a school day. Locked states stay neutral. Tests: see the admin brief's attendance tests (percentage maths with legacy rows, 30 school days, payment gating).
+
+## Batch 6 follow-up
+
+Account change-password and password recovery references are additive. First enabled email recovery is Admin-only. Reset page uses shared password rules and reset-link emails state 60-minute expiry. Preserve prior instructions.

@@ -9,6 +9,8 @@ use App\Modules\Academics\Models\Section;
 use App\Modules\Academics\Models\Subject;
 use App\Modules\Academics\Models\TeacherSubjectAssignment;
 use App\Modules\Core\Models\User;
+use App\Modules\Core\Services\AuditRecorder;
+use App\Modules\Results\Models\Result;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -64,7 +66,7 @@ class AcademicAssignmentManager
 
         if ($sectionId) {
             $levels = AcademicLevel::where('section_id', $sectionId)
-                ->with(['classes' => fn ($query) => $query->with(['department', 'classSubjects.subject'])
+                ->with(['classes' => fn ($query) => $query->with(['department', 'classSubjects.subject', 'arms.formTeacher'])
                     ->orderByRaw('position is null')->orderBy('position')->orderBy('name')])
                 ->orderBy('name')->limit(100)->get();
             $classes = $levels->flatMap->classes->values();
@@ -74,18 +76,21 @@ class AcademicAssignmentManager
             ...$scope,
             'levels' => $levels,
             'classes' => $classes,
-            'subjects' => Subject::orderBy('name')->limit(100)->get(),
+            'subjects' => Subject::when($sectionId, fn ($query) => $query->where('section_id', $sectionId))
+                ->orderBy('name')->limit(100)->get(),
         ];
     }
 
     public function teacherCatalog(User $actor, ?int $requestedSectionId = null): array
     {
         $catalog = $this->catalog($actor, 'teachers', $requestedSectionId);
-        $catalog['teachers'] = User::where('status', 'active')
-            ->whereHas('roles.permissions', fn (Builder $query) => $query->whereIn('permissions.name', [
-                'enter_results', 'mark_assignments', 'upload_enotes',
-            ]))
-            ->orderBy('name')->limit(100)->get(['id', 'name', 'email']);
+        $catalog['teacherGroups'] = $catalog['sectionId']
+            ? app(SectionTeacherDirectory::class)->candidates($catalog['sectionId'], SectionTeacherDirectory::SUBJECT_PERMISSIONS, $catalog['canViewAll'])
+            : ['section' => collect(), 'other' => collect(), 'all' => collect()];
+        $catalog['teachers'] = $catalog['teacherGroups']['all'];
+        $catalog['formTeacherGroups'] = $catalog['sectionId']
+            ? app(SectionTeacherDirectory::class)->candidates($catalog['sectionId'], SectionTeacherDirectory::FORM_PERMISSION, $catalog['canViewAll'])
+            : ['section' => collect(), 'other' => collect(), 'all' => collect()];
         $catalog['assignments'] = TeacherSubjectAssignment::whereIn('class_id', $catalog['classes']->pluck('id'))
             ->get(['id', 'user_id', 'class_id', 'subject_id']);
 
@@ -118,10 +123,7 @@ class AcademicAssignmentManager
     {
         return DB::transaction(function () use ($actor, $sectionId, $teacherId, $pairKeys): array {
             $plan = $this->teacherPlan($actor, $sectionId, $teacherId, $pairKeys, true);
-            TeacherSubjectAssignment::whereIn('id', collect($plan['removeRows'])->pluck('id'))->delete();
-            foreach ($plan['addPairs'] as $pair) {
-                TeacherSubjectAssignment::firstOrCreate(['user_id' => $teacherId, ...$pair]);
-            }
+            $this->persistTeacherPlan($plan, $actor);
 
             return collect($plan)->except(['removeRows', 'addPairs'])->all();
         });
@@ -136,10 +138,7 @@ class AcademicAssignmentManager
     {
         return DB::transaction(function () use ($actor, $sectionId, $classId, $teacherBySubject): array {
             $plan = $this->classPlan($actor, $sectionId, $classId, $teacherBySubject, true);
-            TeacherSubjectAssignment::whereIn('id', collect($plan['removeRows'])->pluck('id'))->delete();
-            foreach ($plan['addPairs'] as $pair) {
-                TeacherSubjectAssignment::firstOrCreate($pair);
-            }
+            $this->persistTeacherPlan($plan, $actor);
 
             return collect($plan)->except(['removeRows', 'addPairs'])->all();
         });
@@ -174,9 +173,9 @@ class AcademicAssignmentManager
         if ($classes->count() !== count($classIds)) {
             throw new AuthorizationException('Every selected class must belong to the chosen level and section.');
         }
-        $subjects = Subject::whereIn('id', $subjectIds)->orderBy('name')->get(['id', 'name']);
+        $subjects = Subject::where('section_id', $sectionId)->whereIn('id', $subjectIds)->orderBy('name')->get(['id', 'name']);
         if ($subjects->count() !== count($subjectIds)) {
-            throw new AuthorizationException('One or more selected subjects do not belong to this school.');
+            throw new AuthorizationException('One or more selected subjects do not belong to this section.');
         }
 
         $existingQuery = ClassSubject::whereIn('class_id', $classIds)->whereIn('subject_id', $subjectIds);
@@ -219,6 +218,7 @@ class AcademicAssignmentManager
         }
 
         $offered = $this->offeredPairs($catalog['classes']);
+        $this->assertNoOutsideSubjects($sectionId, $pairKeys);
         $desired = collect($pairKeys)->map(fn ($key) => $this->parsePair((string) $key))->filter()
             ->filter(fn (array $pair) => $offered->has($pair['class_id'].':'.$pair['subject_id']))
             ->keyBy(fn (array $pair) => $pair['class_id'].':'.$pair['subject_id']);
@@ -230,7 +230,8 @@ class AcademicAssignmentManager
         }
         $existing = $existingQuery->get()->keyBy(fn ($row) => $row->class_id.':'.$row->subject_id);
         $existingByPair = collect($existing->all());
-        $addPairs = $desired->except($existing->keys())->values();
+        $addPairs = $desired->except($existing->keys())->values()
+            ->map(fn (array $pair): array => ['user_id' => $teacherId, ...$pair]);
         $removeRows = $existingByPair->except($desired->keys())->values();
         $this->assertPairsUnassigned($teacherId, $addPairs);
 
@@ -245,7 +246,8 @@ class AcademicAssignmentManager
             throw new AuthorizationException('Choose a class in your section.');
         }
         $teacherIds = $catalog['teachers']->pluck('id')->map(fn ($id) => (int) $id)->all();
-        $offeredIds = $class->classSubjects->pluck('subject_id')->map(fn ($id) => (int) $id);
+        $offeredIds = Subject::where('section_id', $sectionId)
+            ->whereIn('id', $class->classSubjects->pluck('subject_id'))->pluck('id')->map(fn ($id) => (int) $id);
         $desired = collect($teacherBySubject)->mapWithKeys(function ($teacherId, $subjectId) use ($offeredIds, $teacherIds): array {
             $subjectId = (int) $subjectId;
             if (! $offeredIds->contains($subjectId)) {
@@ -275,7 +277,8 @@ class AcademicAssignmentManager
             } elseif ($rows->contains('user_id', $wanted)) {
                 $unchanged++;
             } elseif ($rows->isNotEmpty()) {
-                throw ValidationException::withMessages(['teachers' => 'That subject already has a teacher. Remove the current teacher and save before assigning another.']);
+                $removeRows = $removeRows->merge($rows);
+                $addPairs->push(['user_id' => $wanted, 'class_id' => $classId, 'subject_id' => $subjectId]);
             } else {
                 $addPairs->push(['user_id' => $wanted, 'class_id' => $classId, 'subject_id' => $subjectId]);
             }
@@ -289,16 +292,19 @@ class AcademicAssignmentManager
         $classes = $catalog['classes']->keyBy('id');
         $subjects = $catalog['subjects']->keyBy('id');
         $teachers = $catalog['teachers']->keyBy('id');
+        $resultCounts = $this->resultCounts($catalog['classes']->pluck('id'));
         $changes = $addPairs->map(fn (array $pair) => [
             'type' => 'add',
             'class' => $classes->get($pair['class_id'])?->name,
             'subject' => $subjects->get($pair['subject_id'])?->name,
             'teacher' => isset($pair['user_id']) ? $teachers->get($pair['user_id'])?->name : $label,
+            'result_count' => $resultCounts[$pair['class_id'].':'.$pair['subject_id']] ?? 0,
         ])->merge($removeRows->map(fn ($row) => [
             'type' => 'remove',
             'class' => $classes->get($row->class_id)?->name,
             'subject' => $subjects->get($row->subject_id)?->name,
             'teacher' => $teachers->get($row->user_id)?->name ?? $label,
+            'result_count' => $resultCounts[$row->class_id.':'.$row->subject_id] ?? 0,
         ]))->values()->all();
 
         return [
@@ -309,7 +315,44 @@ class AcademicAssignmentManager
             'changes' => $changes,
             'addPairs' => $addPairs->values()->all(),
             'removeRows' => $removeRows->values(),
+            'affected_results' => collect($changes)->where('type', 'remove')->sum('result_count'),
         ];
+    }
+
+    private function persistTeacherPlan(array $plan, User $actor): void
+    {
+        $removeRows = collect($plan['removeRows']);
+        $addPairs = collect($plan['addPairs']);
+        $keys = $removeRows->map(fn ($row): string => $row->class_id.':'.$row->subject_id)
+            ->merge($addPairs->map(fn (array $pair): string => $pair['class_id'].':'.$pair['subject_id']))->unique();
+        $changes = $keys->map(function (string $key) use ($removeRows, $addPairs): array {
+            [$classId, $subjectId] = array_map('intval', explode(':', $key));
+            $new = $addPairs->first(fn (array $pair): bool => $pair['class_id'] === $classId && $pair['subject_id'] === $subjectId);
+
+            return [
+                'class_id' => $classId,
+                'subject_id' => $subjectId,
+                'previous_user_ids' => $removeRows->filter(fn ($row): bool => $row->class_id === $classId && $row->subject_id === $subjectId)->pluck('user_id')->all(),
+                'new_user_id' => $new['user_id'] ?? null,
+            ];
+        });
+
+        TeacherSubjectAssignment::whereIn('id', $removeRows->pluck('id'))->delete();
+        foreach ($addPairs as $pair) {
+            TeacherSubjectAssignment::firstOrCreate($pair);
+        }
+        foreach ($changes as $change) {
+            app(AuditRecorder::class)->record($actor, 'teacher_subject_assignment_changed', null, $change);
+        }
+    }
+
+    private function resultCounts(Collection $classIds): Collection
+    {
+        return Result::query()->join('class_arms', function ($join): void {
+            $join->on('class_arms.id', '=', 'results.class_arm_id')->on('class_arms.school_id', '=', 'results.school_id');
+        })->whereIn('class_arms.class_id', $classIds)->selectRaw('class_arms.class_id, results.subject_id, count(results.id) as aggregate')
+            ->groupBy('class_arms.class_id', 'results.subject_id')->get()
+            ->mapWithKeys(fn ($row): array => [$row->class_id.':'.$row->subject_id => (int) $row->aggregate]);
     }
 
     private function offeredPairs(Collection $classes): Collection
@@ -336,6 +379,16 @@ class AcademicAssignmentManager
             $pair = $this->parsePair((string) $key);
             if ($pair && ! SchoolClass::whereKey($pair['class_id'])->whereHas('level', fn (Builder $query) => $query->where('section_id', $sectionId))->exists()) {
                 throw new AuthorizationException('You cannot assign a teacher outside your section.');
+            }
+        }
+    }
+
+    private function assertNoOutsideSubjects(int $sectionId, array $pairKeys): void
+    {
+        foreach ($pairKeys as $key) {
+            $pair = $this->parsePair((string) $key);
+            if ($pair && ! Subject::whereKey($pair['subject_id'])->where('section_id', $sectionId)->exists()) {
+                throw new AuthorizationException('You cannot assign a subject from another section.');
             }
         }
     }

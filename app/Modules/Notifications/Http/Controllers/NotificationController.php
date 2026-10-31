@@ -25,7 +25,7 @@ class NotificationController extends Controller
         app(PortalContext::class)->for($request);
         $notifications->markRead($notification, $request->user());
 
-        return back();
+        return redirect()->route('notifications.index', $request->only('student'));
     }
 
     public function readAll(Request $request, InAppNotifications $notifications): RedirectResponse
@@ -33,6 +33,7 @@ class NotificationController extends Controller
         app(PortalContext::class)->for($request);
         $notifications->markAllRead($request->user());
 
-        return back()->with('status', 'All notifications marked as read.');
+        return redirect()->route('notifications.index', $request->only('student'))
+            ->with('status', 'All notifications marked as read.');
     }
 }

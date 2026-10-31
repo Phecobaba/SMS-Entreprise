@@ -106,7 +106,7 @@ Three-section schools; correcting a pupil sent to Awaiting admission by mistake;
 
 Screens: INDEX rows 12 to 15b. Specs: `fee-schedule.md`, `invoices-generate.md`, `invoices-not-invoiced.md`, `invoice-detail.md`, `payment-record.md`, `payment-approvals.md`, `payment-gateway.md`, plus the "Online payment isn't set up yet" notes in `student/specs/fees.md` and `parent-fees.md`. Money: **integer kobo in storage, naira only on screen**.
 
-### Order of work (the backend order is in `BACKEND_HANDOFF.md` items 7 to 9)
+### Order of work (the build order and current state are in `PROGRESS.md` under Completed and Next Up)
 1. Fee items, schedule lines, invoice lines (copied at issue), bulk generation (preview, idempotent), single invoice with extras, Not invoiced.
 2. Manual payment: bank, teller number (unique once, school-wide), date, amount, optional photo; Awaiting approval, approve, reject; a school setting for one-step.
 3. Part-payment as a linked invoice; adjustment lines; void rules.
@@ -124,12 +124,58 @@ An issued invoice never changes when the schedule changes; running bulk generati
 ### Open questions (do not decide; record in PROGRESS.md)
 Several matching scopes for one student; removal of fee items in use; partial manual payments; manual-payment rejection wording and teller reuse after rejection; the Paystack dashboard location for the webhook; the wording when keys cannot be decrypted; whether an Admin may override the void block.
 
-## Batch 6: staff, students, import, CBT upload, Activity log, ticker events, Admission requirements
-Not delivered yet. Do not build. Scope recorded so far (design arrives first):
-- **First-login "Set your password"** screen for every role; **staff Account page** (change password).
-- **Head Staff list and detail**, section-scoped: no salary column; a **record-discipline form** (query, warning, commendation). Heads never see salary, exit records or documents and cannot edit employment details. The list excludes Admin accounts, users with `view_all_sections` and the other head.
-- **Admin staff form:** a **section assignment field** (many-to-many).
-- Add staff (one-time credentials with print, admin password reset), add student, bulk import wizard, registration-number settings, CBT CSV upload and guarded delete, Activity log, ticker events, "Admission requirements".
-- The matrix with 20+ subjects was designed early and is part of batch 4 (`teacher-assignments`, state "Many subjects").
+## Academic setup revision (2026-10-23): Section ownership of Levels and Subjects, head variants
 
-Tests that will be required (confirmed when batch 6 ships): a head sees only staff in their own section; the list never contains Admin accounts, `view_all_sections` holders or the other head; a head can never read salary, exit records or documents by any route; a head cannot edit employment details; recording discipline writes the existing audit entry; a creator cannot assign a role above their own; admin-created accounts must change the password at first login.
+Screens: INDEX rows 32 to 35 (`academic-levels`, `head-levels`, `academic-subjects`, `head-subjects`), plus `academic-sections` (Levels now read-only) and the three Promotion screens (Graduated wording). Spec: `specs/academic-setup.md`.
+
+### Rules
+- A Level's or Subject's Section is set **at creation and never changes**; there is no move for anyone. Remove the Admin Section selector from the Level edit sheet, the per-Level selectors, the disabled first-run selectors and the "Move level" confirmation from Sections and levels. An update request carrying a different Section is refused.
+- **Admin** create sheet: required Section. **Head** create sheet: no Section field; the server uses the head's assigned Section and refuses any other. Heads create, edit and delete only in their Section (`manage_section_levels`, `manage_section_subjects`).
+- The Subjects screen is one list with a Section tag per row and a Section filter; the same name may exist once per Section. The Admin sidebar links Bulk subjects, Teacher assignments and Promotion under Academics.
+- Head navigation (order Classes, Levels, Subjects, Bulk subjects, Teacher assignments, Promotion): add Levels and Subjects to the sidebar and the phone More list (and the missing Bulk subjects, Teacher assignments, Promotion rows in More).
+
+### Tests (trust-sensitive)
+See `specs/academic-setup.md`: an existing Section never changes; a head cannot act outside their Section by editing ids; a head's create ignores a posted Section; an Admin create without a Section is refused; per-Section Subject name uniqueness.
+
+### Still open (do not resolve silently)
+A head assigned to more than one Section; a wrong-Section Level or Subject that already has classes, teachers or results cannot be deleted; how existing Levels get their first Section after migration.
+
+## Batch 6: accounts, people and sign-in (design delivered)
+
+Screens and specs: INDEX rows 16, 16b, 17, 17b, 18, 19, 38 to 43 (row 37 is a proposal: compare with today's Students page; rows 44 to 46 are spec only, not designed, or deferred). Build in this order: **(1)** the account foundations (`must_change_password`, the shared username validator, the role ranking, the one-time credential handling) because every later screen uses them; **(2)** Set your password and the login lines; **(3)** Add staff, staff access and Account; **(4)** registration-number settings, number history and Add student; **(5)** the import wizard; **(6)** Head Staff; **(7)** Activity log. Specs: `staff-add`, `staff-access`, `sign-in-rules`, `account`, `students`, `student-add`, `students-import`, `student-access`, `registration-numbers`, `head-staff`, `activity-log`, `ticker-events`, `student/specs/set-password`.
+
+### Rules that apply everywhere
+- **Credentials are shown once.** A temporary password is made on the server, stored **only as a hash**, shown only in the response to the request that made it, with `Cache-Control: no-store`. It is **never** logged, written to `audit_logs`, the session or flash, a queue payload, a notification, an email or a file. Print slip is the browser printing the on-screen panel.
+- **Admin-created and Admin-reset accounts must change the password at first sign-in** (`users.must_change_password`, NEW). While set, every route except set-password, sign-out and assets redirects there, including AJAX, Livewire and exam or payment routes.
+- **A creator cannot assign a role above their own**, on create and on role change, enforced on the server. The role order is an open question (the design proposes Admin, Head, Bursar, Teacher).
+- **A head cannot see or record anything outside their Section**, even by editing ids. Staff payloads use an allow-list so salary, exit records and documents cannot reach a head by any route.
+- **A bulk import with any invalid row creates nothing.** Check writes nothing; Confirm is one transaction, re-validated, idempotent.
+- Hiding a field is a convenience; the server validates. Times are Africa/Lagos. Naira in kobo on storage.
+
+### Stated current behaviour Codex must confirm first (I have not seen these)
+Today's Staff HR and Students pages and forms; whether `students` has a registration number column (my plan: no, NEW); whether username login and case-insensitive matching work today; `section_user` usage; `staff_disciplinary_log` and `staff_sensitive_view_audit` behaviour; which modules write `audit_logs`; the existing password rule and any change-password route; `notifications.url`.
+
+### NEW data (Codex names columns and logs them)
+`users.must_change_password`; a role ranking; registration number on students with a history table; registration-number settings (prefix, length, year flag, per-Section prefixes) and a sequence; a temporary import record (no passwords); a view-activity-log permission; section-scoped registration-number permission (already proposed 2026-10-17); head Staff permissions.
+
+### Tests (required, trust-sensitive)
+- A creator cannot assign a role above their own (form, forged POST, edited ids; also on role change).
+- Admin-created accounts, and accounts after an Admin reset, must change the password at first login and cannot reach any other route until they do.
+- Credentials are shown once and are never logged or stored in plain text (search logs, `audit_logs`, session store, queue table, flash, database).
+- A head cannot see or record anything outside their Section by editing ids; the list excludes Admins, `view_all_sections` holders, the other head and themself; salary, exit records and documents are unreachable for a head; a head with no Section sees the locked state and gets no data.
+- A bulk import with any invalid row creates nothing (students, users, parents, links, invoices all zero); confirm twice creates nothing the second time.
+- Registration numbers are unique school-wide and race-safe; the number never contains the class; a format change never alters issued numbers; a changed number keeps its history and every change is logged.
+- Username uniqueness is school-wide and case-insensitive; login accepts any case; the failure message does not say which part was wrong.
+- A reset signs the account out everywhere; a parent reset covers all their children.
+- The Activity log never contains a password, token or payment key.
+
+### Still open (listed in the specs, **not decided**)
+- A **head assigned to more than one Section** (the data allows it; the screens show one, with no switcher).
+- **Three-section schools** ("the other head" becomes "the other heads"; the Section select and list generalise).
+- **Who edits a registration number once a pupil is Awaiting admission** (proposal in the 2026-10-17 note: the Secondary head and Admin only).
+- **What a parent with several children signs in with** (the design: one login for the family using the parent's own username or email, with a child switcher).
+- The role order and whether Heads create Teachers; the sequence rule for numbers (one counter or one per prefix); whether a number in history blocks reuse; what "Skipped" covers in an import and the row limits; how the import's one-time credentials are delivered without storing them (and not through a queue); who a "teacher in both Sections" belongs to for Head Staff; whether students and parents can change their own password later (`student/specs/profile.md` calls it optional).
+
+## Batch 6 follow-up reissue — additive implementation guidance
+
+Keep all earlier instructions and Ready/Pending rows above. Batch 6B is **already built**: Students list, Add student, combined Student record/sign-in/number and Registration numbers settings. Do not rebuild those from scratch. Verify current Laravel behavior first; apply only design corrections. The Student record is ONE page with identity edit, username, password reset and number history. Registration numbers belongs under Administration. Admission requirements (built heading) uses D15 Admin override: require a reason BEFORE confirmation; save it in the audit entry; checklist items stay unticked and the UI says conversion was approved by override. Employment status is changed through Exit record, never through generic employment edit. Reset-link email expires in 60 minutes. Preserve original full specs and append Follow-up changes; never replace with a summary. Do not implement Results configuration redesign or reusable help pattern without v2 notes.

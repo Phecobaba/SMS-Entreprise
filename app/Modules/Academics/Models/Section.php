@@ -14,7 +14,7 @@ class Section extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['name', 'head_title', 'classes_arranged_by', 'classes_arranged_at'];
+    protected $fillable = ['name', 'head_title', 'classes_arranged_by', 'classes_arranged_at', 'registration_prefix'];
 
     protected function casts(): array
     {

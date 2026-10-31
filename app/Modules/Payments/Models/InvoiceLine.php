@@ -10,7 +10,7 @@ class InvoiceLine extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['invoice_id', 'fee_item_id', 'description', 'amount_kobo', 'is_required'];
+    protected $fillable = ['invoice_id', 'fee_item_id', 'description', 'line_type', 'amount_kobo', 'is_required', 'adjustment_reason', 'created_by'];
 
     protected function casts(): array
     {

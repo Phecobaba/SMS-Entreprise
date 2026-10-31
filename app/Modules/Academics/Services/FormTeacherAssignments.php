@@ -4,7 +4,8 @@ namespace App\Modules\Academics\Services;
 
 use App\Modules\Academics\Models\ClassArm;
 use App\Modules\Core\Models\User;
-use App\Modules\Core\Services\SchoolUserDirectory;
+use App\Modules\Core\Services\AuditRecorder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
@@ -15,14 +16,24 @@ class FormTeacherAssignments
         return ClassArm::with('schoolClass')->where('form_teacher_user_id', $actor->id)->orderBy('id')->first();
     }
 
-    public function assign(int $armId, int $userId): ClassArm
+    public function assign(int $armId, int $userId, User $actor): ClassArm
     {
         $arm = ClassArm::findOrFail($armId);
-        $user = app(SchoolUserDirectory::class)->find($userId);
-        if (! $user || ! Gate::forUser($user)->allows('mark_attendance')) {
-            throw ValidationException::withMessages(['user_id' => 'Choose a user with attendance-marking permission.']);
+        $user = User::find($userId);
+        $section = app(SectionAccess::class)->sectionForArm($arm->id);
+        $allowOtherTeacher = $actor->can('view_all_sections');
+        if (! $user || ! $section || ! app(SectionTeacherDirectory::class)->isEligible($user, $section->id, SectionTeacherDirectory::FORM_PERMISSION, $allowOtherTeacher)) {
+            throw ValidationException::withMessages(['user_id' => 'Choose an active attendance teacher who belongs to this section.']);
         }
-        $arm->update(['form_teacher_user_id' => $user->id]);
+        $previousTeacherId = $arm->form_teacher_user_id;
+        DB::transaction(function () use ($arm, $user, $actor, $previousTeacherId): void {
+            $arm->update(['form_teacher_user_id' => $user->id]);
+            app(AuditRecorder::class)->record($actor, 'form_teacher_assigned', $arm, [
+                'class_arm_id' => $arm->id,
+                'previous_form_teacher_user_id' => $previousTeacherId,
+                'form_teacher_user_id' => $user->id,
+            ]);
+        });
 
         return $arm;
     }
@@ -44,7 +55,7 @@ class FormTeacherAssignments
 
     public function armsFor(User $actor)
     {
-        $query = ClassArm::with('schoolClass');
+        $query = ClassArm::with(['schoolClass.level.section', 'formTeacher']);
         if (Gate::forUser($actor)->allows('manage_attendance')) {
             app(SectionAccess::class)->scopeArms($query, $actor);
         } else {

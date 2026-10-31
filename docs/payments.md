@@ -9,16 +9,33 @@ return to the public homepage. Linked Parents may initialize payments only
 for their own wards through `BillingRecipients::owns()`; `payments.invoice_id`
 remains unique, so future D10 part-payments use linked invoices.
 
-Phase 4 uses Paystack for NGN online payments. Keep `PAYSTACK_SECRET_KEY` in
-the deployment environment (test key first, live key only at go-live); never
-commit it or put it in a browser response. The Bursar issues a Registration,
-Tuition, or Offer Deposit invoice. A candidate can initiate Paystack payment
-from My Admission; Bursar can initiate it from Payments. Manual settlement
-requires `manage_payments` and creates the same invoice/receipt record.
+Phase 4 uses Paystack for NGN online payments. An Admin with
+`manage_payment_gateway` manages a school's public and write-only secret key
+on **Payment gateway**. The secret is encrypted with `APP_KEY`; only its last
+four characters are stored separately for the mask. Saved keys take priority
+over `PAYSTACK_PUBLIC_KEY` / `PAYSTACK_SECRET_KEY` environment fallbacks. If
+`APP_KEY` is lost or changed, the saved secret cannot be read and both keys
+must be entered again. Never commit keys or put a secret in a browser response,
+log, exception, old input or audit entry.
+
+The Bursar sees the gateway's locked state and cannot read or change keys.
+Changing keys requires the Admin's current password, is rate-limited, records
+only who and when in `audit_logs`, and notifies the other Admins. Test and Live
+prefixes must match. The connection check makes the read-only Paystack request
+`GET /transaction?perPage=1&page=1` with a timeout; it never moves money.
+
+When neither a valid saved pair nor an environment pair exists, online payment
+is refused server-side and Student, Parent and Bursar payment screens show
+"Online payment isn't set up yet" instead of Pay controls. This applies to
+term-fee, linked part-payment and one-off invoices. Manual bank-teller payments
+continue to work.
 
 Configure the Paystack webhook URL as
 `https://<live-domain>/payments/paystack/webhook` when a reachable host and
-keys exist. The endpoint checks the raw-body `x-paystack-signature` HMAC
+keys exist. Add it as the webhook URL in the Paystack dashboard's **API Keys &
+Webhooks** settings for the matching Test or Live mode. The endpoint resolves
+the same saved-first secret as initialization and verification, then checks the
+raw-body `x-paystack-signature` SHA-512 HMAC with `hash_equals`
 before calling Paystack's transaction-verify API. It only settles an invoice
 when the verified reference, NGN currency, and kobo amount match its stored
 attempt. Replays cannot produce a second payment. The Paystack callback

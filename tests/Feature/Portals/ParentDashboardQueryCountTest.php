@@ -36,10 +36,12 @@ class ParentDashboardQueryCountTest extends TestCase
 
         $this->createWard($profile, $arm, 1);
         $oneWardQueries = $this->dashboardQueryCount($parent);
+        $this->assertLessThanOrEqual(50, $oneWardQueries);
 
         $this->createWard($profile, $arm, 2);
         $this->createWard($profile, $arm, 3);
         $threeWardQueries = $this->dashboardQueryCount($parent);
+        $this->assertLessThanOrEqual(50, $threeWardQueries);
 
         $this->assertLessThanOrEqual(
             2,

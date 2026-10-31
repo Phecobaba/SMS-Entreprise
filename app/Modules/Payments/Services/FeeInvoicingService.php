@@ -230,7 +230,7 @@ class FeeInvoicingService
 
     public function automaticallyInvoice(Student $student, User $actor): ?Invoice
     {
-        $term = app(AcademicCalendar::class)->currentTerm();
+        $term = app(AcademicCalendar::class)->termForInvoicing();
         if (! $term || Invoice::where('kind', Invoice::KIND_TERM_FEE)->where('term_id', $term->id)->where('student_id', $student->id)->exists()) {
             return null;
         }

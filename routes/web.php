@@ -6,18 +6,23 @@ use App\Modules\Academics\Http\Controllers\AcademicStructureController;
 use App\Modules\Admissions\Http\Controllers\AdmissionController;
 use App\Modules\Admissions\Http\Controllers\IncomingAdmissionController;
 use App\Modules\Admissions\Http\Controllers\PromotionController;
+use App\Modules\Admissions\Http\Controllers\RegistrationNumberController;
+use App\Modules\Admissions\Http\Controllers\StudentController;
 use App\Modules\Assignments\Http\Controllers\AssignmentController;
 use App\Modules\Attendance\Http\Controllers\AttendanceController;
 use App\Modules\CBT\Http\Controllers\ExamParticipantController;
 use App\Modules\CBT\Http\Controllers\ExamStaffController;
 use App\Modules\Core\Http\Controllers\AuthController;
 use App\Modules\Core\Http\Controllers\DashboardController;
+use App\Modules\Core\Http\Controllers\PasswordController;
 use App\Modules\Core\Http\Controllers\SchoolProfileController;
+use App\Modules\Core\Http\Controllers\StaffAccountController;
 use App\Modules\ENotes\Http\Controllers\ENoteController;
 use App\Modules\LandingPage\Http\Controllers\LandingPageController;
 use App\Modules\Notifications\Http\Controllers\NotificationController;
 use App\Modules\Payments\Http\Controllers\FeeInvoicingController;
 use App\Modules\Payments\Http\Controllers\PaymentController;
+use App\Modules\Payments\Http\Controllers\PaymentGatewayController;
 use App\Modules\Payments\Http\Controllers\PaystackWebhookController;
 use App\Modules\Portals\Http\Controllers\PortalPageController;
 use App\Modules\Results\Http\Controllers\ResultCardController;
@@ -38,6 +43,10 @@ Route::middleware('guest')->group(function (): void {
 });
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/set-password', [PasswordController::class, 'show'])->name('password.set.show');
+    Route::post('/set-password', [PasswordController::class, 'store'])->middleware('throttle:5,1')->name('password.set.store');
+    Route::get('/account', [StaffAccountController::class, 'account'])->name('account.show');
+    Route::post('/account/password', [StaffAccountController::class, 'changeOwnPassword'])->middleware('throttle:5,1')->name('account.password');
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
     Route::post('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
@@ -60,6 +69,23 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/my-exams/attempts/{submission}/answers', [ExamParticipantController::class, 'answer'])->name('cbt.answers.store');
     Route::post('/my-exams/attempts/{submission}', [ExamParticipantController::class, 'submit'])->name('cbt.submit');
     Route::get('/my-exams/attempts/{submission}/result', [ExamParticipantController::class, 'result'])->name('cbt.result');
+});
+
+Route::middleware(['auth', 'can:create_staff'])->prefix('staff')->name('staff.')->group(function (): void {
+    Route::get('/add', [StaffAccountController::class, 'create'])->name('accounts.create');
+    Route::post('/add', [StaffAccountController::class, 'store'])->name('accounts.store');
+});
+
+Route::middleware(['auth', 'can:manage_staff_access'])->prefix('staff/access')->name('staff.access.')->group(function (): void {
+    Route::get('/', [StaffAccountController::class, 'index'])->name('index');
+    Route::get('/{user}', [StaffAccountController::class, 'show'])->name('show');
+    Route::put('/{user}', [StaffAccountController::class, 'update'])->name('update');
+    Route::post('/{user}/reset-password', [StaffAccountController::class, 'reset'])->name('reset');
+});
+
+Route::middleware(['auth', 'can:view_sign_in_rules'])->prefix('sign-in-rules')->name('sign-in-rules.')->group(function (): void {
+    Route::get('/', [StaffAccountController::class, 'rules'])->name('show');
+    Route::post('/check', [StaffAccountController::class, 'checkUsername'])->middleware('throttle:20,1')->name('check');
 });
 
 Route::middleware(['auth', 'can:manage_cbt'])->prefix('cbt')->name('cbt.staff.')->group(function (): void {
@@ -85,13 +111,58 @@ Route::middleware(['auth', 'can:manage_admissions'])->prefix('admissions')->name
     Route::post('/{candidate}/convert', [AdmissionController::class, 'convert'])->name('convert');
 });
 
+Route::middleware(['auth', 'can:view_students'])->prefix('students')->name('students.')->group(function (): void {
+    Route::get('/', [StudentController::class, 'index'])->name('index');
+});
+Route::middleware(['auth', 'can:create_students'])->prefix('students')->name('students.')->group(function (): void {
+    Route::get('/add', [StudentController::class, 'create'])->name('create');
+    Route::post('/', [StudentController::class, 'store'])->name('store');
+});
+Route::middleware('auth')->prefix('students')->name('students.')->group(function (): void {
+    Route::get('/{student}', [StudentController::class, 'show'])->name('show');
+    Route::put('/{student}', [StudentController::class, 'update'])->middleware('can:manage_student_accounts')->name('update');
+    Route::post('/{student}/registration-number', [StudentController::class, 'changeNumber'])->middleware('can:change_registration_numbers')->name('registration-number.update');
+    Route::post('/{student}/reset-password', [StudentController::class, 'resetStudent'])->middleware('can:manage_student_accounts')->name('reset');
+    Route::post('/{student}/parents/{parent}/reset-password', [StudentController::class, 'resetParent'])->middleware('can:manage_student_accounts')->name('parents.reset');
+});
+Route::middleware(['auth', 'can:manage_registration_numbers'])->prefix('registration-numbers')->name('registration-numbers.')->group(function (): void {
+    Route::get('/', [RegistrationNumberController::class, 'edit'])->name('edit');
+    Route::put('/', [RegistrationNumberController::class, 'update'])->name('update');
+});
+
 Route::middleware(['auth', 'can:manage_payments'])->prefix('payments')->name('payments.')->group(function (): void {
     Route::get('/', [PaymentController::class, 'index'])->name('index');
+    Route::get('/record', [PaymentController::class, 'record'])->name('record.index');
+    Route::get('/approvals', [PaymentController::class, 'approvals'])->name('approvals.index');
     Route::post('/invoices', [PaymentController::class, 'invoice'])->name('invoices.store');
     Route::post('/invoices/{invoice}/manual', [PaymentController::class, 'manual'])->name('manual');
+    Route::get('/manual-submissions/{submission}/slip', [PaymentController::class, 'slip'])->name('manual-submissions.slip');
     Route::post('/invoices/{invoice}/paystack', [PaymentController::class, 'begin'])->name('begin');
     Route::post('/expenses', [PaymentController::class, 'expense'])->name('expenses.store');
     Route::post('/result-access-rule', [PaymentController::class, 'rule'])->name('rule');
+});
+
+Route::middleware('auth')->prefix('payments')->name('payments.')->group(function (): void {
+    Route::get('/gateway', [PaymentGatewayController::class, 'show'])->name('gateway.show');
+});
+
+Route::middleware(['auth', 'can:manage_payment_gateway', 'throttle:5,1'])->prefix('payments/gateway')->name('payments.gateway.')->group(function (): void {
+    Route::post('/', [PaymentGatewayController::class, 'store'])->name('store');
+    Route::post('/test', [PaymentGatewayController::class, 'test'])->name('test');
+});
+
+Route::middleware(['auth', 'can:manage_fee_schedule'])->prefix('payments')->name('payments.')->group(function (): void {
+    Route::get('/invoices/{invoice}', [PaymentController::class, 'show'])->name('invoices.show');
+    Route::post('/invoices/{invoice}/parts', [PaymentController::class, 'part'])->name('invoices.parts.store');
+    Route::post('/invoices/{invoice}/adjustments', [PaymentController::class, 'adjustment'])->name('invoices.adjustments.store');
+    Route::post('/invoices/{invoice}/void', [PaymentController::class, 'voidInvoice'])->name('invoices.void');
+    Route::post('/part-payments/{invoice}/void', [PaymentController::class, 'voidPart'])->name('parts.void');
+});
+
+Route::middleware(['auth', 'can:approve_payments'])->prefix('payments')->name('payments.')->group(function (): void {
+    Route::post('/manual-submissions/{submission}/approve', [PaymentController::class, 'approve'])->name('manual-submissions.approve');
+    Route::post('/manual-submissions/{submission}/reject', [PaymentController::class, 'reject'])->name('manual-submissions.reject');
+    Route::put('/approval-setting', [PaymentController::class, 'oneStep'])->name('approval-setting.update');
 });
 
 Route::middleware(['auth', 'can:manage_fee_schedule'])->prefix('fees')->name('fees.')->group(function (): void {
@@ -156,15 +227,18 @@ Route::middleware('auth')->prefix('academics')->name('academics.')->group(functi
     Route::post('/arms', [AcademicConfigurationController::class, 'storeArm'])->name('arms.store');
     Route::put('/arms/{arm}', [AcademicConfigurationController::class, 'updateArm'])->name('arms.update');
     Route::delete('/arms/{arm}', [AcademicConfigurationController::class, 'destroyArm'])->name('arms.destroy');
+    Route::get('/setup', [AcademicConfigurationController::class, 'index'])->name('setup');
+    Route::post('/subjects', [AcademicConfigurationController::class, 'storeSubject'])->name('subjects.store');
+    Route::put('/subjects/{subject}', [AcademicConfigurationController::class, 'updateSubject'])->name('subjects.update');
+    Route::delete('/subjects/{subject}', [AcademicConfigurationController::class, 'destroySubject'])->name('subjects.destroy');
+    Route::post('/class-subjects', [AcademicConfigurationController::class, 'attachSubject'])->name('class-subjects.store');
 });
 
 Route::middleware(['auth', 'can:manage_academics'])->prefix('academics')->name('academics.')->group(function (): void {
     Route::get('/', [AcademicStructureController::class, 'sections'])->name('index');
-    Route::get('/setup', [AcademicConfigurationController::class, 'index'])->name('setup');
     Route::get('/sessions', [AcademicConfigurationController::class, 'sessions'])->name('sessions.index');
     Route::post('/sections', [AcademicStructureController::class, 'storeSection'])->name('sections.store');
     Route::put('/sections/{section}', [AcademicStructureController::class, 'updateSection'])->name('sections.update');
-    Route::put('/levels/{level}/section', [AcademicStructureController::class, 'assignLevel'])->name('levels.section');
     Route::get('/departments', [AcademicStructureController::class, 'departments'])->name('departments.index');
     Route::post('/departments', [AcademicStructureController::class, 'storeDepartment'])->name('departments.store');
     Route::put('/departments/{department}', [AcademicStructureController::class, 'updateDepartment'])->name('departments.update');
@@ -175,19 +249,17 @@ Route::middleware(['auth', 'can:manage_academics'])->prefix('academics')->name('
     Route::post('/terms', [AcademicConfigurationController::class, 'storeTerm'])->name('terms.store');
     Route::put('/terms/{term}', [AcademicConfigurationController::class, 'updateTerm'])->name('terms.update');
     Route::delete('/terms/{term}', [AcademicConfigurationController::class, 'destroyTerm'])->name('terms.destroy');
-    Route::post('/subjects', [AcademicConfigurationController::class, 'storeSubject'])->name('subjects.store');
-    Route::post('/class-subjects', [AcademicConfigurationController::class, 'attachSubject'])->name('class-subjects.store');
 });
 
+Route::get('/attendance', [AttendanceController::class, 'index'])->middleware('auth')->name('attendance.index');
 Route::middleware(['auth', 'can:mark_attendance'])->prefix('attendance')->name('attendance.')->group(function (): void {
-    Route::get('/', [AttendanceController::class, 'index'])->name('index');
     Route::get('/arms/{arm}', [AttendanceController::class, 'day'])->name('day');
     Route::post('/arms/{arm}/mark', [AttendanceController::class, 'mark'])->name('mark');
     Route::post('/arms/{arm}/lock', [AttendanceController::class, 'lock'])->middleware('can:manage_attendance')->name('lock');
-    Route::post('/form-teachers', [AttendanceController::class, 'assign'])->middleware('can:manage_attendance')->name('form-teachers.store');
 });
 Route::get('/attendance/alerts', [AttendanceController::class, 'alerts'])->middleware(['auth', 'can:view_attendance_alerts'])->name('attendance.alerts');
 Route::middleware(['auth', 'can:manage_attendance'])->prefix('attendance')->name('attendance.')->group(function (): void {
+    Route::post('/form-teachers', [AttendanceController::class, 'assign'])->name('form-teachers.store');
     Route::get('/settings', [AttendanceController::class, 'settings'])->name('settings');
     Route::put('/settings/{section}', [AttendanceController::class, 'updateSettings'])->name('settings.update');
     Route::post('/settings/{section}/not-held', [AttendanceController::class, 'markNotHeld'])->name('not-held.store');
@@ -216,12 +288,21 @@ Route::middleware(['auth', 'can:manage_school_profile'])->group(function (): voi
 
 Route::middleware(['auth', 'can:view_results_workspace'])->prefix('results')->name('results.')->group(function (): void {
     Route::get('/', [ResultWorkflowController::class, 'index'])->name('index');
-    Route::get('/configuration', [ResultConfigurationController::class, 'index'])->middleware('can:manage_result_settings')->name('configuration');
-    Route::post('/components', [ResultConfigurationController::class, 'component'])->middleware('can:manage_result_settings')->name('components.store');
-    Route::post('/schemes', [ResultConfigurationController::class, 'scheme'])->middleware('can:manage_result_settings')->name('schemes.store');
-    Route::post('/bands', [ResultConfigurationController::class, 'band'])->middleware('can:manage_result_settings')->name('bands.store');
-    Route::post('/templates', [ResultConfigurationController::class, 'template'])->middleware('can:manage_result_settings')->name('templates.store');
-    Route::post('/templates/{template}/subject-remarks', [ResultConfigurationController::class, 'subjectRemarks'])->middleware('can:manage_result_settings')->name('templates.subject-remarks');
+    Route::get('/configuration', [ResultConfigurationController::class, 'index'])->middleware('can:manage_result_configuration')->name('configuration');
+    Route::post('/components', [ResultConfigurationController::class, 'component'])->middleware('can:manage_result_configuration')->name('components.store');
+    Route::put('/components/{component}', [ResultConfigurationController::class, 'updateComponent'])->middleware('can:manage_result_configuration')->name('components.update');
+    Route::delete('/components/{component}', [ResultConfigurationController::class, 'destroyComponent'])->middleware('can:manage_result_configuration')->name('components.destroy');
+    Route::post('/schemes', [ResultConfigurationController::class, 'scheme'])->middleware('can:manage_result_configuration')->name('schemes.store');
+    Route::put('/schemes/{scheme}', [ResultConfigurationController::class, 'updateScheme'])->middleware('can:manage_result_configuration')->name('schemes.update');
+    Route::delete('/schemes/{scheme}', [ResultConfigurationController::class, 'destroyScheme'])->middleware('can:manage_result_configuration')->name('schemes.destroy');
+    Route::post('/bands', [ResultConfigurationController::class, 'band'])->middleware('can:manage_result_configuration')->name('bands.store');
+    Route::put('/bands/{band}', [ResultConfigurationController::class, 'updateBand'])->middleware('can:manage_result_configuration')->name('bands.update');
+    Route::delete('/bands/{band}', [ResultConfigurationController::class, 'destroyBand'])->middleware('can:manage_result_configuration')->name('bands.destroy');
+    Route::post('/templates', [ResultConfigurationController::class, 'template'])->middleware('can:manage_result_configuration')->name('templates.store');
+    Route::put('/templates/{template}', [ResultConfigurationController::class, 'updateTemplate'])->middleware('can:manage_result_configuration')->name('templates.update');
+    Route::delete('/templates/{template}', [ResultConfigurationController::class, 'destroyTemplate'])->middleware('can:manage_result_configuration')->name('templates.destroy');
+    Route::post('/templates/{template}/retire', [ResultConfigurationController::class, 'retireTemplate'])->middleware('can:manage_result_configuration')->name('templates.retire');
+    Route::post('/templates/{template}/subject-remarks', [ResultConfigurationController::class, 'subjectRemarks'])->middleware('can:manage_result_configuration')->name('templates.subject-remarks');
     Route::post('/teacher-assignments', [ResultConfigurationController::class, 'assignTeacher'])->middleware('can:manage_result_settings')->name('teacher-assignments.store');
     Route::post('/card-defaults', [ResultCardController::class, 'defaultComment'])->name('card-defaults.store');
     Route::get('/cards/{card}', [ResultCardController::class, 'show'])->name('cards.show');

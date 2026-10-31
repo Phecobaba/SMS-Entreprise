@@ -77,7 +77,7 @@
             </section>
         @else
             @if($finalStatus)
-                <div class="oak-notice oak-notice-info"><x-icon name="info-circle" /><div><b>Final class: {{ $finalStatus }}</b><p>{{ $finalStatus === 'Awaiting admission' ? 'These students will leave active rosters and wait for admission into the next section.' : 'These students will leave active rosters as graduates.' }} Past results, attendance and receipts remain available.</p></div></div>
+                <div class="oak-notice oak-notice-info"><x-icon name="info-circle" /><div><b>Final class: {{ $finalStatus }}</b><p>@if($finalStatus === 'Awaiting admission') These pupils leave active rosters and wait for admission into the next section. While awaiting admission, they remain limited to their own past report cards and receipts. @else These pupils leave active rosters as Graduated. Graduated pupils and their parents keep read-only access to past report cards, paid receipts and, while payment-gated access allows it, Attendance for the last 30 recorded school days. @endif</p></div></div>
             @elseif($nextStep->count() > 1 && !$source->department_id)
                 <div class="oak-notice oak-notice-info"><x-icon name="info-circle" /><div><b>Choose a class for every student.</b> More than one class is on the next step and the source class has no department.</div></div>
             @endif

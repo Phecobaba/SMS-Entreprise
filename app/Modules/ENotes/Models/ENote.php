@@ -2,6 +2,7 @@
 
 namespace App\Modules\ENotes\Models;
 
+use App\Modules\Academics\Models\SchoolClass;
 use App\Modules\Academics\Models\Subject;
 use App\Modules\Core\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
@@ -18,5 +19,10 @@ class ENote extends Model
     public function subject(): BelongsTo
     {
         return $this->belongsTo(Subject::class);
+    }
+
+    public function schoolClass(): BelongsTo
+    {
+        return $this->belongsTo(SchoolClass::class, 'class_id');
     }
 }

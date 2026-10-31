@@ -4,6 +4,7 @@ namespace App\Modules\Results\Models;
 
 use App\Modules\Core\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class GradeBand extends Model
 {
@@ -13,6 +14,11 @@ class GradeBand extends Model
 
     protected function casts(): array
     {
-        return ['min_score' => 'decimal:2', 'max_score' => 'decimal:2'];
+        return ['min_score' => 'integer', 'max_score' => 'integer'];
+    }
+
+    public function scheme(): BelongsTo
+    {
+        return $this->belongsTo(GradingScheme::class, 'grading_scheme_id');
     }
 }

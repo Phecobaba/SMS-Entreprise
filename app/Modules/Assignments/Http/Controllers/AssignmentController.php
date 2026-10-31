@@ -8,10 +8,12 @@ use App\Modules\Academics\Services\ResultAcademicCatalog;
 use App\Modules\Admissions\Services\StudentDirectory;
 use App\Modules\Assignments\Services\AssignmentService;
 use App\Modules\Core\Services\SchoolUserDirectory;
+use App\Modules\Core\Services\UsernameRules;
 use App\Modules\Core\TenantContext;
 use App\Modules\Portals\Services\PortalContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -50,7 +52,7 @@ class AssignmentController extends Controller
         $data = $request->validate(['status' => ['required', 'in:Submitted,Not Submitted,Late']]);
         $service->mark($assignment, $student, $data['status'], $request->user());
 
-        return back()->with('status', 'Tick saved.');
+        return redirect()->route('assignments.show', $assignment)->with('status', 'Tick saved.');
     }
 
     public function linkWard(Request $request, AssignmentService $service): RedirectResponse
@@ -59,21 +61,25 @@ class AssignmentController extends Controller
         $data = $request->validate(['parent_user_id' => ['required', 'integer'], 'student_id' => ['required', 'integer']]);
         $service->linkWard((int) $data['parent_user_id'], (int) $data['student_id']);
 
-        return back()->with('status', 'Parent linked to student.');
+        return redirect()->route('assignments.index')->with('status', 'Parent linked to student.');
     }
 
-    public function createParent(Request $request, AssignmentService $service): RedirectResponse
+    public function createParent(Request $request, AssignmentService $service): Response
     {
         Gate::authorize('manage_assignments');
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->where('school_id', app(TenantContext::class)->id())],
-            'password' => ['required', 'string', 'min:12'],
+            'username' => ['required', 'string', 'max:30'],
+            'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->where('school_id', app(TenantContext::class)->id())],
             'student_id' => ['required', 'integer'],
         ]);
-        $service->createParentWithWard($data);
+        app(UsernameRules::class)->validateAvailable($data['username']);
+        $created = $service->createParentWithWard($data, $request->user());
 
-        return back()->with('status', 'Parent account created and linked to the student.');
+        return response()->view('students.reset-credentials', $created + [
+            'heading' => $created['user']->name,
+            'student' => app(StudentDirectory::class)->findForPortal((int) $data['student_id']),
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate, private')->header('Pragma', 'no-cache');
     }
 
     public function mine(Request $request, AssignmentService $service): View

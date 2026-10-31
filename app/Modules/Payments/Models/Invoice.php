@@ -24,7 +24,7 @@ class Invoice extends Model
 
     public const KIND_OFFER_DEPOSIT = 'offer_deposit';
 
-    protected $fillable = ['student_id', 'term_fee_student_id', 'candidate_id', 'term_id', 'purpose', 'kind', 'creation_source', 'amount_kobo', 'due_date', 'status', 'created_by'];
+    protected $fillable = ['parent_invoice_id', 'student_id', 'term_fee_student_id', 'candidate_id', 'term_id', 'purpose', 'kind', 'creation_source', 'notes', 'amount_kobo', 'due_date', 'status', 'created_by', 'voided_at', 'voided_by', 'void_reason'];
 
     protected static function booted(): void
     {
@@ -46,7 +46,7 @@ class Invoice extends Model
 
     protected function casts(): array
     {
-        return ['due_date' => 'date', 'amount_kobo' => 'integer'];
+        return ['due_date' => 'date', 'amount_kobo' => 'integer', 'voided_at' => 'datetime'];
     }
 
     public function payment(): HasOne
@@ -59,9 +59,30 @@ class Invoice extends Model
         return $this->hasMany(PaymentAttempt::class);
     }
 
+    public function manualSubmissions(): HasMany
+    {
+        return $this->hasMany(ManualPaymentSubmission::class);
+    }
+
+    public function awaitingManualSubmission(): HasOne
+    {
+        return $this->hasOne(ManualPaymentSubmission::class)
+            ->where('status', ManualPaymentSubmission::STATUS_AWAITING)->latestOfMany();
+    }
+
     public function lines(): HasMany
     {
         return $this->hasMany(InvoiceLine::class);
+    }
+
+    public function parentInvoice(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_invoice_id');
+    }
+
+    public function partPayments(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_invoice_id');
     }
 
     public function candidate(): BelongsTo

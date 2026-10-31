@@ -61,15 +61,17 @@ class SectionScopedApprovalTest extends TestCase
         $secondaryArm = ClassArm::create(['class_id' => $secondaryClass->id, 'name' => 'Blue']);
         $primaryStudent = Student::create(['user_id' => $primaryLearner->id, 'class_arm_id' => $primaryArm->id, 'admission_date' => '2026-09-01']);
         $secondaryStudent = Student::create(['user_id' => $secondaryLearner->id, 'class_arm_id' => $secondaryArm->id, 'admission_date' => '2026-09-01']);
-        $subject = Subject::create(['name' => 'Mathematics']);
+        $primarySubject = Subject::create(['section_id' => $primary->id, 'name' => 'Mathematics']);
+        $secondarySubject = Subject::create(['section_id' => $secondary->id, 'name' => 'Mathematics']);
         $session = AcademicSession::create(['name' => '2026/2027', 'start_date' => '2026-09-01', 'end_date' => '2027-07-31']);
         $term = AcademicTerm::create(['session_id' => $session->id, 'name' => 'First Term', 'start_date' => '2026-09-01', 'end_date' => '2026-12-18']);
-        $scheme = GradingScheme::create(['name' => 'Default']);
-        $primaryTemplate = ResultTemplate::create(['academic_level_id' => $primaryLevel->id, 'grading_scheme_id' => $scheme->id, 'name' => 'Primary', 'scope_key' => 'level:'.$primaryLevel->id]);
-        $secondaryTemplate = ResultTemplate::create(['academic_level_id' => $secondaryLevel->id, 'grading_scheme_id' => $scheme->id, 'name' => 'Secondary', 'scope_key' => 'level:'.$secondaryLevel->id]);
+        $primaryScheme = GradingScheme::create(['section_id' => $primary->id, 'name' => 'Default']);
+        $secondaryScheme = GradingScheme::create(['section_id' => $secondary->id, 'name' => 'Default']);
+        $primaryTemplate = ResultTemplate::create(['section_id' => $primary->id, 'academic_level_id' => $primaryLevel->id, 'grading_scheme_id' => $primaryScheme->id, 'name' => 'Primary', 'scope_key' => 'level:'.$primaryLevel->id]);
+        $secondaryTemplate = ResultTemplate::create(['section_id' => $secondary->id, 'academic_level_id' => $secondaryLevel->id, 'grading_scheme_id' => $secondaryScheme->id, 'name' => 'Secondary', 'scope_key' => 'level:'.$secondaryLevel->id]);
 
-        $primaryResult = Result::create(['student_id' => $primaryStudent->id, 'class_arm_id' => $primaryArm->id, 'subject_id' => $subject->id, 'term_id' => $term->id, 'result_template_id' => $primaryTemplate->id, 'status' => 'Submitted', 'submitted_by' => $teacher->id]);
-        $secondaryResult = Result::create(['student_id' => $secondaryStudent->id, 'class_arm_id' => $secondaryArm->id, 'subject_id' => $subject->id, 'term_id' => $term->id, 'result_template_id' => $secondaryTemplate->id, 'status' => 'Submitted', 'submitted_by' => $teacher->id]);
+        $primaryResult = Result::create(['student_id' => $primaryStudent->id, 'class_arm_id' => $primaryArm->id, 'subject_id' => $primarySubject->id, 'term_id' => $term->id, 'result_template_id' => $primaryTemplate->id, 'status' => 'Submitted', 'submitted_by' => $teacher->id]);
+        $secondaryResult = Result::create(['student_id' => $secondaryStudent->id, 'class_arm_id' => $secondaryArm->id, 'subject_id' => $secondarySubject->id, 'term_id' => $term->id, 'result_template_id' => $secondaryTemplate->id, 'status' => 'Submitted', 'submitted_by' => $teacher->id]);
 
         $this->actingAs($primaryHead)->get(route('results.index'))
             ->assertOk()->assertSee('Primary Learner')->assertDontSee('Secondary Learner');

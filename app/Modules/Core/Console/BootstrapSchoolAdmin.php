@@ -2,14 +2,15 @@
 
 namespace App\Modules\Core\Console;
 
-use App\Modules\Core\Models\Permission;
-use App\Modules\Core\Models\Role;
 use App\Modules\Core\Models\School;
 use App\Modules\Core\Models\SchoolSetting;
 use App\Modules\Core\Models\User;
+use App\Modules\Core\Services\DefaultRoleCatalog;
+use App\Modules\Core\Services\PasswordRules;
 use App\Modules\Core\TenantContext;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 
 class BootstrapSchoolAdmin extends Command
@@ -18,7 +19,7 @@ class BootstrapSchoolAdmin extends Command
 
     protected $description = 'Create the configured school and its first administrator';
 
-    public function handle(TenantContext $context): int
+    public function handle(TenantContext $context, DefaultRoleCatalog $roles): int
     {
         if (config('tenancy.mode') !== 'single_school') {
             $this->error('This command only supports single-school mode.');
@@ -35,10 +36,18 @@ class BootstrapSchoolAdmin extends Command
             return self::FAILURE;
         }
 
-        $password = $this->secret('Administrator password (at least 12 characters)');
+        $password = $this->secret('Administrator password (at least 8 characters)');
 
-        if (! is_string($password) || strlen($password) < 12) {
-            $this->error('The administrator password must contain at least 12 characters.');
+        if (! is_string($password)) {
+            $this->error('Enter an administrator password.');
+
+            return self::FAILURE;
+        }
+
+        try {
+            app(PasswordRules::class)->validate($password, null, (string) $this->argument('school-name'));
+        } catch (ValidationException $exception) {
+            $this->error($exception->errors()['password'][0] ?? 'Choose a different password.');
 
             return self::FAILURE;
         }
@@ -46,7 +55,7 @@ class BootstrapSchoolAdmin extends Command
         $context->set($schoolId);
 
         try {
-            DB::transaction(function () use ($schoolId, $email, $password): void {
+            DB::transaction(function () use ($schoolId, $email, $password, $roles): void {
                 $school = School::find($schoolId);
 
                 if (! $school) {
@@ -57,33 +66,7 @@ class BootstrapSchoolAdmin extends Command
                 }
 
                 SchoolSetting::firstOrCreate([]);
-                $permission = Permission::firstOrCreate(['name' => 'view_dashboard']);
-                $academicsPermission = Permission::firstOrCreate(['name' => 'manage_academics']);
-                $profilePermission = Permission::firstOrCreate(['name' => 'manage_school_profile']);
-                $admissionsPermission = Permission::firstOrCreate(['name' => 'manage_admissions']);
-                $overridePermission = Permission::firstOrCreate(['name' => 'override_admission_checklist']);
-                $resultSettingsPermission = Permission::firstOrCreate(['name' => 'manage_result_settings']);
-                $resultEntryPermission = Permission::firstOrCreate(['name' => 'enter_results']);
-                $resultApprovalPermission = Permission::firstOrCreate(['name' => 'approve_results']);
-                $principalCommentPermission = Permission::firstOrCreate(['name' => 'add_principal_comment']);
-                $proprietorCommentPermission = Permission::firstOrCreate(['name' => 'add_proprietor_comment']);
-                $cbtPermission = Permission::firstOrCreate(['name' => 'manage_cbt']);
-                $cbtApprovalPermission = Permission::firstOrCreate(['name' => 'approve_cbt_results']);
-                $attendanceMarkPermission = Permission::firstOrCreate(['name' => 'mark_attendance']);
-                $attendanceManagePermission = Permission::firstOrCreate(['name' => 'manage_attendance']);
-                $attendanceAlertsPermission = Permission::firstOrCreate(['name' => 'view_attendance_alerts']);
-                $assignmentManagePermission = Permission::firstOrCreate(['name' => 'manage_assignments']);
-                $assignmentMarkPermission = Permission::firstOrCreate(['name' => 'mark_assignments']);
-                $enoteManagePermission = Permission::firstOrCreate(['name' => 'manage_enotes']);
-                $enoteUploadPermission = Permission::firstOrCreate(['name' => 'upload_enotes']);
-                $paymentsPermission = Permission::firstOrCreate(['name' => 'manage_payments']);
-                $feeSchedulePermission = Permission::firstOrCreate(['name' => 'manage_fee_schedule']);
-                $staffPermission = Permission::firstOrCreate(['name' => 'manage_staff_records']);
-                $salaryPermission = Permission::firstOrCreate(['name' => 'view_staff_salary']);
-                $disciplinePermission = Permission::firstOrCreate(['name' => 'view_staff_disciplinary']);
-                $allSectionsPermission = Permission::firstOrCreate(['name' => 'view_all_sections']);
-                $role = Role::firstOrCreate(['name' => 'School Admin']);
-                $role->permissions()->syncWithoutDetaching([$permission->id, $academicsPermission->id, $profilePermission->id, $admissionsPermission->id, $overridePermission->id, $resultSettingsPermission->id, $resultEntryPermission->id, $resultApprovalPermission->id, $principalCommentPermission->id, $proprietorCommentPermission->id, $cbtPermission->id, $cbtApprovalPermission->id, $attendanceMarkPermission->id, $attendanceManagePermission->id, $attendanceAlertsPermission->id, $assignmentManagePermission->id, $assignmentMarkPermission->id, $enoteManagePermission->id, $enoteUploadPermission->id, $paymentsPermission->id, $feeSchedulePermission->id, $staffPermission->id, $salaryPermission->id, $disciplinePermission->id, $allSectionsPermission->id]);
+                $role = $roles->provision()['School Admin'];
 
                 $user = User::firstOrCreate(
                     ['email' => $email],

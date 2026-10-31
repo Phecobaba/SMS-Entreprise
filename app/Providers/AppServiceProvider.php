@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Modules\Academics\Services\FormTeacherAssignments;
+use App\Modules\Core\Http\Middleware\RequirePasswordChange;
 use App\Modules\Core\Models\User;
 use App\Modules\Core\Services\AppNavigation;
 use App\Modules\Core\TenantContext;
@@ -10,6 +11,7 @@ use App\Modules\Portals\Services\PortalContext;
 use App\Modules\Results\Models\ResultCard;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,6 +30,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Livewire::addPersistentMiddleware(RequirePasswordChange::class);
+
         $this->loadMigrationsFrom(app_path('Modules/Core/Database/Migrations'));
         $this->loadMigrationsFrom(app_path('Modules/Academics/Database/Migrations'));
         $this->loadMigrationsFrom(app_path('Modules/Admissions/Database/Migrations'));
@@ -47,18 +51,30 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage_section_arms', fn (User $user): bool => $user->hasPermission('manage_section_arms'));
         Gate::define('manage_section_subjects', fn (User $user): bool => $user->hasPermission('manage_section_subjects'));
         Gate::define('manage_section_teacher_assignments', fn (User $user): bool => $user->hasPermission('manage_section_teacher_assignments'));
+        Gate::define('manage_section_result_settings', fn (User $user): bool => $user->hasPermission('manage_section_result_settings'));
         Gate::define('manage_promotions', fn (User $user): bool => $user->hasPermission('manage_promotions'));
         Gate::define('manage_school_profile', fn (User $user): bool => $user->hasPermission('manage_school_profile'));
         Gate::define('manage_admissions', fn (User $user): bool => $user->hasPermission('manage_admissions'));
         Gate::define('manage_payments', fn (User $user): bool => $user->hasPermission('manage_payments'));
+        Gate::define('approve_payments', fn (User $user): bool => $user->hasPermission('approve_payments'));
         Gate::define('manage_fee_schedule', fn (User $user): bool => $user->hasPermission('manage_fee_schedule'));
+        Gate::define('manage_payment_gateway', fn (User $user): bool => $user->hasPermission('manage_payment_gateway'));
         Gate::define('manage_staff_records', fn (User $user): bool => $user->hasPermission('manage_staff_records'));
         Gate::define('view_staff_salary', fn (User $user): bool => $user->hasPermission('view_staff_salary'));
         Gate::define('view_staff_disciplinary', fn (User $user): bool => $user->hasPermission('view_staff_disciplinary'));
+        Gate::define('create_staff', fn (User $user): bool => $user->hasPermission('create_staff'));
+        Gate::define('manage_staff_access', fn (User $user): bool => $user->hasPermission('manage_staff_access'));
+        Gate::define('view_sign_in_rules', fn (User $user): bool => $user->hasPermission('view_sign_in_rules'));
+        Gate::define('view_students', fn (User $user): bool => $user->hasPermission('view_students'));
+        Gate::define('create_students', fn (User $user): bool => $user->hasPermission('create_students'));
+        Gate::define('manage_student_accounts', fn (User $user): bool => $user->hasPermission('manage_student_accounts'));
+        Gate::define('manage_registration_numbers', fn (User $user): bool => $user->hasPermission('manage_registration_numbers'));
+        Gate::define('change_registration_numbers', fn (User $user): bool => $user->hasPermission('change_registration_numbers'));
         Gate::define('view_all_sections', fn (User $user): bool => $user->hasPermission('view_all_sections'));
         Gate::define('override_admission_checklist', fn (User $user): bool => $user->hasPermission('override_admission_checklist'));
-        Gate::define('view_results_workspace', fn (User $user): bool => $user->hasPermission('manage_result_settings') || $user->hasPermission('enter_results') || $user->hasPermission('approve_results') || $user->hasPermission('add_principal_comment') || $user->hasPermission('add_proprietor_comment'));
+        Gate::define('view_results_workspace', fn (User $user): bool => $user->hasPermission('manage_result_settings') || $user->hasPermission('manage_section_result_settings') || $user->hasPermission('enter_results') || $user->hasPermission('approve_results') || $user->hasPermission('add_principal_comment') || $user->hasPermission('add_proprietor_comment'));
         Gate::define('manage_result_settings', fn (User $user): bool => $user->hasPermission('manage_result_settings'));
+        Gate::define('manage_result_configuration', fn (User $user): bool => $user->hasPermission('manage_result_settings') || $user->hasPermission('manage_section_result_settings'));
         Gate::define('enter_results', fn (User $user): bool => $user->hasPermission('enter_results'));
         Gate::define('approve_results', fn (User $user): bool => $user->hasPermission('approve_results'));
         Gate::define('add_principal_comment', fn (User $user): bool => $user->hasPermission('add_principal_comment'));

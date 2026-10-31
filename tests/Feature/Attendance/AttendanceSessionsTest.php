@@ -6,6 +6,7 @@ use App\Modules\Academics\Models\AcademicLevel;
 use App\Modules\Academics\Models\ClassArm;
 use App\Modules\Academics\Models\SchoolClass;
 use App\Modules\Academics\Models\Section;
+use App\Modules\Academics\Services\SectionTeacherDirectory;
 use App\Modules\Admissions\Models\Student;
 use App\Modules\Attendance\Models\AttendanceAlert;
 use App\Modules\Attendance\Models\AttendanceRecord;
@@ -199,6 +200,73 @@ class AttendanceSessionsTest extends TestCase
         $this->assertNotContains($created[30], $summary['days']->pluck('date')->map->toDateString()->all());
     }
 
+    public function test_form_teacher_assignment_is_section_scoped_audited_and_marking_stays_form_teacher_only(): void
+    {
+        $f = $this->fixture();
+        $mark = Permission::where('name', 'mark_attendance')->firstOrFail();
+        $teacherRole = Role::where('name', 'Teacher')->firstOrFail();
+        $replacement = $this->user('Replacement Teacher', 'replacement@example.test');
+        $teacherRole->permissions()->syncWithoutDetaching([$mark->id]);
+        $replacement->roles()->attach($teacherRole);
+        $f['sectionA']->heads()->attach($replacement, ['school_id' => $f['school']->id]);
+        $outsideTeacher = $this->user('Outside Teacher', 'outside-form@example.test');
+        $outsideTeacher->roles()->attach($teacherRole);
+        $f['sectionB']->heads()->attach($outsideTeacher, ['school_id' => $f['school']->id]);
+        $inactiveTeacher = User::create(['name' => 'Inactive Teacher', 'email' => 'inactive-form@example.test', 'password' => 'long-password-here', 'status' => 'inactive']);
+        $inactiveTeacher->roles()->attach($teacherRole);
+        $f['sectionA']->heads()->attach($inactiveTeacher, ['school_id' => $f['school']->id]);
+        $nonTeacher = $this->user('Office User', 'office-form@example.test');
+        $f['sectionA']->heads()->attach($nonTeacher, ['school_id' => $f['school']->id]);
+        $dualTeacher = $this->user('Dual Form Teacher', 'dual-form@example.test');
+        $dualTeacher->roles()->attach($teacherRole);
+        $f['sectionA']->heads()->attach($dualTeacher, ['school_id' => $f['school']->id]);
+        $f['sectionB']->heads()->attach($dualTeacher, ['school_id' => $f['school']->id]);
+        $directory = app(SectionTeacherDirectory::class);
+        $this->assertTrue($directory->isEligible($dualTeacher, $f['sectionA']->id, SectionTeacherDirectory::FORM_PERMISSION, false));
+        $this->assertTrue($directory->isEligible($dualTeacher, $f['sectionB']->id, SectionTeacherDirectory::FORM_PERMISSION, false));
+        $date = today('Africa/Lagos')->toDateString();
+        $statuses = collect($f['students'])->mapWithKeys(fn (Student $student): array => [$student->id => 'Present'])->all();
+
+        $this->actingAs($replacement)->get(route('attendance.day', $f['armA']))
+            ->assertSessionHasErrors('class_arm_id');
+        $this->post(route('attendance.mark', $f['armA']), [
+            'date' => $date, 'session' => 'Morning', 'statuses' => $statuses,
+        ])->assertSessionHasErrors('class_arm_id');
+        $this->post(route('attendance.form-teachers.store'), [
+            'class_arm_id' => $f['armA']->id, 'user_id' => $replacement->id,
+        ])->assertForbidden();
+
+        $this->actingAs($f['head'])->get(route('attendance.index'))->assertOk();
+        foreach ([$outsideTeacher, $inactiveTeacher, $nonTeacher] as $candidate) {
+            $this->post(route('attendance.form-teachers.store'), [
+                'class_arm_id' => $f['armA']->id, 'user_id' => $candidate->id,
+            ])->assertSessionHasErrors('user_id');
+        }
+        $this->post(route('attendance.form-teachers.store'), [
+            'class_arm_id' => $f['armB']->id, 'user_id' => $replacement->id,
+        ])->assertForbidden();
+        $this->post(route('attendance.form-teachers.store'), [
+            'class_arm_id' => $f['armA']->id, 'user_id' => $replacement->id,
+        ])->assertSessionHasNoErrors();
+
+        $this->tenant($f);
+        $this->assertSame($replacement->id, $f['armA']->fresh()->form_teacher_user_id);
+        $audit = AuditLog::where('action', 'form_teacher_assigned')->firstOrFail();
+        $this->assertSame($f['head']->id, $audit->user_id);
+        $this->assertSame($f['teacher']->id, $audit->metadata['previous_form_teacher_user_id']);
+        $this->assertSame($replacement->id, $audit->metadata['form_teacher_user_id']);
+
+        $this->actingAs($f['teacher'])->get(route('attendance.day', $f['armA']))
+            ->assertSessionHasErrors('class_arm_id');
+        $this->post(route('attendance.mark', $f['armA']), [
+            'date' => $date, 'session' => 'Morning', 'statuses' => $statuses,
+        ])->assertSessionHasErrors('class_arm_id');
+        $this->actingAs($f['head'])->get(route('attendance.day', $f['armA']))->assertForbidden();
+        $this->post(route('attendance.mark', $f['armA']), [
+            'date' => $date, 'session' => 'Morning', 'statuses' => $statuses,
+        ])->assertForbidden();
+    }
+
     private function fixture(): array
     {
         $school = School::create(['name' => 'Oakfield']);
@@ -215,7 +283,7 @@ class AttendanceSessionsTest extends TestCase
         $headRole = Role::create(['name' => 'Head']);
         $adminRole = Role::create(['name' => 'School Admin']);
         $teacherRole->permissions()->attach($mark);
-        $headRole->permissions()->attach([$mark->id, $manage->id, $alerts->id]);
+        $headRole->permissions()->attach([$manage->id, $alerts->id]);
         $adminRole->permissions()->attach([$mark->id, $manage->id, $alerts->id, $all->id]);
         $teacher->roles()->attach($teacherRole);
         $head->roles()->attach($headRole);

@@ -4,6 +4,7 @@
 @include('core._shell-start')<main class="mx-auto max-w-5xl rounded-lg bg-white p-7 shadow">
 <a wire:navigate href="{{ route('results.index') }}" class="text-blue-700 underline">Results workspace</a>
 <h1 class="mt-4 text-2xl font-bold">{{ $studentName }} · {{ $term }} report card</h1>
+@if($registrationNumber)<p class="mt-1"><strong>Registration number:</strong> {{ $registrationNumber }}</p>@endif
 @if(session('status'))<p class="mt-3 rounded bg-green-50 p-3 text-green-800">{{ session('status') }}</p>@endif
 @if($errors->any())<div class="mt-3 rounded bg-red-50 p-3 text-red-800">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
 <p class="mt-2">{{ $results->count() }} approved subject results. <a href="{{ route('results.cards.pdf', $card) }}" class="text-blue-700 underline">Print one-page A4 PDF</a></p>

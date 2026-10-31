@@ -19,7 +19,8 @@ class AppNavigation
         }
         if ($user->can('approve_results') || $user->can('view_attendance_alerts') || $user->can('manage_promotions')
             || $user->can('manage_section_subjects') || $user->can('manage_section_teacher_assignments')
-            || $user->can('manage_section_levels') || $user->can('manage_section_arms')) {
+            || $user->can('manage_section_levels') || $user->can('manage_section_arms')
+            || $user->can('manage_section_result_settings')) {
             return 'head';
         }
         if ($user->can('mark_attendance') && $user->can('enter_results')) {
@@ -79,22 +80,31 @@ class AppNavigation
     {
         return $this->allowed($user, [
             ['Dashboard', 'dashboard', 'view_dashboard', null],
-            ['Academics', 'academics.index', 'manage_academics', 'Teaching'],
-            ['Bulk subjects', 'academics.bulk-subjects.index', 'manage_academics', 'Teaching'],
-            ['Teacher assignments', 'academics.teacher-assignments.index', 'manage_result_settings', 'Teaching'],
-            ['Promotion', 'academics.promotion.index', 'manage_promotions', 'Teaching'],
+            ['Academics', 'academics.index', 'manage_academics', 'Academics'],
+            ['Bulk subjects', 'academics.bulk-subjects.index', 'manage_academics', 'Academics'],
+            ['Teacher assignments', 'academics.teacher-assignments.index', 'manage_result_settings', 'Academics'],
+            ['Promotion', 'academics.promotion.index', 'manage_promotions', 'Academics'],
             ['Results', 'results.index', 'view_results_workspace', 'Teaching'],
+            ['Result configuration', 'results.configuration', 'manage_result_settings', 'Teaching'],
             ['CBT', 'cbt.staff.index', 'manage_cbt', 'Teaching'],
             ['Attendance', 'attendance.index', 'mark_attendance', 'Daily ops'],
             ['Alerts', 'attendance.alerts', 'view_attendance_alerts', 'Daily ops'],
             ['Assignments', 'assignments.index', 'mark_assignments', 'Daily ops'],
             ['E-Notes', 'enotes.index', 'upload_enotes', 'Daily ops'],
             ['Admissions', 'admissions.index', 'manage_admissions', 'Daily ops'],
+            ['Students', 'students.index', 'view_students', 'Daily ops'],
             ['Payments', 'payments.index', 'manage_payments', 'Administration'],
+            ['Record payment', 'payments.record.index', 'manage_payments', 'Administration'],
+            ['Awaiting approval', 'payments.approvals.index', 'manage_payments', 'Administration'],
             ['Fee schedule', 'fees.schedule.index', 'manage_fee_schedule', 'Administration'],
             ['Generate invoices', 'fees.generate.index', 'manage_fee_schedule', 'Administration'],
             ['Not invoiced', 'fees.not-invoiced.index', 'manage_fee_schedule', 'Administration'],
+            ['Payment gateway', 'payments.gateway.show', 'manage_payments', 'Administration'],
             ['Staff HR', 'staff.index', 'manage_staff_records', 'Administration'],
+            ['Add staff', 'staff.accounts.create', 'create_staff', 'Administration'],
+            ['Staff access', 'staff.access.index', 'manage_staff_access', 'Administration'],
+            ['Sign-in rules', 'sign-in-rules.show', 'view_sign_in_rules', 'Administration'],
+            ['Registration numbers', 'registration-numbers.edit', 'manage_registration_numbers', 'Administration'],
             ['School Profile', 'school-profile.edit', 'manage_school_profile', 'Administration'],
         ]);
     }
@@ -105,11 +115,15 @@ class AppNavigation
             ['Dashboard', 'dashboard', 'view_dashboard', null],
             ['Classes', 'academics.classes.index', 'manage_section_classes', 'Academics'],
             ['Levels', 'academics.levels.index', 'manage_section_levels', 'Academics'],
+            ['Subjects', 'academics.setup', 'manage_section_subjects', 'Academics'],
             ['Bulk subjects', 'academics.bulk-subjects.index', 'manage_section_subjects', 'Academics'],
             ['Teacher assignments', 'academics.teacher-assignments.index', 'manage_section_teacher_assignments', 'Academics'],
             ['Promotion', 'academics.promotion.index', 'manage_promotions', 'Academics'],
+            ['Staff', 'staff.index', 'manage_staff_records', 'Academics'],
             ['Results', 'results.index', 'view_results_workspace', 'Teaching'],
-            ['Attendance', 'attendance.alerts', 'view_attendance_alerts', 'Teaching'],
+            ['Result configuration', 'results.configuration', 'manage_section_result_settings', 'Teaching'],
+            ['Attendance', 'attendance.index', 'manage_attendance', 'Teaching'],
+            ['Alerts', 'attendance.alerts', 'view_attendance_alerts', 'Teaching'],
         ]);
     }
 
@@ -118,9 +132,12 @@ class AppNavigation
         return $this->allowed($user, [
             ['Dashboard', 'dashboard', 'view_dashboard', null],
             ['Payments', 'payments.index', 'manage_payments', null],
+            ['Record payment', 'payments.record.index', 'manage_payments', null],
+            ['Awaiting approval', 'payments.approvals.index', 'manage_payments', null],
             ['Fee schedule', 'fees.schedule.index', 'manage_fee_schedule', null],
             ['Generate invoices', 'fees.generate.index', 'manage_fee_schedule', null],
             ['Not invoiced', 'fees.not-invoiced.index', 'manage_fee_schedule', null],
+            ['Payment gateway', 'payments.gateway.show', 'manage_payments', null],
         ]);
     }
 

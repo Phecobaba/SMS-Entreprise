@@ -19,7 +19,7 @@
         <section class="ad-card"><form method="get" action="{{ route('academics.promotion.incoming.index') }}" class="ad-form-grid ad-filter-row"><label>Receiving section<select class="ad-inline-select" name="section" onchange="this.form.submit()">@foreach($sections as $available)<option value="{{ $available->id }}" @selected($selectedSection === $available->id)>{{ $available->name }}</option>@endforeach</select></label></form></section>
     @endif
 
-    <div class="oak-notice oak-notice-info"><x-icon name="info-circle" /><div><b>Accept, not continue.</b><p>Acceptance keeps each pupil's current registration number. It does not create an invoice. Past results, attendance and receipts stay on record.</p></div></div>
+    <div class="oak-notice oak-notice-info"><x-icon name="info-circle" /><div><b>Accept, not continue.</b><p>Acceptance keeps each pupil's current registration number and creates no invoice. Pupils marked not continuing become Graduated: they and their parents keep read-only access to past report cards, paid receipts and, while payment-gated access allows it, Attendance for the last 30 recorded school days. Pupils still Awaiting admission remain limited to past report cards and receipts.</p></div></div>
 
     @if($report)
         <section class="oak-notice oak-notice-success pr-report" role="status"><x-icon name="circle-check" /><div>

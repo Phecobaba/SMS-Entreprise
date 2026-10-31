@@ -45,12 +45,19 @@ class ResultTeachingAssignments
         }
     }
 
-    public function assign(int $userId, int $classId, int $subjectId): TeacherSubjectAssignment
+    public function assign(int $userId, int $classId, int $subjectId, User $actor): TeacherSubjectAssignment
     {
         $user = app(SchoolUserDirectory::class)->find($userId);
-        if (! $user || ! (Gate::forUser($user)->allows('enter_results') || Gate::forUser($user)->allows('mark_assignments') || Gate::forUser($user)->allows('upload_enotes'))) {
-            throw ValidationException::withMessages(['user_id' => 'Choose a teacher with score-entry, assignment, or E-Note permission.']);
+        $class = SchoolClass::with('level')->findOrFail($classId);
+        if (! $user || ! $class->level?->section_id || ! app(SectionTeacherDirectory::class)->isEligible(
+            $user,
+            (int) $class->level->section_id,
+            SectionTeacherDirectory::SUBJECT_PERMISSIONS,
+            $actor->can('view_all_sections'),
+        )) {
+            throw ValidationException::withMessages(['user_id' => 'Choose an active teacher allowed for this section.']);
         }
+        app(SubjectReferences::class)->assertClassSubjectSection($classId, $subjectId);
         if (! ClassSubject::where('class_id', $classId)->where('subject_id', $subjectId)->exists()) {
             throw ValidationException::withMessages(['subject_id' => 'Assign the subject to this class first.']);
         }

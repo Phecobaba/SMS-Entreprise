@@ -22,6 +22,25 @@ class CandidateConversionTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_candidate_registration_uses_the_shared_password_rule(): void
+    {
+        $school = School::create(['name' => 'Oakfield International Schools']);
+        config()->set('tenancy.default_school_id', $school->id);
+        app(TenantContext::class)->set($school->id);
+
+        $this->post(route('admissions.register.store'), [
+            'name' => 'Applicant', 'email' => 'candidate@example.test', 'phone' => '08000000000',
+            'password' => 'password123', 'password_confirmation' => 'password123',
+        ])->assertSessionHasErrors('password');
+        $this->assertDatabaseMissing('users', ['email' => 'candidate@example.test']);
+
+        $this->post(route('admissions.register.store'), [
+            'name' => 'Applicant', 'email' => 'candidate@example.test', 'phone' => '08000000000',
+            'password' => 'Candidate88', 'password_confirmation' => 'Candidate88',
+        ])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('users', ['email' => 'candidate@example.test', 'must_change_password' => false]);
+    }
+
     public function test_conversion_requires_complete_checklist_or_a_logged_permitted_override(): void
     {
         $school = School::create(['name' => 'Oakfield']);
@@ -73,6 +92,9 @@ class CandidateConversionTest extends TestCase
             ->assertSessionHasNoErrors();
         app(TenantContext::class)->set($school->id);
         $this->assertSame(1, Student::where('candidate_id', $candidate->id)->count());
+        $converted = Student::where('candidate_id', $candidate->id)->firstOrFail();
+        $this->assertNotNull($converted->registration_number);
+        $this->assertFalse(User::findOrFail($converted->user_id)->must_change_password);
         $event = CandidateStatusHistory::where('candidate_id', $candidate->id)->where('to_status', 'Converted to Student')->firstOrFail();
         $this->assertTrue($event->is_override);
         $this->assertSame($admin->id, $event->changed_by);
@@ -93,7 +115,8 @@ class CandidateConversionTest extends TestCase
         app(TenantContext::class)->set($admin->school_id);
         $candidate = $pipeline->register(['name' => 'Applicant', 'email' => $email, 'phone' => '08000000000', 'password' => 'long-password-here', 'applied_level_id' => AcademicLevel::value('id')]);
         $invoice = app(PaymentLedger::class)->invoice(['candidate_id' => $candidate->id, 'purpose' => 'Registration', 'amount_kobo' => 10000, 'due_date' => today()->toDateString()], $admin);
-        $this->actingAs($admin)->post(route('payments.manual', $invoice))->assertSessionHasNoErrors();
+        app(PaymentLedger::class)->settleManualSubmission($invoice, $invoice->amount_kobo, $admin);
+        $this->actingAs($admin);
         $this->post(route('admissions.exam-taken', $candidate))->assertSessionHasNoErrors();
         $this->post(route('admissions.exam-outcome', $candidate), ['outcome' => 'Passed'])->assertSessionHasNoErrors();
         $this->post(route('admissions.offer', $candidate), ['response_deadline' => today()->addWeek()->toDateString()])->assertSessionHasNoErrors();

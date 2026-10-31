@@ -26,5 +26,7 @@ Per-school encrypted gateway settings (public key, encrypted secret key, mode, c
 ## Tests (trust-sensitive)
 The secret key never appears in any response, log or audit entry; a saved secret verifies a webhook signature and a wrong one does not; a test public key with a live secret key is refused; a change requires the password; with no keys, the Pay screens show the not-set-up state and manual payment still works.
 
-## Open questions (do not decide)
-The exact Paystack dashboard location for the webhook setting (confirm before release); the wording shown when decryption fails after an application-key change.
+## Resolved during implementation (2026-10-24)
+- Paystack's documentation places the webhook field under **API Keys & Webhooks** in Dashboard Settings. The application uses the generic instruction to add the shown URL there for the matching Test or Live mode.
+- A decryption failure disables online payment and tells the Admin: **"The saved keys can't be read. Please enter them again."** Payers see only the ordinary not-set-up state.
+- The harmless connection check is `GET /transaction?perPage=1&page=1`, documented by Paystack as the read-only List Transactions endpoint.

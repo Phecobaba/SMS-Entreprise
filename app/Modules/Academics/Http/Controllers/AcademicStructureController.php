@@ -27,7 +27,10 @@ class AcademicStructureController extends Controller
 
         return view('academics.sections', [
             'sections' => Section::with(['heads', 'levels'])->withCount(['levels'])->orderBy('name')->limit(100)->get(),
-            'levels' => AcademicLevel::with('section')->withCount('classes')->orderBy('name')->limit(100)->get(),
+            'levels' => AcademicLevel::with([
+                'section',
+                'classes' => fn ($query) => $query->withCount('activeStudents'),
+            ])->withCount('classes')->orderBy('name')->limit(100)->get(),
             'headOptions' => User::where('status', 'active')
                 ->whereHas('roles.permissions', fn ($query) => $query->where('permissions.name', 'approve_results'))
                 ->whereDoesntHave('roles.permissions', fn ($query) => $query->where('permissions.name', 'view_all_sections'))
@@ -48,7 +51,7 @@ class AcademicStructureController extends Controller
             $administration->assignHead($section, $head, $request->user());
         });
 
-        return back()->with('status', 'Section added. Assign every level before using section-scoped work.');
+        return redirect()->route('academics.index')->with('status', 'Section added. Assign every level before using section-scoped work.');
     }
 
     public function updateSection(Request $request, Section $section, TenantContext $context, SectionAdministration $administration): RedirectResponse
@@ -65,17 +68,7 @@ class AcademicStructureController extends Controller
             $section->update(['name' => trim($data['name']), 'head_title' => trim($data['head_title'])]);
         });
 
-        return back()->with('status', 'Section updated.');
-    }
-
-    public function assignLevel(Request $request, AcademicLevel $level, TenantContext $context, SectionAdministration $administration): RedirectResponse
-    {
-        $data = $request->validate([
-            'section_id' => ['required', 'integer', Rule::exists('sections', 'id')->where('school_id', $context->id())],
-        ]);
-        $administration->assignLevel($level, Section::findOrFail($data['section_id']), $request->user());
-
-        return back()->with('status', $level->name.' and its classes now belong to the selected section. No records were deleted.');
+        return redirect()->route('academics.index')->with('status', 'Section updated.');
     }
 
     public function departments(Request $request): View
@@ -94,7 +87,7 @@ class AcademicStructureController extends Controller
         ]);
         $administration->createDepartment($data['name'], $request->user());
 
-        return back()->with('status', 'Department added. Department fields are now available on classes.');
+        return redirect()->route('academics.departments.index')->with('status', 'Department added. Department fields are now available on classes.');
     }
 
     public function updateDepartment(Request $request, Department $department, TenantContext $context): RedirectResponse
@@ -108,7 +101,7 @@ class AcademicStructureController extends Controller
         }
         $department->update(['name' => trim($data['name'])]);
 
-        return back()->with('status', 'Department renamed.');
+        return redirect()->route('academics.departments.index')->with('status', 'Department renamed.');
     }
 
     public function destroyDepartment(Request $request, Department $department): RedirectResponse
@@ -119,7 +112,7 @@ class AcademicStructureController extends Controller
         }
         $department->delete();
 
-        return back()->with('status', 'Department deleted.');
+        return redirect()->route('academics.departments.index')->with('status', 'Department deleted.');
     }
 
     public function classes(Request $request, SectionAccess $access, ClassOrderingService $ordering): View
@@ -167,7 +160,7 @@ class AcademicStructureController extends Controller
         $data = $request->validate(['direction' => ['required', Rule::in(['up', 'down'])]]);
         $ordering->move($class, $data['direction'], $request->user());
 
-        return back()->with('status', 'Class order updated. The whole step moved together.');
+        return redirect()->route('academics.classes.index')->with('status', 'Class order updated. The whole step moved together.');
     }
 
     public function destroyClass(Request $request, SchoolClass $class, ClassOrderingService $ordering): RedirectResponse
@@ -175,7 +168,7 @@ class AcademicStructureController extends Controller
         $name = $class->name;
         $ordering->delete($class, $request->user());
 
-        return back()->with('status', $name.' deleted. No student or school history was removed.');
+        return redirect()->route('academics.classes.index')->with('status', $name.' deleted. No student or school history was removed.');
     }
 
     public function arrange(Request $request, SectionAccess $access, ClassOrderingService $ordering): View
