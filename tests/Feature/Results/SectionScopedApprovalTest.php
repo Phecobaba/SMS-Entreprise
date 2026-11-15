@@ -41,7 +41,7 @@ class SectionScopedApprovalTest extends TestCase
         $approve = Permission::firstOrCreate(['name' => 'approve_results']);
         $viewAll = Permission::firstOrCreate(['name' => 'view_all_sections']);
         $manageAcademics = Permission::firstOrCreate(['name' => 'manage_academics']);
-        $headRole = Role::create(['name' => 'Principal']);
+        $headRole = Role::create(['name' => 'Head']);
         $headRole->permissions()->attach($approve);
         $adminRole = Role::create(['name' => 'School Admin']);
         $adminRole->permissions()->attach([$approve->id, $viewAll->id, $manageAcademics->id]);

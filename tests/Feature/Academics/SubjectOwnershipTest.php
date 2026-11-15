@@ -175,7 +175,7 @@ class SubjectOwnershipTest extends TestCase
         $head = User::create(['name' => 'Head', 'email' => 'subject-head@example.test', 'password' => 'long-password-here']);
         $teacher = User::create(['name' => 'Teacher', 'email' => 'subject-teacher@example.test', 'password' => 'long-password-here']);
         $adminRole = Role::create(['name' => 'School Admin']);
-        $headRole = Role::create(['name' => 'Principal']);
+        $headRole = Role::create(['name' => 'Head']);
         foreach (['manage_academics', 'view_all_sections'] as $name) {
             $adminRole->permissions()->attach(Permission::firstOrCreate(['name' => $name]));
         }

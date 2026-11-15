@@ -37,7 +37,6 @@ class SectionTeacherDirectory
     public function candidates(int $sectionId, array $permissions, bool $includeOtherTeachers): array
     {
         $eligible = app(SchoolUserDirectory::class)->scopeStaffAccounts(User::where('status', 'active'))
-            ->whereHas('roles.permissions', fn (Builder $query) => $query->whereIn('permissions.name', $permissions))
             ->orderBy('name')->limit(200)->get(['id', 'name', 'email', 'status']);
         $inSectionIds = $this->teacherIdsForSection($sectionId);
         $inSection = $eligible->filter(fn (User $user): bool => $inSectionIds->contains($user->id))->values();
@@ -53,7 +52,7 @@ class SectionTeacherDirectory
     {
         $eligibleStaff = app(SchoolUserDirectory::class)->scopeStaffAccounts(
             User::whereKey($user->id)->where('status', 'active'),
-        )->whereHas('roles.permissions', fn (Builder $query) => $query->whereIn('permissions.name', $permissions))->exists();
+        )->exists();
         if (! $eligibleStaff) {
             return false;
         }

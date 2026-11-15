@@ -125,7 +125,7 @@ class ReportCardCommentModesTest extends TestCase
         }
         $adminRole = Role::create(['name' => 'School Admin']);
         $adminRole->permissions()->attach(Permission::whereIn('name', ['manage_result_settings', 'add_proprietor_comment', 'view_all_sections'])->pluck('id'));
-        $headRole = Role::create(['name' => 'Principal']);
+        $headRole = Role::create(['name' => 'Head']);
         $headRole->permissions()->attach(Permission::whereIn('name', ['manage_section_result_settings', 'add_principal_comment'])->pluck('id'));
         $admin = User::create(['name' => 'Admin', 'email' => 'admin@example.test', 'password' => 'long-password-here', 'status' => 'active']);
         $head = User::create(['name' => 'Head', 'email' => 'head@example.test', 'password' => 'long-password-here', 'status' => 'active']);

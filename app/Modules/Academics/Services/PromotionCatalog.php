@@ -126,17 +126,22 @@ class PromotionCatalog
         return $arm;
     }
 
-    public function waitingForArrangement(): Collection
+    public function waitingForArrangement(User $actor): Collection
     {
-        return Section::whereNull('classes_arranged_at')->orderBy('name')->get();
+        $query = Section::whereNull('classes_arranged_at');
+        if (! $actor->can('view_all_sections')) {
+            $query->whereIn('id', app(SectionAccess::class)->sectionIds($actor));
+        }
+
+        return $query->orderBy('name')->get();
     }
 
-    public function assertEverySectionArranged(): void
+    public function assertEverySectionArranged(User $actor): void
     {
-        $waiting = $this->waitingForArrangement();
+        $waiting = $this->waitingForArrangement($actor);
         if ($waiting->isNotEmpty()) {
             throw ValidationException::withMessages([
-                'promotion' => 'Arrange every section before promoting students. Waiting for '.$waiting->pluck('name')->join(', ').'.',
+                'promotion' => 'Arrange your classes first. Waiting for '.$waiting->pluck('name')->join(', ').' to be arranged.',
             ]);
         }
     }

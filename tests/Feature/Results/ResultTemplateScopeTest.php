@@ -253,7 +253,7 @@ class ResultTemplateScopeTest extends TestCase
         $head = User::create(['name' => 'Primary Head', 'email' => 'template-head@example.test', 'password' => 'long-password-here', 'status' => 'active']);
         $teacher = User::create(['name' => 'Teacher', 'email' => 'template-teacher@example.test', 'password' => 'long-password-here', 'status' => 'active']);
         $adminRole = Role::create(['name' => 'School Admin']);
-        $headRole = Role::create(['name' => 'Principal']);
+        $headRole = Role::create(['name' => 'Head']);
         $teacherRole = Role::create(['name' => 'Teacher']);
         foreach (['manage_result_settings', 'view_all_sections', 'view_results_workspace', 'enter_results'] as $permission) {
             $adminRole->permissions()->attach(Permission::firstOrCreate(['name' => $permission]));

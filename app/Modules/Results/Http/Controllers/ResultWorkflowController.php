@@ -27,7 +27,7 @@ class ResultWorkflowController extends Controller
     public function index(StudentDirectory $students, ResultAcademicCatalog $academics, ResultTeachingAssignments $assignments, Request $request): View
     {
         $teacherWorkspace = app(TeacherResultsWorkspace::class);
-        if ($teacherWorkspace->isTeacherWorkspace($request->user())) {
+        if ($teacherWorkspace->isTeacherWorkspace($request->user(), $request)) {
             return view('results.teacher.index', $teacherWorkspace->landing($request->user(), $request));
         }
 
@@ -107,7 +107,7 @@ class ResultWorkflowController extends Controller
 
     public function store(Request $request, ResultWorkflow $workflow): RedirectResponse
     {
-        abort_if(app(TeacherResultsWorkspace::class)->isTeacherWorkspace($request->user()), 403, 'Use your assigned subject and class to enter current-term scores.');
+        abort_if(app(ResultTeachingAssignments::class)->hasAssignments($request->user()), 403, 'Use your assigned subject and class to enter current-term scores.');
         $data = $request->validate([
             'student_id' => ['required', 'integer'],
             'subject_id' => ['required', 'integer'],
@@ -128,14 +128,14 @@ class ResultWorkflowController extends Controller
 
     public function teacherPair(int $class, int $subject, Request $request, TeacherResultsWorkspace $workspace): View
     {
-        abort_unless($workspace->isTeacherWorkspace($request->user()), 403);
+        abort_unless(app(ResultTeachingAssignments::class)->hasAssignments($request->user()), 403);
 
         return view('results.teacher.pair', $workspace->pairPage($request->user(), $class, $subject, $request));
     }
 
     public function teacherCsvTemplate(int $class, int $subject, Request $request, TeacherResultsWorkspace $workspace, TeacherScoreCsv $csv): Response
     {
-        abort_unless($workspace->isTeacherWorkspace($request->user()), 403);
+        abort_unless(app(ResultTeachingAssignments::class)->hasAssignments($request->user()), 403);
         $download = $csv->template($request->user(), $class, $subject);
 
         return response($download['contents'], 200, [
@@ -147,7 +147,7 @@ class ResultWorkflowController extends Controller
 
     public function teacherCsvPreview(int $class, int $subject, Request $request, TeacherResultsWorkspace $workspace, TeacherScoreCsv $csv): View
     {
-        abort_unless($workspace->isTeacherWorkspace($request->user()), 403);
+        abort_unless(app(ResultTeachingAssignments::class)->hasAssignments($request->user()), 403);
         $data = $request->validate([
             'file' => ['required', 'file', 'max:1024', 'extensions:csv'],
         ]);
@@ -159,7 +159,7 @@ class ResultWorkflowController extends Controller
 
     public function teacherCsvApply(int $class, int $subject, Request $request, TeacherResultsWorkspace $workspace, TeacherScoreCsv $csv): RedirectResponse
     {
-        abort_unless($workspace->isTeacherWorkspace($request->user()), 403);
+        abort_unless(app(ResultTeachingAssignments::class)->hasAssignments($request->user()), 403);
         $data = $request->validate(['upload_token' => ['required', 'string', 'size:48']]);
         $count = $csv->apply($request->user(), $class, $subject, $data['upload_token']);
 
@@ -169,14 +169,14 @@ class ResultWorkflowController extends Controller
 
     public function teacherEntry(int $class, int $subject, int $student, Request $request, TeacherResultsWorkspace $workspace): View
     {
-        abort_unless($workspace->isTeacherWorkspace($request->user()), 403);
+        abort_unless(app(ResultTeachingAssignments::class)->hasAssignments($request->user()), 403);
 
         return view('results.teacher.entry', $workspace->entry($request->user(), $class, $subject, $student));
     }
 
     public function teacherSave(int $class, int $subject, int $student, Request $request, TeacherResultsWorkspace $workspace, ResultWorkflow $workflow): RedirectResponse
     {
-        abort_unless($workspace->isTeacherWorkspace($request->user()), 403);
+        abort_unless(app(ResultTeachingAssignments::class)->hasAssignments($request->user()), 403);
         $context = $workspace->entry($request->user(), $class, $subject, $student);
         if (! $context['term']) {
             return redirect()->route('results.teacher.entry', [$class, $subject, $student])
@@ -196,7 +196,7 @@ class ResultWorkflowController extends Controller
 
     public function teacherSubmit(int $class, int $subject, int $student, Request $request, TeacherResultsWorkspace $workspace, ResultWorkflow $workflow): RedirectResponse
     {
-        abort_unless($workspace->isTeacherWorkspace($request->user()), 403);
+        abort_unless(app(ResultTeachingAssignments::class)->hasAssignments($request->user()), 403);
         $context = $workspace->entry($request->user(), $class, $subject, $student);
         if (! $context['term']) {
             return redirect()->route('results.teacher.entry', [$class, $subject, $student])
@@ -226,7 +226,7 @@ class ResultWorkflowController extends Controller
 
     public function teacherClass(int $arm, Request $request, TeacherResultsWorkspace $workspace): View
     {
-        abort_unless($workspace->isTeacherWorkspace($request->user()), 403);
+        abort_unless(app(ResultTeachingAssignments::class)->hasAssignments($request->user()), 403);
 
         return view('results.teacher.class', $workspace->formClass($request->user(), $arm));
     }

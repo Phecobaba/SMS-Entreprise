@@ -169,7 +169,7 @@ class AcademicSetupCrudTest extends TestCase
         $head = User::create(['name' => 'Head', 'email' => 'setup-head@example.test', 'password' => 'long-password-here']);
         $adminRole = Role::create(['name' => 'School Admin']);
         $adminRole->permissions()->attach(collect(['manage_academics', 'view_all_sections'])->map(fn ($name) => Permission::firstOrCreate(['name' => $name])->id));
-        $headRole = Role::create(['name' => 'Principal']);
+        $headRole = Role::create(['name' => 'Head']);
         $headRole->permissions()->attach(collect(['manage_section_levels', 'manage_section_subjects', 'manage_section_arms', 'approve_results'])->map(fn ($name) => Permission::firstOrCreate(['name' => $name])->id));
         $admin->roles()->attach($adminRole);
         $head->roles()->attach($headRole);

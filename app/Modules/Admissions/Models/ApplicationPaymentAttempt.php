@@ -3,8 +3,10 @@
 namespace App\Modules\Admissions\Models;
 
 use App\Modules\Core\Models\Concerns\BelongsToTenant;
+use App\Modules\Payments\Models\Receipt;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ApplicationPaymentAttempt extends Model
 {
@@ -20,5 +22,10 @@ class ApplicationPaymentAttempt extends Model
     public function application(): BelongsTo
     {
         return $this->belongsTo(Application::class);
+    }
+
+    public function receipt(): HasOne
+    {
+        return $this->hasOne(Receipt::class);
     }
 }

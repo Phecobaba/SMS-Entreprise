@@ -22,6 +22,11 @@ class DashboardController extends Controller
         $sections = collect();
         $selectedSection = null;
         $selectedSectionId = null;
+        $headSection = null;
+        $headSectionIds = app(SectionAccess::class)->sectionIds($request->user());
+        if ($headSectionIds !== []) {
+            $headSection = Section::whereIn('id', $headSectionIds)->orderBy('name')->first();
+        }
         if ($staffKind === 'admin') {
             $sections = Section::orderBy('name')->limit(100)->get();
             $selectedSectionId = $this->selectedAdminSection($request, $sections, app(SectionAccess::class));
@@ -43,11 +48,17 @@ class DashboardController extends Controller
                 $portal,
                 $selectedSectionId,
                 $selectedSection,
+                $headSection,
             );
         if (in_array($data['kind'], ['admin', 'head'], true)) {
             $data['sections'] = $sections;
             $data['selected_section_id'] = $selectedSectionId;
             $data['show_section_switcher'] = $data['kind'] === 'admin' && $sections->count() > 1;
+        }
+        if ($data['kind'] === 'staff_composed' && isset($data['blocks']['admin'])) {
+            $data['blocks']['admin']['sections'] = $sections;
+            $data['blocks']['admin']['selected_section_id'] = $selectedSectionId;
+            $data['blocks']['admin']['show_section_switcher'] = $sections->count() > 1;
         }
         if ($portal && $portal['kind'] === 'parent' && $portal['student_id']) {
             $data['wards'] = $portal['wards'];

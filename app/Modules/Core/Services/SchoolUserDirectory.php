@@ -9,7 +9,7 @@ use Illuminate\Support\Collection;
 
 class SchoolUserDirectory
 {
-    public const STAFF_ROLE_NAMES = ['School Admin', 'Principal', 'Bursar', 'Teacher'];
+    public const STAFF_ROLE_NAMES = ['School Admin', 'Head', 'Bursar', 'Teacher'];
 
     public const PORTAL_ROLE_NAMES = ['Student', 'Parent', 'Candidate'];
 
@@ -29,6 +29,19 @@ class SchoolUserDirectory
     public function activeOptions()
     {
         return User::where('status', 'active')->orderBy('name')->get(['id', 'name', 'email']);
+    }
+
+    public function activeStaffOptions(): Collection
+    {
+        return $this->scopeStaffAccounts(User::where('status', User::STATUS_ACTIVE))
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+    }
+
+    public function activeStaffAccount(int $userId): User
+    {
+        return $this->scopeStaffAccounts(User::where('status', User::STATUS_ACTIVE))
+            ->findOrFail($userId);
     }
 
     public function searchStaff(string $term): Collection

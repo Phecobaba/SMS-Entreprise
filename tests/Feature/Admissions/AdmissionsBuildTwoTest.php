@@ -181,13 +181,13 @@ class AdmissionsBuildTwoTest extends TestCase
         }
         $adminRole = Role::create(['name' => 'School Admin']);
         $adminRole->permissions()->sync(Permission::whereIn('name', ['manage_admissions', 'manage_exam_sessions', 'view_all_sections', 'manage_school_profile'])->pluck('id'));
-        $headRole = Role::create(['name' => 'Principal']);
+        $headRole = Role::create(['name' => 'Head']);
         $headRole->permissions()->sync([Permission::where('name', 'manage_exam_sessions')->value('id')]);
         $admin = User::create(['name' => 'Admin', 'username' => 'admin.one', 'password' => 'password']);
         $admin->roles()->attach($adminRole);
         $head = User::create(['name' => 'Head', 'username' => 'head.one', 'password' => 'password']);
         $head->roles()->attach($headRole);
-        $head->sections()->attach($primary, ['school_id' => $school->id]);
+        $head->headSections()->attach($primary, ['school_id' => $school->id]);
         $session = ExamSession::create(['name' => 'Entrance day', 'starts_at' => now(), 'venue_note' => 'Main hall', 'is_in_person' => true, 'section_id' => $primary->id, 'created_by' => $admin->id]);
 
         return compact('school', 'primary', 'secondary', 'primaryLevel', 'earlyLevel', 'secondaryLevel', 'admin', 'head', 'session');

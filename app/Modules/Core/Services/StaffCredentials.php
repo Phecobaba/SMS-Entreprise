@@ -3,6 +3,7 @@
 namespace App\Modules\Core\Services;
 
 use App\Modules\Academics\Models\Section;
+use App\Modules\Academics\Services\HeadAssignments;
 use App\Modules\Core\Models\Role;
 use App\Modules\Core\Models\User;
 use App\Modules\Notifications\Services\InAppNotifications;
@@ -18,6 +19,9 @@ class StaffCredentials
     {
         $role = Role::findOrFail((int) $data['role_id']);
         app(RoleAuthority::class)->assertMayAssign($actor, $role);
+        if ($role->name === 'Head') {
+            throw ValidationException::withMessages(['role_id' => 'Head is granted by a Head of assignment.']);
+        }
         $username = app(UsernameRules::class)->validateAvailable((string) $data['username']);
         $sectionIds = $this->validatedSections($role, $data['section_ids'] ?? []);
         $temporaryPassword = $this->temporaryPassword();
@@ -78,30 +82,42 @@ class StaffCredentials
         return ['user' => $target->load(['roles', 'sections']), 'temporary_password' => $temporaryPassword];
     }
 
-    public function changeAccess(User $target, Role $role, array $sectionIds, User $actor): User
+    public function changeAccess(User $target, Role $role, array $sectionIds, ?array $headSectionIds, User $actor): User
     {
         if ($target->is($actor)) {
             throw ValidationException::withMessages(['account' => 'Use your Account page for your own account.']);
         }
         app(RoleAuthority::class)->assertMayManage($actor, $target);
         app(RoleAuthority::class)->assertMayAssign($actor, $role, "You can't give a role above your own.");
+        if ($role->name === 'Head') {
+            throw ValidationException::withMessages(['role_id' => 'Head is granted by a Head of assignment.']);
+        }
         app(LastActiveAdminGuard::class)->assertCanLoseAdminRole($target, $role->name);
         $sectionIds = $this->validatedSections($role, $sectionIds);
 
-        return DB::transaction(function () use ($target, $role, $sectionIds, $actor): User {
-            $beforeRole = app(RoleAuthority::class)->primaryRole($target)?->name;
-            $rankedRoleIds = Role::whereIn('name', ['School Admin', 'Principal', 'Bursar', 'Teacher'])->pluck('id');
-            $target->roles()->detach($rankedRoleIds);
+        return DB::transaction(function () use ($target, $role, $sectionIds, $headSectionIds, $actor): User {
+            $beforeBase = app(RoleAuthority::class)->primaryBaseRole($target);
+            if ($beforeBase && ! $beforeBase->is($role)) {
+                $target->roles()->detach($beforeBase->id);
+            }
             $target->roles()->syncWithoutDetaching([$role->id => ['school_id' => $target->school_id]]);
-            $target->sections()->syncWithPivotValues($sectionIds, ['school_id' => $target->school_id]);
+            if ($headSectionIds !== null) {
+                app(HeadAssignments::class)->syncUser($target, $headSectionIds, $actor);
+            }
+            $effectiveHeadIds = $headSectionIds ?? $target->headSections()->pluck('sections.id')->all();
+            $membershipIds = collect($sectionIds)->merge($effectiveHeadIds)->map(fn ($id): int => (int) $id)->unique()->values()->all();
+            $target->sections()->syncWithPivotValues($membershipIds, ['school_id' => $target->school_id]);
             app(AuditRecorder::class)->record($actor, 'staff_access_changed', $target, [
-                'before_role' => $beforeRole,
+                'before_role' => $beforeBase?->name,
                 'after_role' => $role->name,
-                'section_ids' => $sectionIds,
+                'work_section_ids' => $sectionIds,
+                'head_section_ids' => array_values(array_map('intval', $effectiveHeadIds)),
             ]);
-            app(SessionRevoker::class)->all($target);
+            if (! $beforeBase?->is($role)) {
+                app(SessionRevoker::class)->all($target);
+            }
 
-            return $target->load(['roles.permissions', 'sections']);
+            return $target->load(['roles.permissions', 'sections', 'headSections']);
         });
     }
 
@@ -111,9 +127,6 @@ class StaffCredentials
         $count = Section::whereIn('id', $sectionIds)->count();
         if ($count !== count($sectionIds)) {
             throw ValidationException::withMessages(['section_ids' => 'Choose Sections from this school only.']);
-        }
-        if ($role->name === 'Principal' && count($sectionIds) !== 1) {
-            throw ValidationException::withMessages(['section_ids' => 'A Head must have exactly one Section.']);
         }
         if ($role->name === 'Teacher' && count($sectionIds) < 1) {
             throw ValidationException::withMessages(['section_ids' => 'A Teacher must have at least one Section.']);

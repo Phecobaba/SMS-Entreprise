@@ -41,9 +41,12 @@ class FormTeacherAssignments
     public function assertMayMark(ClassArm $arm, User $actor): void
     {
         Gate::forUser($actor)->authorize('mark_attendance');
+        if ($arm->form_teacher_user_id === $actor->id) {
+            return;
+        }
         if (Gate::forUser($actor)->allows('manage_attendance')) {
             app(SectionAccess::class)->assertClassArm($actor, $arm->id);
-        } elseif ($arm->form_teacher_user_id !== $actor->id) {
+        } else {
             throw ValidationException::withMessages(['class_arm_id' => 'You are not this class arm’s form teacher.']);
         }
     }

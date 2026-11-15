@@ -17,12 +17,12 @@ class DemoPrincipalSectionSeeder extends Seeder
         School::findOrFail($schoolId);
         app(TenantContext::class)->set($schoolId);
 
-        $principal = User::where('name', 'Demo Principal')->firstOrFail();
+        $principal = User::whereIn('name', ['Demo Head', 'Demo Principal'])->firstOrFail();
         $section = Section::firstOrCreate(
             ['name' => 'Secondary School'],
             ['head_title' => 'Principal'],
         );
-        $principal->sections()->syncWithoutDetaching([
+        $principal->headSections()->syncWithoutDetaching([
             $section->id => ['school_id' => $schoolId],
         ]);
 

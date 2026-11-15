@@ -163,7 +163,7 @@ class ParentDirectoryTest extends TestCase
         app(TenantContext::class)->set($school->id);
         app(DefaultRoleCatalog::class)->provision();
         $admin = $this->user('Directory Admin', 'School Admin');
-        $head = $this->user('Primary Head', 'Principal');
+        $head = $this->user('Primary Head', 'Head');
         $bursar = $this->user('School Bursar', 'Bursar');
         $teacher = $this->user('Class Teacher', 'Teacher');
 

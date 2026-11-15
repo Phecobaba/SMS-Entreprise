@@ -16,7 +16,7 @@
                 <div class="oak-field"><label for="section-name">Section name</label><input id="section-name" name="name" required maxlength="100" placeholder="e.g. Primary School"></div>
                 <div class="oak-field"><label for="section-title">Head title</label><input id="section-title" name="head_title" required maxlength="100" placeholder="e.g. Head Teacher"></div>
                 <div class="oak-field"><label for="section-learner-term">Learners are called</label><select id="section-learner-term" name="learner_term" required><option value="Pupil">Pupil</option><option value="Student" selected>Student</option></select></div>
-                <div class="oak-field ad-wide"><label for="section-head">Head</label><select id="section-head" name="head_user_id"><option value="">Not assigned yet</option>@foreach($headOptions as $head)<option value="{{ $head->id }}">{{ $head->name }}</option>@endforeach</select><small>Only users with result-approval permission are listed.</small></div>
+                @include('academics._head-picker', ['pickerId' => 'section-head', 'selectedHeadId' => old('head_user_id'), 'emptyLabel' => 'Not assigned yet', 'wide' => true])
                 <div class="ad-wide"><button class="oak-btn oak-btn-primary">Add section</button></div>
             </form>
         </section>
@@ -31,7 +31,7 @@
                             <div class="oak-field"><label>Name</label><input name="name" required maxlength="100" value="{{ $section->name }}"></div>
                             <div class="oak-field"><label>Head title</label><input name="head_title" required maxlength="100" value="{{ $section->head_title }}"><small>Used for the section head's comment on report cards.</small></div>
                             <div class="oak-field"><label>Learners are called</label><select name="learner_term" required><option value="Pupil" @selected($section->learner_term === 'Pupil')>Pupil</option><option value="Student" @selected($section->learner_term === 'Student')>Student</option></select></div>
-                            <div class="oak-field"><label>Head</label><select name="head_user_id"><option value="">Not assigned</option>@foreach($headOptions as $head)<option value="{{ $head->id }}" @selected($section->heads->contains($head))>{{ $head->name }}</option>@endforeach</select></div>
+                            @include('academics._head-picker', ['pickerId' => 'section-head-'.$section->id, 'selectedHeadId' => old('head_user_id', $section->heads->first()?->id)])
                             <div class="ad-wide"><button class="oak-btn oak-btn-primary">Save section</button></div>
                         </form>
                     </details>
@@ -49,7 +49,7 @@
         <div class="ad-bar"><button class="oak-btn oak-btn-primary" type="button" data-open-sheet="add-section-sheet">Add section</button></div>
         <x-oak.sheet id="add-section-sheet" labelledby="add-section-title"><div class="oak-sheet"><h2 id="add-section-title">Add a section</h2><form method="post" action="{{ route('academics.sections.store') }}" class="ad-form-grid">@csrf
             <div class="oak-field"><label>Name</label><input name="name" required maxlength="100"></div><div class="oak-field"><label>Head title</label><input name="head_title" required maxlength="100"></div><div class="oak-field"><label>Learners are called</label><select name="learner_term" required><option value="Pupil">Pupil</option><option value="Student" selected>Student</option></select></div>
-            <div class="oak-field ad-wide"><label>Head</label><select name="head_user_id"><option value="">Not assigned</option>@foreach($headOptions as $head)<option value="{{ $head->id }}">{{ $head->name }}</option>@endforeach</select></div>
+            @include('academics._head-picker', ['pickerId' => 'new-section-head', 'selectedHeadId' => old('head_user_id'), 'wide' => true])
             <div class="oak-sheet-actions ad-wide"><button type="button" class="oak-btn oak-btn-quiet" data-close-sheet>Cancel</button><button class="oak-btn oak-btn-primary">Add section</button></div>
         </form></div></x-oak.sheet>
     @endif

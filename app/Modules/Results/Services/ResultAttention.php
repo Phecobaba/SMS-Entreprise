@@ -2,6 +2,7 @@
 
 namespace App\Modules\Results\Services;
 
+use App\Modules\Academics\Services\ResultTeachingAssignments;
 use App\Modules\Core\Models\User;
 use App\Modules\Results\Models\Result;
 
@@ -17,15 +18,22 @@ class ResultAttention
             return $this->cache[$actor->id];
         }
 
-        if ($actor->can('approve_results')) {
-            return $this->cache[$actor->id] = $this->submitted($actor);
+        $submitted = $actor->can('approve_results') ? $this->submitted($actor) : null;
+        $rejected = app(ResultTeachingAssignments::class)->hasAssignments($actor)
+            ? $this->rejected($actor)
+            : null;
+
+        if ($submitted && $rejected) {
+            $count = $submitted['count'] + $rejected['count'];
+
+            return $this->cache[$actor->id] = [
+                'count' => $count,
+                'url' => route('results.index', absolute: false),
+                'text' => $count.' '.str('result')->plural($count).' need your attention',
+            ];
         }
 
-        if ($actor->can('enter_results')) {
-            return $this->cache[$actor->id] = $this->rejected($actor);
-        }
-
-        return $this->cache[$actor->id] = null;
+        return $this->cache[$actor->id] = $submitted ?? $rejected;
     }
 
     /** @return array{count: int, url: string, text: string}|null */
@@ -37,6 +45,7 @@ class ResultAttention
                 'classArm.schoolClass.level.section.heads',
                 fn ($heads) => $heads->whereKey($actor->id),
             );
+            $query->where(fn ($results) => $results->whereNull('submitted_by')->orWhere('submitted_by', '!=', $actor->id));
         }
 
         $count = $query->count();

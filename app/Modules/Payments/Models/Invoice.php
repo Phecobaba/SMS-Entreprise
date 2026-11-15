@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class Invoice extends Model
 {
@@ -55,6 +56,11 @@ class Invoice extends Model
     public function payment(): HasOne
     {
         return $this->hasOne(Payment::class);
+    }
+
+    public function receipt(): HasOneThrough
+    {
+        return $this->hasOneThrough(Receipt::class, Payment::class, 'invoice_id', 'payment_id');
     }
 
     public function attempts(): HasMany

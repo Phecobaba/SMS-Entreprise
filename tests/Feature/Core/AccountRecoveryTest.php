@@ -440,7 +440,7 @@ class AccountRecoveryTest extends TestCase
             'admin' => ['Recovery Admin', 'admin-recovery@example.test', 'admin-recovery', 'School Admin'],
             'otherAdmin' => ['Other Admin', 'other-admin@example.test', 'other-admin', 'School Admin'],
             'teacher' => ['Recovery Teacher', 'teacher-recovery@example.test', 'teacher-recovery', 'Teacher'],
-            'principal' => ['Recovery Principal', 'principal-recovery@example.test', 'principal-recovery', 'Principal'],
+            'principal' => ['Recovery Head', 'principal-recovery@example.test', 'principal-recovery', 'Head'],
             'bursar' => ['Recovery Bursar', 'bursar-recovery@example.test', 'bursar-recovery', 'Bursar'],
             'student' => ['Recovery Student', 'student-recovery@example.test', 'student-recovery', 'Student'],
             'parent' => ['Recovery Parent', 'parent-recovery@example.test', 'parent-recovery', 'Parent'],

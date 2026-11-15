@@ -53,8 +53,18 @@ class User extends Authenticatable
     public function sections(): BelongsToMany
     {
         return $this->belongsToMany(Section::class, 'section_user')
-            ->withPivot('school_id')
+            ->withPivot('school_id', 'is_head')
             ->wherePivot('school_id', app(TenantContext::class)->id())
+            ->withTimestamps();
+    }
+
+    public function headSections(): BelongsToMany
+    {
+        return $this->belongsToMany(Section::class, 'section_user')
+            ->withPivot('school_id', 'is_head')
+            ->withPivotValue('is_head', true)
+            ->wherePivot('school_id', app(TenantContext::class)->id())
+            ->wherePivot('is_head', true)
             ->withTimestamps();
     }
 

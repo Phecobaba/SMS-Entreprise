@@ -2,7 +2,6 @@
 
 namespace App\Modules\Core\Services;
 
-use App\Modules\Academics\Services\FormTeacherAssignments;
 use App\Modules\Admissions\Models\Student;
 use App\Modules\Admissions\Services\AdmissionPipeline;
 use App\Modules\Core\Models\User;
@@ -12,6 +11,8 @@ use Illuminate\Support\Facades\Route;
 class AppNavigation
 {
     private array $itemsByUser = [];
+
+    private array $staffFlagsByUser = [];
 
     public function staffKind(User $user): ?string
     {
@@ -24,7 +25,7 @@ class AppNavigation
             || $user->can('manage_section_result_settings') || $user->can('manage_exam_sessions')) {
             return 'head';
         }
-        if ($user->can('mark_attendance') && $user->can('enter_results')) {
+        if ($this->hasTeaching($user)) {
             return 'teacher';
         }
         if ($user->can('manage_payments')) {
@@ -52,19 +53,61 @@ class AppNavigation
             }
         }
 
-        $items = match ($kind) {
-            'admin' => $this->adminItems($user),
-            'head' => $this->headItems($user),
-            'bursar' => $this->bursarItems($user),
-            'teacher' => $this->teacherItems($user),
-            default => $this->generalItems($user),
-        };
+        $groups = $this->staffGroups($user);
+        if ($groups !== []) {
+            $items = [$this->item('Dashboard', 'dashboard')];
+            foreach (['teaching', 'head', 'admin'] as $group) {
+                if (! in_array($group, $groups, true)) {
+                    continue;
+                }
+                $roleItems = match ($group) {
+                    'teaching' => $this->teacherItems($user),
+                    'head' => $this->headItems($user),
+                    'admin' => $this->adminItems($user),
+                };
+                foreach ($roleItems as $item) {
+                    if ($item['label'] === 'Dashboard') {
+                        continue;
+                    }
+                    $item['group'] = match ($group) {
+                        'teaching' => 'Teaching',
+                        'head' => 'Head',
+                        'admin' => 'Admin',
+                    };
+                    if ($item['label'] === 'Results') {
+                        $item['url'] = route('results.index', ['workspace' => $group === 'teaching' ? 'teaching' : 'review']);
+                    }
+                    $items[] = $item;
+                }
+            }
+        } else {
+            $items = match ($kind) {
+                'bursar' => $this->bursarItems($user),
+                default => $this->generalItems($user),
+            };
+        }
 
         if (Route::has('notifications.index')) {
             $items[] = $this->item('Notifications', 'notifications.index');
         }
 
         return $this->itemsByUser[$user->id] = $items;
+    }
+
+    public function staffGroups(User $user): array
+    {
+        $groups = [];
+        if ($this->hasTeaching($user)) {
+            $groups[] = 'teaching';
+        }
+        if ($this->hasHeadScope($user)) {
+            $groups[] = 'head';
+        }
+        if ($user->can('view_all_sections')) {
+            $groups[] = 'admin';
+        }
+
+        return $groups;
     }
 
     public function mobileLabels(User $user): array
@@ -105,6 +148,7 @@ class AppNavigation
             ['Payments', 'payments.index', 'manage_payments', 'Administration', [
                 ['Record payment', 'payments.record.index', 'manage_payments'],
                 ['Awaiting approval', 'payments.approvals.index', 'manage_payments'],
+                ['Receipts', 'payments.receipts.index', 'manage_payments'],
                 ['Fee schedule', 'fees.schedule.index', 'manage_fee_schedule'],
                 ['Generate invoices', 'fees.generate.index', 'manage_fee_schedule'],
                 ['Not invoiced', 'fees.not-invoiced.index', 'manage_fee_schedule'],
@@ -153,6 +197,7 @@ class AppNavigation
             ['Payments', 'payments.index', 'manage_payments', null],
             ['Record payment', 'payments.record.index', 'manage_payments', null],
             ['Awaiting approval', 'payments.approvals.index', 'manage_payments', null],
+            ['Receipts', 'payments.receipts.index', 'manage_payments', null],
             ['Fee schedule', 'fees.schedule.index', 'manage_fee_schedule', null],
             ['Generate invoices', 'fees.generate.index', 'manage_fee_schedule', null],
             ['Not invoiced', 'fees.not-invoiced.index', 'manage_fee_schedule', null],
@@ -170,13 +215,46 @@ class AppNavigation
             ['Assignments', 'assignments.index', 'mark_assignments', null],
             ['E-Notes', 'enotes.index', 'upload_enotes', null],
         ];
-        if ($user->can('manage_attendance') || app(FormTeacherAssignments::class)->dashboardArms($user)->isNotEmpty()) {
+        if ($user->can('manage_attendance') || $this->staffFlags($user)['form_teacher']) {
             array_splice($definitions, 1, 0, [[
                 'Attendance', 'attendance.index', 'mark_attendance', null,
             ]]);
         }
 
         return $this->allowed($user, $definitions);
+    }
+
+    private function hasTeaching(User $user): bool
+    {
+        if (! $user->can('view_dashboard')) {
+            return false;
+        }
+
+        $flags = $this->staffFlags($user);
+
+        return $flags['teaching'];
+    }
+
+    private function hasHeadScope(User $user): bool
+    {
+        return $this->staffFlags($user)['head'];
+    }
+
+    private function staffFlags(User $user): array
+    {
+        if (isset($this->staffFlagsByUser[$user->id])) {
+            return $this->staffFlagsByUser[$user->id];
+        }
+
+        $flags = User::query()->whereKey($user->id)
+            ->withExists(['teacherSubjectAssignments', 'formTeacherArms', 'sections'])
+            ->firstOrFail();
+
+        return $this->staffFlagsByUser[$user->id] = [
+            'teaching' => (bool) ($flags->teacher_subject_assignments_exists || $flags->form_teacher_arms_exists),
+            'form_teacher' => (bool) $flags->form_teacher_arms_exists,
+            'head' => (bool) $flags->sections_exists,
+        ];
     }
 
     private function generalItems(User $user): array

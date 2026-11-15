@@ -45,7 +45,7 @@
   A new request marks older unused rows used. Links expire after the configured
   60 minutes and are single-use. Laravel's stock email-keyed
   `password_reset_tokens` table remains unused because it is not tenant-safe.
-- **roles** — id, school_id, name (e.g. Admin, Principal, Teacher, Bursar,
+- **roles** — id, school_id, name (e.g. School Admin, Head, Teacher, Bursar,
   Parent, Student, Candidate)
 - **permissions** — id, name (e.g. `approve_result`, `confirm_payment`,
   `view_staff_salary`, `view_all_sections`, `manage_section_subjects`,
@@ -64,7 +64,7 @@
   holding more than one role; both records must belong to the same school)
 - **Default role catalog** — `DefaultRoleCatalog` is the single source used
   by real-school bootstrap, demo seeding and the additive existing-role
-  migration. It creates School Admin, Principal, Teacher, Bursar, Student and
+  migration. It creates School Admin, Head, Teacher, Bursar, Student and
   Parent roles. Defaults are:
   - School Admin: `view_dashboard`, full Academics/profile/Admissions/Results/
     CBT/Attendance/Assignments/E-Notes/Payments/Staff permissions,
@@ -72,7 +72,7 @@
     `manage_staff_access`, `view_sign_in_rules`, `view_activity_log`, all four Student-management
     permissions, `change_registration_numbers`, `view_parents`,
     `view_all_parents`, `manage_parent_accounts` and `manage_exam_sessions`.
-  - Principal: `view_dashboard`, `approve_results`,
+  - Head: `view_dashboard`, `approve_results`,
     `add_principal_comment`, `manage_attendance`,
     `view_attendance_alerts`, `manage_section_classes`,
     `manage_section_levels`, `manage_section_arms`,
@@ -89,7 +89,7 @@
     their tenant-scoped Student or Parent/ward profile.
   The migration only adds missing defaults to roles that already exist and
   never removes school-managed grants. Staff-account assignment uses the rank
-  School Admin > Principal (Head) > Bursar > Teacher; only School Admin receives
+  School Admin > Head > Bursar > Teacher; only School Admin receives
   the three staff-account permissions by default.
 - **audit_logs** — id, school_id, user_id, actor_name (nullable snapshot),
   actor_role (nullable snapshot), module (nullable), action, description
@@ -119,14 +119,18 @@
   letters/numbers used by the composable pupil-number format); tenant-owned and name
   unique within a school. Head assignment scopes what a user may see; it
   does not create a section-specific role.
-- **section_user** — id, school_id, section_id, user_id; tenant-scoped
-  many-to-many assignment of people to Sections, unique per Section/User
-  pair. The current UI shows one head, while the data model permits a future
-  vice principal without a schema change. For teacher pickers this direct link,
+- **section_user** — id, school_id, section_id, user_id, `is_head` (boolean,
+  default false); tenant-scoped many-to-many assignment of people to Sections,
+  unique per Section/User pair. Every row is a “works in” membership; only rows
+  with `is_head = true` grant Head scope. Assigning Head scope adds the shared
+  Head role without removing existing roles; removal drops Head only when the
+  user heads no other Section. One shared service keeps the role and scope in
+  sync and audits both Staff access and Academics Section assignment. For
+  teacher pickers this direct link,
   a subject-teacher assignment in the Section, or a form-teacher arm in the
   Section marks the teacher as belonging to that Section.
-  Staff-account rules assign exactly one Section to a Principal/Head, one or
-  more Sections to a Teacher, and none to a School Admin or Bursar.
+  Staff access lists ordinary “Works in” membership separately from “Head of”
+  scope. Its base-role selector never offers or removes Head.
 - **departments** — id, school_id, name (e.g. Science, Arts); optional
   school-defined Class tag catalog, unique within a school. If empty, no
   Department field, filter, or label is shown.
@@ -162,9 +166,9 @@
 - **class_arms** — id, school_id, class_id, name (e.g. "A", "B"),
   form_teacher_user_id (nullable; current form teacher); name unique
   within a class. A form-teacher candidate is an active User who holds
-  `mark_attendance` and belongs to the arm's Section by the shared teacher-
-  Section rule. A Head sees only their Section's candidates; Admin sees those
-  candidates first and then other active attendance teachers. Users with
+  a staff role and belongs to the arm's Section by the shared teacher-
+  Section rule. A Head sees only their Section's active staff candidates; Admin
+  sees those candidates first and then other active staff accounts. Users with
   `manage_attendance` assign within their Section scope; assigning a replacement overwrites this current pointer and
   writes the previous/new User IDs to `audit_logs`. Historical attendance
   still records `marked_by`.
@@ -184,9 +188,11 @@
   subject_id (which teacher may enter a class's subject results); unique
   teacher/class/subject combination, linked to `class_subjects`. Assignments
   persist across Terms. The current management UI presents one Teacher per
-  Class/Subject pair. Candidates must be active, hold a teaching permission,
-  and, for a Head, belong to that Section; Admin may choose an active qualified
-  teacher from the Other teachers group. Removing or replacing an assignment
+  Class/Subject pair. Candidates must be active staff accounts and, for a Head,
+  belong to that Section; Admin may choose any active staff account from the
+  Other teachers group. An assigned Admin or Head receives score-entry ability
+  only for that exact Class/Subject pair; the assignment does not widen their
+  administrative Section scope. Removing or replacing an assignment
   deletes only this authorization row and never a historical Result. Each
   change records actor, Class, Subject, previous teacher and new teacher in
   `audit_logs`.
@@ -421,8 +427,8 @@ live progress is class-wide (all Arms), Active pupils only, and Section-scoped.
 Release is controlled
 directly by Immediate/Scheduled/Manual policy with no approval step. An exam can
 be deleted only while Draft and only when it has no submissions. The
-`view_cbt_results` permission is granted by default to School Admin, Principal
-and Teacher: Admin sees school-wide results, Principal sees assigned Sections,
+`view_cbt_results` permission is granted by default to School Admin, Head
+and Teacher: Admin sees school-wide results, Head sees assigned Sections,
 and Teacher sees only closed exams for persistent class/subject teaching pairs.
 For student exams, live progress uses the latest numbered attempt and derives
 Absent only when the exam counts as closed and the pupil has no attempt. Score
@@ -493,7 +499,9 @@ progress. Per-question review remains tied to the exact attempt id.
   result_template_id (snapshots class/template for this term), status
   (Draft, Submitted, Approved, Rejected), submitted_by, approved_by,
   rejection_reason, total_score, percentage, grade, remark, locked_at;
-  Approved is the locked state
+  Approved is the locked state. A Head cannot approve or reject a Result whose
+  `submitted_by` is their own User id; an Admin may approve their own submission
+  and the generic audit metadata records `own_submission: true`.
 - **result_items** — id, school_id, result_id, assessment_component_id,
   score (the individual CA1/CA2/Exam/etc. entries that sum to the result
   total)
@@ -648,10 +656,19 @@ plus the `result_cards` comment/metadata row, and rendered as a PDF:
 - **payments** — id, school_id, invoice_id (unique: no double settlement),
   amount_kobo (unsigned bigint integer kobo), method (Online/Manual), gateway_reference (nullable,
   unique), confirmed_by (nullable for verified gateway), paid_at,
-  receipt_number (nullable column, unique per school, generated on
-  confirmation), created_at, updated_at. **Receipts are not a separate
-  table:** the Bursar receipt listing is generated from settled `payments`
-  joined to their invoices, using `receipt_number` as the receipt ID.
+  receipt_number (nullable compatibility copy of the issued Receipt number),
+  created_at, updated_at.
+- **receipt_counters** — id, school_id, issue_year, next_number, timestamps;
+  one row per school and calendar year, locked while allocating the
+  `OAK-YYYY-NNNNNN` number.
+- **receipts** — id, school_id, nullable payment_id, application_id and
+  application_payment_attempt_id, number, immutable school name/address/
+  phone/logo snapshot, payer name, child name, class or applied-Level label,
+  JSON paid-item snapshot, amount_kobo, currency, method, nullable gateway
+  reference, nullable tuition balance-after, nullable received-by name,
+  issued_at, emailed_at, mail_failed_at and timestamps. Invoice receipts are
+  unique per Payment; online Application receipts are unique per confirmed
+  attempt and a manually confirmed Application has one manual receipt.
 - **manual_payment_submissions** — id, school_id, invoice_id, bank,
   teller_number (trimmed display value), active_teller_key (nullable normalized
   value), paid_on, amount_kobo, photo_path (nullable private-local path),

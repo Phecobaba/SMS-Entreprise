@@ -33,6 +33,7 @@ use App\Modules\Payments\Http\Controllers\FeeInvoicingController;
 use App\Modules\Payments\Http\Controllers\PaymentController;
 use App\Modules\Payments\Http\Controllers\PaymentGatewayController;
 use App\Modules\Payments\Http\Controllers\PaystackWebhookController;
+use App\Modules\Payments\Http\Controllers\ReceiptController;
 use App\Modules\Portals\Http\Controllers\PortalPageController;
 use App\Modules\Results\Http\Controllers\ResultCardController;
 use App\Modules\Results\Http\Controllers\ResultConfigurationController;
@@ -52,6 +53,7 @@ Route::prefix('apply')->name('applications.')->group(function (): void {
     Route::post('/', [PublicApplicationController::class, 'store'])->middleware('throttle:5,1,application-submit')->name('store');
     Route::get('/status', [PublicApplicationController::class, 'status'])->name('status');
     Route::get('/status/{application}', [PublicApplicationController::class, 'signedStatus'])->middleware(['signed', 'throttle:30,1,application-signed-status'])->name('status.signed');
+    Route::get('/status/{application}/receipt', [ReceiptController::class, 'application'])->middleware('throttle:30,1,application-receipt')->name('receipt');
     Route::post('/continue', [PublicApplicationController::class, 'continue'])->middleware('throttle:5,1,application-continue')->name('continue');
     Route::post('/check', [PublicApplicationController::class, 'check'])->middleware('throttle:2,1,application-check')->name('check');
     Route::get('/return', [PublicApplicationController::class, 'return'])->middleware('throttle:30,1,application-return')->name('return');
@@ -84,6 +86,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/my-invoices/{invoice}/paystack', [PaymentController::class, 'begin'])->name('payments.mine.begin');
     Route::post('/payment-attempts/{attempt}/check', [PaymentController::class, 'check'])->name('payments.attempts.check');
     Route::get('/my-fees', [PortalPageController::class, 'fees'])->name('payments.mine.index');
+    Route::get('/receipts/{receipt}/download', [ReceiptController::class, 'download'])->name('receipts.download');
     Route::get('/my-results', [PortalPageController::class, 'results'])->name('results.mine.index');
     Route::get('/my-attendance', [PortalPageController::class, 'attendance'])->name('attendance.mine');
     Route::get('/my-enotes', [PortalPageController::class, 'enotes'])->name('enotes.mine');
@@ -252,6 +255,9 @@ Route::middleware(['auth', 'can:manage_payments'])->prefix('payments')->name('pa
     Route::post('/invoices/{invoice}/paystack', [PaymentController::class, 'begin'])->name('begin');
     Route::post('/expenses', [PaymentController::class, 'expense'])->name('expenses.store');
     Route::post('/result-access-rule', [PaymentController::class, 'rule'])->name('rule');
+    Route::get('/receipts', [ReceiptController::class, 'index'])->name('receipts.index');
+    Route::get('/receipts/{receipt}', [ReceiptController::class, 'show'])->name('receipts.show');
+    Route::post('/receipts/{receipt}/resend', [ReceiptController::class, 'resend'])->name('receipts.resend');
 });
 
 Route::middleware('auth')->prefix('payments')->name('payments.')->group(function (): void {

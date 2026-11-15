@@ -25,26 +25,29 @@
     @elseif($overview['kind'] === 'bursar')
         @include('core.dashboards.bursar')
     @elseif($overview['kind'] === 'teacher')
-        <div class="oak-dashboard-actions oak-teacher-actions">
-            @if($overview['form_arms']->isNotEmpty() || auth()->user()->can('manage_attendance'))<a class="oak-action oak-action-primary" href="{{ route('attendance.index') }}" wire:navigate><span aria-hidden="true">✓</span>Mark attendance</a>@endif
-            <a class="oak-action oak-action-secondary" href="{{ route('results.index') }}" wire:navigate><span aria-hidden="true">▤</span>Enter scores</a>
+        @include('core.dashboards.teacher')
+    @elseif($overview['kind'] === 'staff_composed')
+        @php
+            $firstBlock = array_key_first($overview['blocks']);
+        @endphp
+        <div class="oak-role-tabs" role="tablist" aria-label="Dashboard view" data-role-tabs data-default-role="{{ $firstBlock }}">
+            @foreach($overview['blocks'] as $role => $block)<button type="button" role="tab" data-role-tab="{{ $role }}" aria-selected="{{ $role === $firstBlock ? 'true' : 'false' }}">{{ $role === 'teaching' ? 'My teaching' : ucfirst($role) }}</button>@endforeach
         </div>
-        <div class="oak-metric-grid oak-metric-grid-three">
-            <div class="oak-metric"><span>{{ $overview['learners_term'] }}</span><strong>{{ $overview['students'] }}</strong></div>
-            <div class="oak-metric"><span>Attendance</span><strong class="oak-metric-success">M {{ ($overview['attendance']['Morning'] ?? null) === null ? '—' : $overview['attendance']['Morning'].'%' }} · A {{ ($overview['attendance']['Afternoon'] ?? null) === null ? '—' : $overview['attendance']['Afternoon'].'%' }}</strong></div>
-            <div class="oak-metric"><span>Pending</span><strong class="oak-metric-accent">{{ $overview['pending'] }}</strong></div>
+        <div data-role-blocks>
+            @foreach($overview['blocks'] as $role => $block)
+                <section class="oak-role-dashboard" data-role-block="{{ $role }}" @if($role !== $firstBlock) data-phone-hidden @endif>
+                    <h2 class="oak-role-dashboard-title">{{ $role === 'teaching' ? 'My teaching' : ucfirst($role) }}</h2>
+                    @php
+                        $composedOverview = $overview;
+                        $overview = $block;
+                    @endphp
+                    @include('core.dashboards.'.($role === 'teaching' ? 'teacher' : $role))
+                    @php
+                        $overview = $composedOverview;
+                    @endphp
+                </section>
+            @endforeach
         </div>
-        <section class="oak-dashboard-section"><h2 class="oak-roster-heading">Your teaching</h2>
-            <div class="oak-two-col">
-                <div><strong>Form arms</strong>@forelse($overview['form_arms'] as $label)<div class="oak-list-row"><span>{{ $label }}</span></div>@empty<p class="oak-empty">No form arm assigned.</p>@endforelse</div>
-                <div><strong>Assigned subjects</strong>@forelse($overview['assigned_pairs'] as $label)<div class="oak-list-row"><span>{{ $label }}</span></div>@empty<p class="oak-empty">No class and subject pair assigned.</p>@endforelse</div>
-            </div>
-        </section>
-        <section class="oak-dashboard-section"><h2 class="oak-roster-heading">Class roster</h2>
-            @if($overview['roster'])<div class="oak-table-scroll"><table class="oak-roster"><thead><tr><th>{{ $overview['learner_term'] }}</th><th>Status</th></tr></thead><tbody>
-                @foreach($overview['roster'] as $row)<tr><td>{{ $row['name'] }}</td><td><span class="oak-status-pill {{ $row['status'] === 'Present' ? 'oak-status-success' : (in_array($row['status'], ['Absent']) ? 'oak-status-danger' : 'oak-status-warning') }}">{{ $row['status'] }}</span></td></tr>@endforeach
-            </tbody></table></div>@else<p class="oak-empty">No {{ strtolower($overview['learners_term']) }} are assigned to your form-teacher class yet.</p>@endif
-        </section>
     @elseif($overview['kind'] === 'student')
         @if($overview['restricted'] ?? false)
             @include('portals._restricted-dashboard')

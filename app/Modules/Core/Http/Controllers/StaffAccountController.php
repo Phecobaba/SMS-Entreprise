@@ -27,7 +27,7 @@ class StaffAccountController extends Controller
     public function create(Request $request, RoleAuthority $roles): View
     {
         return view('core.staff-add', [
-            'roles' => $roles->rolesActorMayAssign($request->user()),
+            'roles' => $roles->baseRolesActorMayAssign($request->user()),
             'sections' => Section::orderBy('name')->get(),
         ]);
     }
@@ -58,13 +58,15 @@ class StaffAccountController extends Controller
 
     public function show(User $user, Request $request, RoleAuthority $roles): View
     {
-        $user->load(['roles', 'sections']);
+        $user->load(['roles', 'sections', 'headSections']);
         $actor = $request->user()->loadMissing('roles');
 
         return view('core.staff-access-show', [
             'account' => $user,
-            'roles' => $roles->rolesActorMayAssign($request->user()),
+            'roles' => $roles->baseRolesActorMayAssign($request->user()),
             'sections' => Section::orderBy('name')->get(),
+            'baseRole' => $roles->primaryBaseRole($user),
+            'canAssignHeads' => $request->user()->can('view_all_sections'),
             'viewOnly' => ! $roles->mayManage($actor, $user),
             'ownAccount' => $user->is($request->user()),
             'staffRecord' => Staff::where('user_id', $user->id)->first(),
@@ -86,11 +88,25 @@ class StaffAccountController extends Controller
             'role_id' => ['required', 'integer'],
             'section_ids' => ['array'],
             'section_ids.*' => ['integer'],
+            'head_section_ids' => ['array'],
+            'head_section_ids.*' => ['integer'],
+            'head_sections_present' => ['nullable', 'boolean'],
         ]);
         $role = Role::findOrFail((int) $data['role_id']);
-        $credentials->changeAccess($user->loadMissing('roles'), $role, $data['section_ids'] ?? [], $request->user()->loadMissing('roles'));
+        $headSectionIds = $request->user()->can('view_all_sections')
+            ? ($request->boolean('head_sections_present')
+                ? ($data['head_section_ids'] ?? [])
+                : $user->headSections()->pluck('sections.id')->all())
+            : null;
+        $credentials->changeAccess(
+            $user->loadMissing(['roles', 'headSections']),
+            $role,
+            $data['section_ids'] ?? [],
+            $headSectionIds,
+            $request->user()->loadMissing('roles'),
+        );
 
-        return redirect()->route('staff.access.show', $user)->with('status', 'Role and Section saved.');
+        return redirect()->route('staff.access.show', $user)->with('status', 'Role and Sections saved.');
     }
 
     public function disable(User $user, Request $request, StaffSignIn $signIn): RedirectResponse

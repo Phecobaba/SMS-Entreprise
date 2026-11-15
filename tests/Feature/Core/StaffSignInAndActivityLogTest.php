@@ -182,7 +182,7 @@ class StaffSignInAndActivityLogTest extends TestCase
         AuditLog::create([
             'user_id' => $fixture['head']->id,
             'actor_name' => 'Filter Person',
-            'actor_role' => 'Principal',
+            'actor_role' => 'Head',
             'module' => 'Academics',
             'action' => 'class_updated',
             'description' => 'Updated JS 1.',
@@ -236,7 +236,7 @@ class StaffSignInAndActivityLogTest extends TestCase
         $permissions = $adminRole->permissions()->pluck('name');
         $this->assertTrue($permissions->contains('view_activity_log'));
         $this->assertTrue($permissions->contains('school_custom_permission'));
-        $this->assertNotContains('view_activity_log', app(DefaultRoleCatalog::class)->definitions()['Principal']);
+        $this->assertNotContains('view_activity_log', app(DefaultRoleCatalog::class)->definitions()['Head']);
     }
 
     private function fixture(): array
@@ -249,7 +249,7 @@ class StaffSignInAndActivityLogTest extends TestCase
         $adminRole = Role::create(['name' => 'School Admin']);
         $adminRole->permissions()->attach($permissions->pluck('id'));
         $teacherRole = Role::create(['name' => 'Teacher']);
-        $headRole = Role::create(['name' => 'Principal']);
+        $headRole = Role::create(['name' => 'Head']);
         $bursarRole = Role::create(['name' => 'Bursar']);
         $admin = $this->user('Admin Actor', 'admin-actor', $adminRole, 'admin-password');
         $target = $this->user('Target Teacher', 'target-teacher', $teacherRole, 'target-password');

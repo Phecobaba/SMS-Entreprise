@@ -52,7 +52,7 @@ class HeadStaffScopeTest extends TestCase
     public function test_head_with_two_sections_sees_the_union_and_search_is_scoped(): void
     {
         $f = $this->fixture();
-        $f['head']->sections()->attach($f['secondary'], ['school_id' => $f['school']->id]);
+        $f['head']->headSections()->attach($f['secondary'], ['school_id' => $f['school']->id]);
 
         $this->actingAs($f['head'])->get(route('head.staff.index'))
             ->assertOk()->assertSee('Direct Staff')->assertSee('Outside Staff');
@@ -125,7 +125,7 @@ class HeadStaffScopeTest extends TestCase
         $viewOnlyRole = Role::create(['name' => 'Section Viewer']);
         $viewOnlyRole->permissions()->attach(Permission::where('name', 'view_section_staff')->firstOrFail());
         $viewer = $this->user('View Only', $viewOnlyRole);
-        $viewer->sections()->attach($f['primary'], ['school_id' => $f['school']->id]);
+        $viewer->headSections()->attach($f['primary'], ['school_id' => $f['school']->id]);
         $this->actingAs($viewer)->post(route('head.staff.discipline.store', $f['direct']), $data)->assertForbidden();
     }
 
@@ -133,7 +133,7 @@ class HeadStaffScopeTest extends TestCase
     {
         $school = School::create(['name' => 'Existing School']);
         app(TenantContext::class)->set($school->id);
-        $principal = Role::create(['name' => 'Principal']);
+        $principal = Role::create(['name' => 'Head']);
         $teacher = Role::create(['name' => 'Teacher']);
         $custom = Permission::firstOrCreate(['name' => 'custom_permission']);
         $principal->permissions()->attach($custom);
@@ -152,7 +152,7 @@ class HeadStaffScopeTest extends TestCase
         config()->set('tenancy.default_school_id', $school->id);
         app(TenantContext::class)->set($school->id);
         $roles = app(DefaultRoleCatalog::class)->provision();
-        $principalRole = $roles['Principal'];
+        $principalRole = $roles['Head'];
         $teacherRole = $roles['Teacher'];
         $bursarRole = $roles['Bursar'];
         $adminRole = $roles['School Admin'];
@@ -162,7 +162,7 @@ class HeadStaffScopeTest extends TestCase
         $admin = $this->user('School Admin', $adminRole);
         $primary = Section::create(['name' => 'Primary School', 'head_title' => 'Head Teacher']);
         $secondary = Section::create(['name' => 'Secondary School', 'head_title' => 'Principal']);
-        $head->sections()->attach($primary, ['school_id' => $school->id]);
+        $head->headSections()->attach($primary, ['school_id' => $school->id]);
         $primaryLevel = AcademicLevel::create(['section_id' => $primary->id, 'name' => 'Primary 4']);
         $secondaryLevel = AcademicLevel::create(['section_id' => $secondary->id, 'name' => 'JS 1']);
         $primaryClass = SchoolClass::create(['academic_level_id' => $primaryLevel->id, 'name' => 'Primary 4']);
@@ -189,7 +189,7 @@ class HeadStaffScopeTest extends TestCase
         $wideUser->sections()->attach($primary, ['school_id' => $school->id]);
         $wideStaff = $this->staff($wideUser, 'Wide viewer');
         $otherHead = $this->user('Other Head', $principalRole);
-        $otherHead->sections()->attach($primary, ['school_id' => $school->id]);
+        $otherHead->headSections()->attach($primary, ['school_id' => $school->id]);
         $otherHeadStaff = $this->staff($otherHead, 'Other head');
         $headStaff = $this->staff($head, 'Head');
         $exitedUser = $this->user('Exited Staff', $teacherRole);

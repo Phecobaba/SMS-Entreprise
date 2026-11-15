@@ -8,7 +8,7 @@ use Illuminate\Validation\ValidationException;
 
 class RoleAuthority
 {
-    private const RANKS = ['Teacher' => 1, 'Bursar' => 2, 'Principal' => 3, 'School Admin' => 4];
+    private const RANKS = ['Teacher' => 1, 'Bursar' => 2, 'Head' => 3, 'School Admin' => 4];
 
     public function rank(string $role): ?int
     {
@@ -33,6 +33,17 @@ class RoleAuthority
 
             return $actorRank !== null && $rank <= $actorRank;
         })->values();
+    }
+
+    public function baseRolesActorMayAssign(User $actor)
+    {
+        return $this->rolesActorMayAssign($actor)->reject(fn (Role $role): bool => $role->name === 'Head')->values();
+    }
+
+    public function primaryBaseRole(User $user): ?Role
+    {
+        return $user->roles->reject(fn (Role $role): bool => $role->name === 'Head')
+            ->sortByDesc(fn (Role $role): int => $this->rank($role->name) ?? 0)->first();
     }
 
     public function assertMayAssign(User $actor, Role $role, string $message = "You can't create an account with a role above your own."): void

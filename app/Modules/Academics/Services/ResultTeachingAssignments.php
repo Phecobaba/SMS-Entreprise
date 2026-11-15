@@ -16,6 +16,8 @@ use Illuminate\Validation\ValidationException;
 
 class ResultTeachingAssignments
 {
+    private array $assignmentPresence = [];
+
     public function dashboardTeacherContexts(User $actor): Collection
     {
         return $this->assignedPairOptions($actor)->pluck('label');
@@ -34,8 +36,7 @@ class ResultTeachingAssignments
 
     public function assertMayEnterClass(User $actor, int $classId): void
     {
-        if (! Gate::forUser($actor)->allows('manage_result_settings')
-            && ! TeacherSubjectAssignment::where('user_id', $actor->id)->where('class_id', $classId)->exists()) {
+        if (! TeacherSubjectAssignment::where('user_id', $actor->id)->where('class_id', $classId)->exists()) {
             throw ValidationException::withMessages(['class_id' => 'You are not assigned to this class.']);
         }
     }
@@ -73,9 +74,13 @@ class ResultTeachingAssignments
     public function mayEnter(User $actor, int $classId, int $subjectId): bool
     {
         return Gate::forUser($actor)->allows('enter_results')
-            && ! Gate::forUser($actor)->allows('view_all_sections')
-            && ! Gate::forUser($actor)->allows('approve_results')
             && TeacherSubjectAssignment::where('user_id', $actor->id)->where('class_id', $classId)->where('subject_id', $subjectId)->exists();
+    }
+
+    public function hasAssignments(User $actor): bool
+    {
+        return $this->assignmentPresence[$actor->id]
+            ??= TeacherSubjectAssignment::where('user_id', $actor->id)->exists();
     }
 
     public function unassignedPairOptions(User $actor): Collection
@@ -168,9 +173,7 @@ class ResultTeachingAssignments
     {
         $arm = ClassArm::findOrFail($armId);
         $query = Subject::whereIn('id', ClassSubject::where('class_id', $arm->class_id)->select('subject_id'));
-        if (! Gate::forUser($actor)->allows('manage_result_settings')) {
-            $query->whereIn('id', TeacherSubjectAssignment::where('user_id', $actor->id)->where('class_id', $arm->class_id)->select('subject_id'));
-        }
+        $query->whereIn('id', TeacherSubjectAssignment::where('user_id', $actor->id)->where('class_id', $arm->class_id)->select('subject_id'));
 
         return $query->orderBy('name')->get()->all();
     }

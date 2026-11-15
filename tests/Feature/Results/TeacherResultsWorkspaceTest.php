@@ -22,6 +22,7 @@ use App\Modules\Results\Models\Result;
 use App\Modules\Results\Models\ResultCard;
 use App\Modules\Results\Models\ResultItem;
 use App\Modules\Results\Models\ResultTemplateComponent;
+use App\Modules\Results\Services\ResultAttention;
 use App\Modules\Results\Services\ResultConfiguration;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -140,7 +141,7 @@ class TeacherResultsWorkspaceTest extends TestCase
         ]);
     }
 
-    public function test_admin_and_head_review_but_cannot_enter_scores_while_rejected_teacher_can_resubmit(): void
+    public function test_admin_and_head_without_assignments_review_but_cannot_enter_scores_while_rejected_teacher_can_resubmit(): void
     {
         $f = $this->fixture();
         $approve = Permission::firstOrCreate(['name' => 'approve_results']);
@@ -149,7 +150,7 @@ class TeacherResultsWorkspaceTest extends TestCase
         $allSections = Permission::firstOrCreate(['name' => 'view_all_sections']);
         $adminRole = Role::create(['name' => 'School Admin']);
         $adminRole->permissions()->attach([$approve->id, $view->id, $manage->id, $allSections->id, Permission::where('name', 'enter_results')->value('id')]);
-        $headRole = Role::create(['name' => 'Principal']);
+        $headRole = Role::create(['name' => 'Head']);
         $headRole->permissions()->attach([$approve->id, $view->id, Permission::where('name', 'enter_results')->value('id')]);
         $admin = User::create(['name' => 'Admin', 'email' => 'review-admin@example.test', 'password' => 'long-password-here', 'status' => 'active']);
         $admin->roles()->attach($adminRole);
@@ -200,6 +201,73 @@ class TeacherResultsWorkspaceTest extends TestCase
         app(TenantContext::class)->set($f['school']->id);
         $this->assertSame('Approved', $result->fresh()->status);
         $this->assertDatabaseHas('audit_logs', ['action' => 'result_approved', 'actor_name' => 'Admin']);
+    }
+
+    public function test_assigned_head_and_admin_enter_only_their_pairs_and_self_approval_rules_are_enforced(): void
+    {
+        $f = $this->fixture();
+        $approve = Permission::firstOrCreate(['name' => 'approve_results']);
+        $allSections = Permission::firstOrCreate(['name' => 'view_all_sections']);
+        $headRole = Role::create(['name' => 'Head']);
+        $headRole->permissions()->attach($approve);
+        $adminRole = Role::create(['name' => 'School Admin']);
+        $adminRole->permissions()->attach([$approve->id, $allSections->id]);
+        $head = User::create(['name' => 'Teaching Head', 'email' => 'teaching-head@example.test', 'password' => 'long-password-here', 'status' => 'active']);
+        $admin = User::create(['name' => 'Teaching Admin', 'email' => 'teaching-admin@example.test', 'password' => 'long-password-here', 'status' => 'active']);
+        $head->roles()->attach($headRole);
+        $admin->roles()->attach($adminRole);
+        $f['section']->heads()->attach($head, ['school_id' => $f['school']->id]);
+
+        TeacherSubjectAssignment::create(['user_id' => $head->id, 'class_id' => $f['classOne']->id, 'subject_id' => $f['english']->id]);
+        $adminSubject = Subject::create(['section_id' => $f['section']->id, 'name' => 'Civic Education']);
+        ClassSubject::create(['class_id' => $f['classTwo']->id, 'subject_id' => $adminSubject->id]);
+        TeacherSubjectAssignment::create(['user_id' => $admin->id, 'class_id' => $f['classTwo']->id, 'subject_id' => $adminSubject->id]);
+
+        Result::create([
+            'student_id' => $f['studentB']->id,
+            'class_arm_id' => $f['armB']->id,
+            'subject_id' => $f['english']->id,
+            'term_id' => $f['term']->id,
+            'result_template_id' => $f['template']->id,
+            'status' => 'Rejected',
+            'submitted_by' => $head->id,
+            'rejection_reason' => 'Correct this result.',
+        ]);
+        Result::create([
+            'student_id' => $f['studentB']->id,
+            'class_arm_id' => $f['armB']->id,
+            'subject_id' => $f['math']->id,
+            'term_id' => $f['term']->id,
+            'result_template_id' => $f['template']->id,
+            'status' => 'Submitted',
+            'submitted_by' => $f['teacher']->id,
+        ]);
+        $attention = app(ResultAttention::class)->for($head);
+        $this->assertSame(2, $attention['count']);
+        $this->assertSame('2 results need your attention', $attention['text']);
+
+        $this->actingAs($head)->get(route('results.teacher.pair', [$f['classOne'], $f['english']]))->assertOk();
+        $this->get(route('results.teacher.pair', [$f['classOne'], $f['math']]))->assertForbidden();
+        $this->post(route('results.teacher.submit', [$f['classOne'], $f['english'], $f['studentA']]), [
+            'scores' => [$f['component']->id => 72],
+        ])->assertRedirect();
+        app(TenantContext::class)->set($f['school']->id);
+        $headResult = Result::where('student_id', $f['studentA']->id)->where('subject_id', $f['english']->id)->firstOrFail();
+        $this->post(route('results.approve', $headResult))->assertSessionHasErrors(['result' => 'You submitted this result. Another Head or an Admin must approve it.']);
+        $this->post(route('results.reject', $headResult), ['rejection_reason' => 'Review it.'])
+            ->assertSessionHasErrors(['result' => 'You submitted this result. Another Head or an Admin must reject it.']);
+
+        $this->actingAs($admin)->get(route('results.teacher.pair', [$f['classTwo'], $adminSubject]))->assertOk();
+        $this->get(route('results.teacher.pair', [$f['classOne'], $f['english']]))->assertForbidden();
+        $this->post(route('results.teacher.submit', [$f['classTwo'], $adminSubject, $f['studentOther']]), [
+            'scores' => [$f['component']->id => 81],
+        ])->assertRedirect();
+        app(TenantContext::class)->set($f['school']->id);
+        $adminResult = Result::where('student_id', $f['studentOther']->id)->where('subject_id', $adminSubject->id)->firstOrFail();
+        $this->post(route('results.approve', $adminResult))->assertRedirect();
+        app(TenantContext::class)->set($f['school']->id);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'result_approved', 'subject_id' => $adminResult->id]);
+        $this->assertTrue((bool) AuditLog::where('action', 'result_approved')->where('subject_id', $adminResult->id)->firstOrFail()->metadata['own_submission']);
     }
 
     public function test_pair_page_exposes_the_csv_template_preview_apply_and_cancel_actions(): void

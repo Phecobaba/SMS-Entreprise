@@ -211,7 +211,7 @@ class ClassStructureTest extends TestCase
         $manageSection = Permission::firstOrCreate(['name' => 'manage_section_classes']);
         $manageAcademics = Permission::firstOrCreate(['name' => 'manage_academics']);
         $viewAll = Permission::firstOrCreate(['name' => 'view_all_sections']);
-        $headRole = Role::create(['name' => 'Principal']);
+        $headRole = Role::create(['name' => 'Head']);
         $headRole->permissions()->attach($manageSection);
         $adminRole = Role::create(['name' => 'School Admin']);
         $adminRole->permissions()->attach([$manageAcademics->id, $viewAll->id]);

@@ -30,7 +30,7 @@ class DefaultRoleCatalog
                 'manage_registration_numbers', 'change_registration_numbers',
                 'view_parents', 'view_all_parents', 'manage_parent_accounts',
             ],
-            'Principal' => [
+            'Head' => [
                 'view_dashboard', 'approve_results', 'add_principal_comment',
                 'manage_attendance', 'view_attendance_alerts',
                 'manage_section_classes', 'manage_section_levels',

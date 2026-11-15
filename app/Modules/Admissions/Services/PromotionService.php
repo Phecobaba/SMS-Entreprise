@@ -16,7 +16,7 @@ class PromotionService
     {
         $catalog = app(PromotionCatalog::class);
         $catalog->assertMayPromote($actor);
-        $catalog->assertEverySectionArranged();
+        $catalog->assertEverySectionArranged($actor);
         $source = $catalog->assertClass($actor, $sourceClassId);
 
         return $this->buildPlan($actor, $source, $sourceArmId, $placements);
@@ -26,7 +26,7 @@ class PromotionService
     {
         $catalog = app(PromotionCatalog::class);
         $catalog->assertMayPromote($actor);
-        $catalog->assertEverySectionArranged();
+        $catalog->assertEverySectionArranged($actor);
         $source = $catalog->assertClass($actor, $sourceClassId);
 
         return DB::transaction(function () use ($actor, $source, $sourceArmId, $placements): array {
@@ -85,7 +85,7 @@ class PromotionService
     {
         $catalog = app(PromotionCatalog::class);
         $catalog->assertMayPromote($actor);
-        $catalog->assertEverySectionArranged();
+        $catalog->assertEverySectionArranged($actor);
 
         return DB::transaction(function () use ($actor, $studentId, $destinationClassId, $destinationArmId, $catalog): Student {
             $student = Student::active()->whereKey($studentId)->lockForUpdate()->firstOrFail();

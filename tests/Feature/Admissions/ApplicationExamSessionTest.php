@@ -155,13 +155,13 @@ class ApplicationExamSessionTest extends TestCase
         }
         $adminRole = Role::create(['name' => 'School Admin']);
         $adminRole->permissions()->sync(Permission::whereIn('name', ['manage_admissions', 'manage_exam_sessions', 'manage_cbt', 'view_all_sections'])->pluck('id'));
-        $headRole = Role::create(['name' => 'Principal']);
+        $headRole = Role::create(['name' => 'Head']);
         $headRole->permissions()->sync([Permission::where('name', 'manage_exam_sessions')->value('id')]);
         $admin = User::create(['name' => 'Admin', 'username' => 'admin.one', 'password' => 'password']);
         $admin->roles()->attach($adminRole);
         $head = User::create(['name' => 'Head', 'username' => 'head.one', 'password' => 'password']);
         $head->roles()->attach($headRole);
-        $head->sections()->attach($primary, ['school_id' => $school->id]);
+        $head->headSections()->attach($primary, ['school_id' => $school->id]);
         $other = User::create(['name' => 'Other', 'username' => 'other.one', 'password' => 'password']);
 
         return compact('school', 'primary', 'secondary', 'primaryLevel', 'secondaryLevel', 'admin', 'head', 'other');

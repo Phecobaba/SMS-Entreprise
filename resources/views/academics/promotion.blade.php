@@ -5,7 +5,6 @@
 @php
     $pageTitle = 'Promotion';
     $actorSection = !$canViewAll ? $sections->first() : null;
-    $ownWaiting = $actorSection && $waiting->contains('id', $actorSection->id);
     $finalStatus = $source && $nextStep->isEmpty() ? app(\App\Modules\Academics\Services\PromotionCatalog::class)->finalStatus($source) : null;
 @endphp
 @include('core._shell-start')
@@ -28,12 +27,12 @@
         <section class="ad-card pr-blocked">
             <x-icon name="lock" />
             <h2>Arrange your classes first</h2>
-            @if($ownWaiting || $canViewAll)
-                <p>Promotion stays locked until every section has a saved class order.</p>
+            @if($canViewAll)
+                @foreach($waiting as $waitingSection)<p>{{ $waitingSection->name }} still needs a saved class order.</p>@endforeach
                 <a class="oak-btn oak-btn-primary" href="{{ route('academics.classes.arrange') }}" wire:navigate>Arrange classes</a>
             @else
                 <p>Waiting for {{ $waiting->pluck('name')->join(', ') }} to be arranged.</p>
-                <a class="oak-btn oak-btn-secondary" href="{{ route('academics.classes.index') }}" wire:navigate>View classes</a>
+                <a class="oak-btn oak-btn-primary" href="{{ route('academics.classes.arrange') }}" wire:navigate>Arrange classes</a>
             @endif
         </section>
     @else

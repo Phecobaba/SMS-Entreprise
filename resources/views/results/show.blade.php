@@ -22,7 +22,19 @@
 </section>
 @can('approve_results')
     @if($result->status === 'Submitted')
-        <section class="mt-6 rounded border p-4"><h2 class="font-semibold">Review</h2><form method="post" action="{{ route('results.approve', $result) }}" class="mt-3">@csrf<button class="oak-btn min-h-11 bg-green-700 px-4 text-white">Approve and lock</button></form><form method="post" action="{{ route('results.reject', $result) }}" class="mt-3 flex flex-wrap gap-2">@csrf<input required name="rejection_reason" placeholder="Reason for correction" class="min-h-11 min-w-0 flex-1 rounded border p-2"><button class="oak-btn oak-btn-secondary min-h-11">Reject</button></form></section>
+        @php($ownHeadSubmission = (int) $result->submitted_by === (int) auth()->id() && ! auth()->user()->can('view_all_sections'))
+        <section class="mt-6 rounded border p-4">
+            <h2 class="font-semibold">Review</h2>
+            @if((int) $result->submitted_by === (int) auth()->id())
+                <p class="mt-2 rounded bg-amber-50 p-3 text-amber-900">You submitted this.</p>
+            @endif
+            @if($ownHeadSubmission)
+                <p class="mt-3 text-sm text-slate-700">Another Head or an Admin must approve or reject it.</p>
+            @else
+                <form method="post" action="{{ route('results.approve', $result) }}" class="mt-3">@csrf<button class="oak-btn min-h-11 bg-green-700 px-4 text-white">Approve and lock</button></form>
+                <form method="post" action="{{ route('results.reject', $result) }}" class="mt-3 flex flex-wrap gap-2">@csrf<input required name="rejection_reason" placeholder="Reason for correction" class="min-h-11 min-w-0 flex-1 rounded border p-2"><button class="oak-btn oak-btn-secondary min-h-11">Reject</button></form>
+            @endif
+        </section>
     @endif
 @endcan
 <section class="mt-7"><h2 class="text-lg font-semibold">Audit trail</h2><ol class="mt-2 space-y-2">@foreach($result->audit as $event)<li class="border-b pb-2">{{ $event->created_at->format('d M Y H:i') }} · {{ $event->action }} · User #{{ $event->user_id }} · {{ $event->note }}</li>@endforeach</ol></section>

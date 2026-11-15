@@ -13,7 +13,7 @@ class HeadStaffScope
     /** @return Collection<int, int> */
     public function sectionIds(User $head): Collection
     {
-        return $head->sections()->orderBy('sections.name')->pluck('sections.id');
+        return $head->headSections()->orderBy('sections.name')->pluck('sections.id');
     }
 
     /** @param Collection<int, int> $sectionIds */

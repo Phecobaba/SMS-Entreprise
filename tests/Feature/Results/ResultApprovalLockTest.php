@@ -48,7 +48,7 @@ class ResultApprovalLockTest extends TestCase
         $principal = User::create(['name' => 'Principal', 'email' => 'principal@example.test', 'password' => 'long-password-here', 'status' => 'active']);
         $learner = User::create(['name' => 'Learner', 'email' => 'learner@example.test', 'password' => 'long-password-here', 'status' => 'active']);
         $entryRole = Role::create(['name' => 'Teacher']);
-        $approvalRole = Role::create(['name' => 'Principal']);
+        $approvalRole = Role::create(['name' => 'Head']);
         $entry = Permission::create(['name' => 'enter_results']);
         $markAttendance = Permission::create(['name' => 'mark_attendance']);
         $approval = Permission::create(['name' => 'approve_results']);

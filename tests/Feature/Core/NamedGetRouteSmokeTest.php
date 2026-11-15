@@ -109,7 +109,7 @@ class NamedGetRouteSmokeTest extends TestCase
         $roles = app(DefaultRoleCatalog::class)->provision();
 
         $users = [];
-        foreach (['School Admin' => 'Admin', 'Principal' => 'Head', 'Teacher' => 'Teacher', 'Bursar' => 'Bursar', 'Student' => 'Student', 'Parent' => 'Parent'] as $role => $label) {
+        foreach (['School Admin' => 'Admin', 'Head' => 'Head', 'Teacher' => 'Teacher', 'Bursar' => 'Bursar', 'Student' => 'Student', 'Parent' => 'Parent'] as $role => $label) {
             $user = User::create([
                 'name' => "{$label} Route Smoke",
                 'email' => strtolower($label).'@route-smoke.test',
@@ -125,6 +125,7 @@ class NamedGetRouteSmokeTest extends TestCase
             'school_id' => $school->id,
             'section_id' => $primary->id,
             'user_id' => $users['Head']->id,
+            'is_head' => true,
         ]);
         $level = AcademicLevel::create(['section_id' => $primary->id, 'name' => 'Primary 1']);
         $class = SchoolClass::create(['academic_level_id' => $level->id, 'name' => 'Primary 1']);

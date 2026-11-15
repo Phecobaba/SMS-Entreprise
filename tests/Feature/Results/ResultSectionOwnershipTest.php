@@ -93,7 +93,7 @@ class ResultSectionOwnershipTest extends TestCase
 
     public function test_principal_catalog_grants_only_section_result_settings(): void
     {
-        $permissions = app(DefaultRoleCatalog::class)->definitions()['Principal'];
+        $permissions = app(DefaultRoleCatalog::class)->definitions()['Head'];
         $this->assertContains('manage_section_result_settings', $permissions);
         $this->assertNotContains('manage_result_settings', $permissions);
     }
@@ -142,7 +142,7 @@ class ResultSectionOwnershipTest extends TestCase
         $admin = User::create(['name' => 'Admin', 'email' => 'result-sections-admin@example.test', 'password' => 'long-password-here', 'status' => 'active']);
         $head = User::create(['name' => 'Head', 'email' => 'result-sections-head@example.test', 'password' => 'long-password-here', 'status' => 'active']);
         $adminRole = Role::create(['name' => 'School Admin']);
-        $headRole = Role::create(['name' => 'Principal']);
+        $headRole = Role::create(['name' => 'Head']);
         foreach (['manage_result_settings', 'view_all_sections'] as $name) {
             $adminRole->permissions()->attach(Permission::firstOrCreate(['name' => $name]));
         }

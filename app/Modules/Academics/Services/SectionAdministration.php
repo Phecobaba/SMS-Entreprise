@@ -8,12 +8,14 @@ use App\Modules\Academics\Models\SchoolClass;
 use App\Modules\Academics\Models\Section;
 use App\Modules\Admissions\Models\Candidate;
 use App\Modules\Core\Models\User;
-use App\Modules\Core\TenantContext;
+use App\Modules\Core\Services\AuditRecorder;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class SectionAdministration
 {
+    public function __construct(private readonly AuditRecorder $audit) {}
+
     public function createSection(string $name, string $headTitle, User $actor, string $learnerTerm = 'Student'): Section
     {
         Gate::forUser($actor)->authorize('view_all_sections');
@@ -23,13 +25,7 @@ class SectionAdministration
 
     public function assignHead(Section $section, ?User $head, User $actor): Section
     {
-        Gate::forUser($actor)->authorize('view_all_sections');
-        if ($head && ! $head->can('approve_results')) {
-            throw ValidationException::withMessages(['head_user_id' => 'Choose a user who has result-approval permission.']);
-        }
-        $section->heads()->sync($head ? [$head->id => ['school_id' => app(TenantContext::class)->id()]] : []);
-
-        return $section->refresh()->load('heads');
+        return app(HeadAssignments::class)->setSectionHead($section, $head, $actor);
     }
 
     public function createDepartment(string $name, User $actor): Department

@@ -216,10 +216,50 @@ const bootResultSectionForms = () => {
     });
 };
 
+const bootHeadPickers = () => {
+    document.querySelectorAll('[data-head-picker]').forEach((picker) => {
+        if (picker.dataset.ready) return;
+        picker.dataset.ready = 'true';
+        const search = picker.querySelector('[data-head-search]');
+        const select = picker.querySelector('[data-head-select]');
+        const count = picker.querySelector('[data-head-count]');
+        const options = [...(select?.querySelectorAll('option[data-head-name]') ?? [])];
+        const filter = () => {
+            const query = search.value.trim().toLocaleLowerCase();
+            let visible = 0;
+            options.forEach((option) => {
+                const matches = query === '' || option.dataset.headName.includes(query);
+                option.hidden = !matches;
+                if (matches) visible += 1;
+            });
+            if (count) count.textContent = String(visible);
+        };
+        search?.addEventListener('input', filter);
+        filter();
+    });
+};
+
+const bootRoleDashboardTabs = () => {
+    document.querySelectorAll('[data-role-tabs]').forEach((tabs) => {
+        if (tabs.dataset.ready) return;
+        tabs.dataset.ready = 'true';
+        const buttons = [...tabs.querySelectorAll('[data-role-tab]')];
+        const blocks = [...document.querySelectorAll('[data-role-block]')];
+        const show = (role) => {
+            buttons.forEach((button) => button.setAttribute('aria-selected', button.dataset.roleTab === role ? 'true' : 'false'));
+            blocks.forEach((block) => block.toggleAttribute('data-phone-hidden', block.dataset.roleBlock !== role));
+        };
+        buttons.forEach((button) => button.addEventListener('click', () => show(button.dataset.roleTab)));
+        show(tabs.dataset.defaultRole);
+    });
+};
+
 const bootOakUi = () => {
     document.querySelectorAll('[data-ticker]').forEach(startTicker);
     bootAssignmentForms();
     bootResultSectionForms();
+    bootHeadPickers();
+    bootRoleDashboardTabs();
 };
 document.addEventListener('DOMContentLoaded', bootOakUi);
 document.addEventListener('livewire:navigated', bootOakUi);

@@ -3,6 +3,7 @@
         'admin' => ($overview['selected_section_id'] ? $overview['section']?->name : 'All sections').' · School overview',
         'bursar' => 'Fees and payments'.($overview['term'] ? ' · '.$overview['term'] : ''),
         'teacher' => $overview['context'] ? 'Today · '.$overview['context'] : 'Your teaching workspace',
+        'staff_composed' => 'Your combined workspace',
         'parent', 'student' => $overview['selected']['name'].' · '.$overview['selected']['class']
             .($overview['kind'] === 'student' && ($overview['term_context'] ?? null) ? ' · '.$overview['term_context'] : ''),
         default => 'Welcome to your Oakfield workspace',
@@ -13,6 +14,7 @@
         'head_locked' => 'Head',
         'bursar' => 'Bursar',
         'teacher' => 'Teacher',
+        'staff_composed' => 'Staff',
         'parent', 'parent_empty' => 'Parent',
         'student' => 'Student',
         default => auth()->user()->roles->sortBy('name')->first()?->name ?? 'Member',

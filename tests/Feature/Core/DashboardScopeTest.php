@@ -182,7 +182,7 @@ class DashboardScopeTest extends TestCase
         ])->mapWithKeys(fn (string $name) => [$name => Permission::firstOrCreate(['name' => $name])]);
         $adminRole = Role::create(['name' => 'School Admin']);
         $adminRole->permissions()->attach($permissions->pluck('id'));
-        $headRole = Role::create(['name' => 'Principal']);
+        $headRole = Role::create(['name' => 'Head']);
         $headRole->permissions()->attach($permissions->only([
             'view_dashboard', 'approve_results', 'view_attendance_alerts', 'manage_attendance',
         ])->pluck('id'));

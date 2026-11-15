@@ -9,7 +9,7 @@
     $oakIsParent = ($oakPortalContext['kind'] ?? null) === 'parent';
     $oakStudentQuery = $oakPortalContext['student_id'] ?? null;
     $oakDenseNav = $oakStaffKind === 'admin';
-    $oakShowGroups = in_array($oakStaffKind, ['admin', 'head'], true);
+    $oakShowGroups = collect($oakNavItems)->contains(fn ($item) => filled($item['group'] ?? null));
     $oakUnread = app(\App\Modules\Notifications\Services\InAppNotifications::class)->unreadCount(auth()->user());
     $oakResultAttention = app(\App\Modules\Results\Services\ResultAttention::class)->for(auth()->user());
     $oakBellCount = $oakUnread + ($oakResultAttention['count'] ?? 0);

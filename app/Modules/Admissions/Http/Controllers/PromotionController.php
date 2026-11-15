@@ -91,7 +91,7 @@ class PromotionController extends Controller
             ? app(IncomingAdmissionService::class)->sourceSectionFor($incomingSections->first())
             : null;
         $hasSection = $actor->can('view_all_sections') || $sections->isNotEmpty();
-        $waiting = $canPromote ? $catalog->waitingForArrangement() : collect();
+        $waiting = $canPromote ? $catalog->waitingForArrangement($actor) : collect();
         $selectedSection = null;
         $classes = collect();
         $source = null;

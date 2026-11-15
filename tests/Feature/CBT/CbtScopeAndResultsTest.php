@@ -106,7 +106,7 @@ class CbtScopeAndResultsTest extends TestCase
 
         app(TenantContext::class)->set($this->school->id);
         $secondHead = $this->user('Two Sections', ['manage_cbt', 'view_cbt_results']);
-        $secondHead->sections()->attach([
+        $secondHead->headSections()->attach([
             $this->primary->id => ['school_id' => $this->school->id],
             $this->secondary->id => ['school_id' => $this->school->id],
         ]);
@@ -217,7 +217,7 @@ class CbtScopeAndResultsTest extends TestCase
 
     public function test_permission_migration_adds_head_and_teacher_access_without_removing_custom_permissions(): void
     {
-        $principal = Role::create(['name' => 'Principal']);
+        $principal = Role::create(['name' => 'Head']);
         $teacher = Role::create(['name' => 'Teacher']);
         $bursar = Role::create(['name' => 'Bursar']);
         $custom = Permission::firstOrCreate(['name' => 'custom_school_permission']);

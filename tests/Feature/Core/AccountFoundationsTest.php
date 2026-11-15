@@ -47,8 +47,8 @@ class AccountFoundationsTest extends TestCase
 
     public function test_role_rank_and_section_rules_are_enforced_on_forms_and_forged_requests(): void
     {
-        $head = $this->userWithRole('Head Hana', 'head.hana', 'Principal');
-        $head->sections()->attach($this->primary, ['school_id' => 1]);
+        $head = $this->userWithRole('Head Hana', 'head.hana', 'Head');
+        $head->headSections()->attach($this->primary, ['school_id' => 1]);
         $createStaff = $this->admin->roles->first()->permissions()->where('name', 'create_staff')->firstOrFail();
         $head->roles->first()->permissions()->attach($createStaff);
         $manageAccess = $this->admin->roles->first()->permissions()->where('name', 'manage_staff_access')->firstOrFail();
@@ -57,7 +57,8 @@ class AccountFoundationsTest extends TestCase
         $teacherTarget->sections()->attach($this->primary, ['school_id' => 1]);
 
         $this->actingAs($head)->get(route('staff.accounts.create'))
-            ->assertOk()->assertDontSee('School Admin')->assertSee('Teacher');
+            ->assertOk()->assertDontSee('School Admin')
+            ->assertDontSee('Head (Principal)')->assertSee('Head is granted later')->assertSee('Teacher');
         $this->post(route('staff.accounts.store'), [
             'name' => 'Forged Admin', 'username' => 'forged.admin',
             'role_id' => $this->roleIds['School Admin'],
@@ -73,8 +74,8 @@ class AccountFoundationsTest extends TestCase
 
         $this->actingAs($this->admin)->post(route('staff.accounts.store'), [
             'name' => 'No Section Head', 'username' => 'no.section',
-            'role_id' => $this->roleIds['Principal'],
-        ])->assertSessionHasErrors('section_ids');
+            'role_id' => $this->roleIds['Head'],
+        ])->assertSessionHasErrors(['role_id' => 'Head is granted by a Head of assignment.']);
 
         app(TenantContext::class)->set(1);
         $otherSchool = School::create(['name' => 'Other']);
@@ -83,9 +84,9 @@ class AccountFoundationsTest extends TestCase
         app(TenantContext::class)->set(1);
         $this->actingAs($this->admin)->post(route('staff.accounts.store'), [
             'name' => 'Outside Head', 'username' => 'outside.head',
-            'role_id' => $this->roleIds['Principal'],
+            'role_id' => $this->roleIds['Head'],
             'section_ids' => [$outside->id],
-        ])->assertSessionHasErrors('section_ids');
+        ])->assertSessionHasErrors('role_id');
     }
 
     public function test_one_time_credentials_force_password_change_and_leave_no_plaintext_trace(): void
@@ -197,7 +198,7 @@ class AccountFoundationsTest extends TestCase
 
     public function test_account_password_requires_current_password_and_new_permissions_are_admin_only(): void
     {
-        foreach (['Principal', 'Bursar', 'Teacher'] as $role) {
+        foreach (['Head', 'Bursar', 'Teacher'] as $role) {
             $permissions = app(DefaultRoleCatalog::class)->definitions()[$role];
             $this->assertEmpty(array_intersect(['create_staff', 'manage_staff_access', 'view_sign_in_rules'], $permissions));
         }

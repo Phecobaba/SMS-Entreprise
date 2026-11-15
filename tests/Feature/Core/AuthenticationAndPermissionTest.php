@@ -4,13 +4,18 @@ namespace Tests\Feature\Core;
 
 use App\Modules\Academics\Models\AcademicLevel;
 use App\Modules\Academics\Models\ClassArm;
+use App\Modules\Academics\Models\ClassSubject;
 use App\Modules\Academics\Models\SchoolClass;
 use App\Modules\Academics\Models\Section;
+use App\Modules\Academics\Models\Subject;
+use App\Modules\Academics\Models\TeacherSubjectAssignment;
+use App\Modules\Academics\Services\ResultTeachingAssignments;
 use App\Modules\Core\Models\Permission;
 use App\Modules\Core\Models\Role;
 use App\Modules\Core\Models\School;
 use App\Modules\Core\Models\User;
 use App\Modules\Core\Services\AppNavigation;
+use App\Modules\Core\Services\DashboardOverview;
 use App\Modules\Core\TenantContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -64,7 +69,7 @@ class AuthenticationAndPermissionTest extends TestCase
         $teacherRole->permissions()->attach($permissions->only([
             'view_dashboard', 'mark_attendance', 'enter_results',
         ])->pluck('id'));
-        $headRole = Role::create(['name' => 'Principal']);
+        $headRole = Role::create(['name' => 'Head']);
         $headRole->permissions()->attach($permissions->only([
             'approve_results', 'manage_promotions', 'manage_section_classes', 'manage_section_levels',
             'manage_section_subjects', 'manage_section_teacher_assignments', 'view_section_staff',
@@ -77,6 +82,7 @@ class AuthenticationAndPermissionTest extends TestCase
         $teacher->roles()->attach($teacherRole);
         $head->roles()->attach($headRole);
         $section = Section::create(['name' => 'Secondary', 'head_title' => 'Principal']);
+        $section->heads()->attach($head, ['school_id' => $school->id]);
         $level = AcademicLevel::create(['section_id' => $section->id, 'name' => 'Junior Secondary']);
         $class = SchoolClass::create(['academic_level_id' => $level->id, 'name' => 'JS 1']);
         ClassArm::create(['class_id' => $class->id, 'name' => 'Gold', 'form_teacher_user_id' => $teacher->id]);
@@ -100,17 +106,16 @@ class AuthenticationAndPermissionTest extends TestCase
             ->assertOk()
             ->assertDontSee('Mark attendance');
         $paymentChildren = collect($adminItems->firstWhere('label', 'Payments')['children']);
-        $this->assertSame(['Record payment', 'Awaiting approval'], $paymentChildren->pluck('label')->all());
+        $this->assertSame(['Record payment', 'Awaiting approval', 'Receipts'], $paymentChildren->pluck('label')->all());
         $this->assertFalse($paymentChildren->pluck('label')->contains('Fee schedule'));
         $this->assertFalse($paymentChildren->pluck('label')->contains('Payment gateway'));
         foreach (['Academics', 'Bulk subjects', 'Teacher assignments', 'Promotion'] as $label) {
-            $this->assertSame('Academics', $adminItems->firstWhere('label', $label)['group']);
+            $this->assertSame('Admin', $adminItems->firstWhere('label', $label)['group']);
         }
         $this->assertSame(
-            ['Classes', 'Levels', 'Subjects', 'Bulk subjects', 'Teacher assignments', 'Promotion'],
-            $headItems->where('group', 'Academics')->pluck('label')->values()->all(),
+            ['Classes', 'Levels', 'Subjects', 'Bulk subjects', 'Teacher assignments', 'Promotion', 'Staff', 'Results'],
+            $headItems->where('group', 'Head')->pluck('label')->values()->all(),
         );
-        $this->assertSame(['Staff'], $headItems->where('group', 'People')->pluck('label')->values()->all());
     }
 
     public function test_login_is_scoped_to_the_school_and_dashboard_requires_a_permission(): void
@@ -161,5 +166,61 @@ class AuthenticationAndPermissionTest extends TestCase
         $this->get('/dashboard')->assertOk()->assertSee('Good')->assertSee('First User')->assertSee('Welcome to your Oakfield workspace');
         $this->post('/logout')->assertRedirect('/login');
         $this->assertGuest();
+    }
+
+    public function test_multi_role_navigation_and_dashboard_blocks_are_composed_without_a_role_switch(): void
+    {
+        $school = School::create(['name' => 'Oakfield']);
+        config()->set('tenancy.default_school_id', $school->id);
+        app(TenantContext::class)->set($school->id);
+        $permissions = collect(['view_dashboard', 'enter_results', 'approve_results', 'view_all_sections', 'manage_section_classes'])
+            ->mapWithKeys(fn (string $name) => [$name => Permission::firstOrCreate(['name' => $name])]);
+        $teacherRole = Role::create(['name' => 'Teacher']);
+        $teacherRole->permissions()->attach($permissions->only(['view_dashboard', 'enter_results'])->pluck('id'));
+        $headRole = Role::create(['name' => 'Head']);
+        $headRole->permissions()->attach($permissions->only(['view_dashboard', 'approve_results', 'manage_section_classes'])->pluck('id'));
+        $adminRole = Role::create(['name' => 'School Admin']);
+        $adminRole->permissions()->attach($permissions->only(['view_dashboard', 'approve_results', 'view_all_sections'])->pluck('id'));
+        $section = Section::create(['name' => 'Secondary', 'head_title' => 'Principal']);
+        $level = AcademicLevel::create(['section_id' => $section->id, 'name' => 'Junior Secondary']);
+        $class = SchoolClass::create(['academic_level_id' => $level->id, 'name' => 'JS 1']);
+        $subject = Subject::create(['section_id' => $section->id, 'name' => 'Mathematics']);
+        ClassSubject::create(['class_id' => $class->id, 'subject_id' => $subject->id]);
+
+        $teacher = User::create(['name' => 'Teacher only', 'email' => 'teacher-only@example.test', 'password' => 'password', 'status' => 'active']);
+        $teacherHead = User::create(['name' => 'Teacher Head', 'email' => 'teacher-head@example.test', 'password' => 'password', 'status' => 'active']);
+        $adminTeacher = User::create(['name' => 'Admin Teacher', 'email' => 'admin-teacher@example.test', 'password' => 'password', 'status' => 'active']);
+        $allThree = User::create(['name' => 'All three', 'email' => 'all-three@example.test', 'password' => 'password', 'status' => 'active']);
+        $teacher->roles()->attach($teacherRole);
+        $teacherHead->roles()->attach([$teacherRole->id, $headRole->id]);
+        $adminTeacher->roles()->attach([$teacherRole->id, $adminRole->id]);
+        $allThree->roles()->attach([$teacherRole->id, $headRole->id, $adminRole->id]);
+        $section->heads()->attach([$teacherHead->id, $allThree->id], ['school_id' => $school->id]);
+        foreach ([$teacher, $teacherHead, $adminTeacher, $allThree] as $user) {
+            TeacherSubjectAssignment::create(['user_id' => $user->id, 'class_id' => $class->id, 'subject_id' => $subject->id]);
+        }
+
+        $navigation = app(AppNavigation::class);
+        $this->assertSame(['teaching'], $navigation->staffGroups($teacher));
+        $this->assertSame(['teaching', 'head'], $navigation->staffGroups($teacherHead));
+        $this->assertSame(['teaching', 'admin'], $navigation->staffGroups($adminTeacher));
+        $this->assertSame(['teaching', 'head', 'admin'], $navigation->staffGroups($allThree));
+        $this->assertSame(['Teaching'], collect($navigation->items($teacher))->pluck('group')->filter()->unique()->values()->all());
+        $this->assertSame(['Teaching', 'Head'], collect($navigation->items($teacherHead))->pluck('group')->filter()->unique()->values()->all());
+        $this->assertSame(['Teaching', 'Admin'], collect($navigation->items($adminTeacher))->pluck('group')->filter()->unique()->values()->all());
+
+        $overview = app(DashboardOverview::class)->for($teacherHead, sectionId: $section->id, section: $section, headSection: $section);
+        $this->assertSame('staff_composed', $overview['kind']);
+        $this->assertSame(['teaching', 'head'], array_keys($overview['blocks']));
+
+        $otherSection = Section::create(['name' => 'Primary', 'head_title' => 'Head Teacher']);
+        $otherLevel = AcademicLevel::create(['section_id' => $otherSection->id, 'name' => 'Primary 4']);
+        $otherClass = SchoolClass::create(['academic_level_id' => $otherLevel->id, 'name' => 'Primary 4']);
+        $otherSubject = Subject::create(['section_id' => $otherSection->id, 'name' => 'English']);
+        ClassSubject::create(['class_id' => $otherClass->id, 'subject_id' => $otherSubject->id]);
+        TeacherSubjectAssignment::create(['user_id' => $teacherHead->id, 'class_id' => $otherClass->id, 'subject_id' => $otherSubject->id]);
+
+        app(ResultTeachingAssignments::class)->assertMayEnterClass($teacherHead, $otherClass->id, $otherSubject->id);
+        $this->actingAs($teacherHead)->get(route('academics.classes.index', ['section' => $otherSection->id]))->assertForbidden();
     }
 }

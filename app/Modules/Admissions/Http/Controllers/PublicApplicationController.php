@@ -11,6 +11,7 @@ use App\Modules\Core\Models\SchoolSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -139,9 +140,15 @@ class PublicApplicationController extends Controller
     {
         $state = $workflow->status($application);
 
-        $application->loadMissing('examSession');
+        $application->loadMissing(['examSession', 'receipt']);
+        $receiptUrl = null;
+        if ($application->receipt) {
+            $receiptUrl = $cookieOwner
+                ? route('applications.receipt', ['application' => $application->public_reference])
+                : URL::temporarySignedRoute('applications.receipt', now()->addDays(7), ['application' => $application->public_reference]);
+        }
 
-        return view('applications.status', compact('application', 'state', 'cookieOwner'));
+        return view('applications.status', compact('application', 'state', 'cookieOwner', 'receiptUrl'));
     }
 
     private function accessCookie(string $token): \Symfony\Component\HttpFoundation\Cookie

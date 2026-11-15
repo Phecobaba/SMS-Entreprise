@@ -29,8 +29,10 @@ class Section extends Model
     public function heads(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'section_user')
-            ->withPivot('school_id')
+            ->withPivot('school_id', 'is_head')
+            ->withPivotValue('is_head', true)
             ->wherePivot('school_id', app(TenantContext::class)->id())
+            ->wherePivot('is_head', true)
             ->withTimestamps();
     }
 

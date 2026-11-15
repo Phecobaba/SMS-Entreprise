@@ -40,7 +40,7 @@
         <div class="oak-row-body">
             @if($invoice->lines->isNotEmpty())<table class="fe-lines"><tbody>@foreach($invoice->lines as $line)<tr><td>{{ $line->description }}</td><td>{{ $money($line->amount_kobo) }}</td></tr>@endforeach<tr class="fe-total"><td>Total</td><td>{{ $money($invoice->amount_kobo) }}</td></tr></tbody></table>@else<p>Invoice total: <strong>{{ $money($invoice->amount_kobo) }}</strong></p>@endif
             @if($paid > 0 && $invoice->kind === \App\Modules\Payments\Models\Invoice::KIND_TERM_FEE)<p><strong>{{ $money($paid) }} of {{ $money($invoice->amount_kobo) }} paid · balance {{ $money($balance) }}</strong></p><div class="h-2 overflow-hidden rounded bg-slate-200"><div class="h-full bg-emerald-600" style="width:{{ min(100, round($paid * 100 / $invoice->amount_kobo)) }}%"></div></div>@endif
-            @if($invoice->payment?->receipt_number)<p>Paid {{ $invoice->payment->paid_at?->format('j M Y') }} · Receipt {{ $invoice->payment->receipt_number }}</p>@endif
+            @if($invoice->payment?->receipt)<p>Paid {{ $invoice->payment->paid_at?->format('j M Y') }} · Receipt {{ $invoice->payment->receipt->number }} · <a class="oak-link inline-flex min-h-11 items-center" href="{{ route('receipts.download',$invoice->payment->receipt) }}">Download</a></p>@elseif($invoice->payment?->receipt_number)<p>Paid {{ $invoice->payment->paid_at?->format('j M Y') }} · Receipt {{ $invoice->payment->receipt_number }}</p>@endif
             @if($state === 'Confirming payment')<p>Paystack is confirming this payment. This invoice stays open until verification succeeds.</p><form method="post" action="{{ route('payments.attempts.check', $attempt) }}">@csrf<button class="oak-btn oak-btn-secondary" type="submit">Check again</button></form>@endif
             @if($state === 'Payment failed')<p>The last attempt failed. You can try again.</p>@endif
             @if($manual)<p>The school has recorded your bank payment and is confirming it. You don't need to pay again.</p><h4 class="fe-sub">Recorded payment</h4><div class="fe-receipt"><span>Bank payment · recorded {{ $manual->created_at->format('j M Y') }}</span><strong>{{ $money($manual->amount_kobo) }}</strong></div><p class="fe-visit"><x-icon name="bell" /><span>You'll get a notification when the school approves it.</span></p>@endif
@@ -51,7 +51,7 @@
                 @php($partManual=$part->awaitingManualSubmission)
                 <div class="fe-pp"><span><strong>Part payment · {{ $money($part->amount_kobo) }}</strong><br>Due {{ $part->due_date->format('j M Y') }} · {{ $part->status }}
                     @if($part->notes)<br>{{ $part->notes }}@endif
-                    @if($part->payment?->receipt_number)<br>Receipt {{ $part->payment->receipt_number }}@endif
+                    @if($part->payment?->receipt)<br>Receipt {{ $part->payment->receipt->number }} · <a class="oak-link inline-flex min-h-11 items-center" href="{{ route('receipts.download',$part->payment->receipt) }}">Download</a>@elseif($part->payment?->receipt_number)<br>Receipt {{ $part->payment->receipt_number }}@endif
                     @if($partManual)<br>Awaiting approval @endif
                     @if($partAttempt?->status === 'Pending')<br>Confirming payment<form method="post" action="{{ route('payments.attempts.check', $partAttempt) }}">@csrf<button class="oak-btn oak-btn-secondary" type="submit">Check again</button></form>@endif
                     @if($partAttempt?->status === 'Failed')<br>Payment failed @endif

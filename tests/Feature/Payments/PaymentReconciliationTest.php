@@ -18,6 +18,7 @@ use App\Modules\Core\Models\User;
 use App\Modules\Core\TenantContext;
 use App\Modules\Payments\Models\Payment;
 use App\Modules\Payments\Models\PaymentAttempt;
+use App\Modules\Payments\Models\Receipt;
 use App\Modules\Payments\Services\PaymentLedger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -91,6 +92,8 @@ class PaymentReconciliationTest extends TestCase
         $this->assertSame('Paid', $invoice->fresh()->status);
         $this->assertSame('Verified', PaymentAttempt::findOrFail($attempt->id)->status);
         $this->assertSame(1, Payment::where('invoice_id', $invoice->id)->count());
-        $this->actingAs($bursar)->get(route('payments.index'))->assertOk()->assertSee('OAK-'.$school->id.'-'.str_pad((string) $invoice->id, 8, '0', STR_PAD_LEFT));
+        $receipt = Receipt::where('payment_id', Payment::where('invoice_id', $invoice->id)->value('id'))->sole();
+        $this->assertMatchesRegularExpression('/^OAK-\d{4}-\d{6}$/', $receipt->number);
+        $this->actingAs($bursar)->get(route('payments.index'))->assertOk()->assertSee($receipt->number);
     }
 }

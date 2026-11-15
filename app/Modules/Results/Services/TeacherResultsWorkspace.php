@@ -20,12 +20,14 @@ use Illuminate\Http\Request;
 
 class TeacherResultsWorkspace
 {
-    public function isTeacherWorkspace(User $actor): bool
+    public function isTeacherWorkspace(User $actor, ?Request $request = null): bool
     {
-        return $actor->can('enter_results')
-            && ! $actor->can('manage_result_settings')
-            && ! $actor->can('approve_results')
-            && ! $actor->can('manage_section_result_settings');
+        if (! app(ResultTeachingAssignments::class)->hasAssignments($actor)) {
+            return false;
+        }
+
+        return ! (($request?->query('workspace') === 'review')
+            && ($actor->can('approve_results') || $actor->can('manage_result_settings')));
     }
 
     public function landing(User $actor, ?Request $request = null): array

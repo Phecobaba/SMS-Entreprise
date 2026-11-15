@@ -16,6 +16,7 @@ use App\Modules\CBT\Console\SyncScheduledEntranceOutcomes;
 use App\Modules\Core\Console\BootstrapSchoolAdmin;
 use App\Modules\Core\Console\GrantSchoolProfileAccess;
 use App\Modules\Core\Console\PrepareQaDatabase;
+use App\Modules\Core\Console\RepairHeadRoles;
 use App\Modules\Core\Console\ResetAdminPassword;
 use App\Modules\Core\Console\TestMailConfiguration;
 use App\Modules\Core\Http\Middleware\RequirePasswordChange;
@@ -52,7 +53,7 @@ return Application::configure(basePath: dirname(__DIR__))
             );
         },
     )
-    ->withCommands([GenerateLandingImages::class, BootstrapSchoolAdmin::class, ResetAdminPassword::class, TestMailConfiguration::class, PrepareQaDatabase::class, GrantAcademicAccess::class, MigrateSubjectSections::class, GrantSchoolProfileAccess::class, GrantAdmissionAccess::class, AssignDemoRegistrationNumber::class, CleanupStudentImports::class, PurgeExpiredApplications::class, LapseExpiredOffers::class, GrantResultAccess::class, MigrateResultSections::class, GrantCbtAccess::class, CleanupQuestionUploads::class, SyncScheduledEntranceOutcomes::class, GrantAttendanceAccess::class, GenerateMissingAttendanceAlerts::class, GrantAssignmentAccess::class, GrantENoteAccess::class, RecheckPendingPaystackPayments::class])
+    ->withCommands([GenerateLandingImages::class, BootstrapSchoolAdmin::class, ResetAdminPassword::class, TestMailConfiguration::class, PrepareQaDatabase::class, RepairHeadRoles::class, GrantAcademicAccess::class, MigrateSubjectSections::class, GrantSchoolProfileAccess::class, GrantAdmissionAccess::class, AssignDemoRegistrationNumber::class, CleanupStudentImports::class, PurgeExpiredApplications::class, LapseExpiredOffers::class, GrantResultAccess::class, MigrateResultSections::class, GrantCbtAccess::class, CleanupQuestionUploads::class, SyncScheduledEntranceOutcomes::class, GrantAttendanceAccess::class, GenerateMissingAttendanceAlerts::class, GrantAssignmentAccess::class, GrantENoteAccess::class, RecheckPendingPaystackPayments::class])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(ResolveTenant::class);
         $middleware->appendToGroup('web', RequirePasswordChange::class);

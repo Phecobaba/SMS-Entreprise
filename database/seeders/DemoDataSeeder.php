@@ -35,7 +35,7 @@ class DemoDataSeeder extends Seeder
     private const ACCOUNTS = [
         'admin' => ['School Admin', 'demo-admin@oakfield.test', 'DEMO_ADMIN_PASSWORD'],
         'teacher' => ['Teacher', 'demo-teacher@oakfield.test', 'DEMO_TEACHER_PASSWORD'],
-        'principal' => ['Principal', 'demo-principal@oakfield.test', 'DEMO_PRINCIPAL_PASSWORD'],
+        'principal' => ['Head', 'demo-principal@oakfield.test', 'DEMO_PRINCIPAL_PASSWORD'],
         'bursar' => ['Bursar', 'demo-bursar@oakfield.test', 'DEMO_BURSAR_PASSWORD'],
         'student' => ['Student', 'demo-student@oakfield.test', 'DEMO_STUDENT_PASSWORD'],
         'parent' => ['Parent', 'demo-parent@oakfield.test', 'DEMO_PARENT_PASSWORD'],

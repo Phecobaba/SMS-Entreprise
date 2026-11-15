@@ -206,7 +206,7 @@ class PromotionTest extends TestCase
     {
         $f = $this->fixture();
         $earlyHead = User::create(['name' => 'Early Years Head', 'email' => 'early-head@example.test', 'password' => 'long-password-here']);
-        $earlyHead->roles()->attach(Role::where('name', 'Principal')->firstOrFail());
+        $earlyHead->roles()->attach(Role::where('name', 'Head')->firstOrFail());
         $early = Section::create([
             'name' => 'Early Years', 'head_title' => 'Early Years Lead', 'learner_term' => 'Pupil',
             'registration_code' => 'EYS', 'classes_arranged_by' => $f['admin']->id, 'classes_arranged_at' => now(),
@@ -466,7 +466,7 @@ class PromotionTest extends TestCase
         $head = User::create(['name' => 'Primary Head', 'email' => 'promotion-head@example.test', 'password' => 'long-password-here']);
         $secondaryHead = User::create(['name' => 'Secondary Head', 'email' => 'secondary-promotion-head@example.test', 'password' => 'long-password-here']);
         $admin = User::create(['name' => 'Admin', 'email' => 'promotion-admin@example.test', 'password' => 'long-password-here']);
-        $headRole = Role::create(['name' => 'Principal']);
+        $headRole = Role::create(['name' => 'Head']);
         $headRole->permissions()->attach($promotion);
         $adminRole = Role::create(['name' => 'School Admin']);
         $adminRole->permissions()->attach([$promotion->id, $viewAll->id]);

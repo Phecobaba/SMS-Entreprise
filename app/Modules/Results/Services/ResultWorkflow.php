@@ -184,9 +184,13 @@ class ResultWorkflow
             if ($result->status !== 'Submitted') {
                 throw ValidationException::withMessages(['result' => 'Only a submitted result can be approved.']);
             }
+            $ownSubmission = (int) $result->submitted_by === (int) $actor->id;
+            if ($ownSubmission && ! $actor->can('view_all_sections')) {
+                throw ValidationException::withMessages(['result' => 'You submitted this result. Another Head or an Admin must approve it.']);
+            }
             $result->update(['status' => 'Approved', 'approved_by' => $actor->id, 'locked_at' => now()]);
             $this->audit($result, 'Approve', $actor, 'Approved and locked');
-            app(AuditRecorder::class)->record($actor, 'result_approved', $result, ['status' => 'Approved'], 'Results', 'Result approved and locked.');
+            app(AuditRecorder::class)->record($actor, 'result_approved', $result, ['status' => 'Approved', 'own_submission' => $ownSubmission], 'Results', 'Result approved and locked.');
             app(ResultCards::class)->compile($result);
             app(InAppNotifications::class)->sendForStudent(
                 $result->student_id,
@@ -212,6 +216,9 @@ class ResultWorkflow
             $result = $this->locked($result);
             if ($result->status !== 'Submitted') {
                 throw ValidationException::withMessages(['result' => 'Only a submitted result can be rejected.']);
+            }
+            if ((int) $result->submitted_by === (int) $actor->id && ! $actor->can('view_all_sections')) {
+                throw ValidationException::withMessages(['result' => 'You submitted this result. Another Head or an Admin must reject it.']);
             }
             $result->update(['status' => 'Rejected', 'approved_by' => null, 'rejection_reason' => trim($reason)]);
             $this->audit($result, 'Reject', $actor, trim($reason));

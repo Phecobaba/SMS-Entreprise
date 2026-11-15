@@ -61,7 +61,7 @@ class StudentRegistrationNumbersTest extends TestCase
         $this->admin = $this->user('Admin', 'admin');
         $this->admin->roles()->attach($roles['School Admin'], ['school_id' => $this->school->id]);
         $this->head = $this->user('Primary Head', 'head');
-        $this->head->roles()->attach($roles['Principal'], ['school_id' => $this->school->id]);
+        $this->head->roles()->attach($roles['Head'], ['school_id' => $this->school->id]);
         $this->primary = Section::create(['name' => 'Primary', 'head_title' => 'Head Teacher', 'learner_term' => 'Pupil', 'registration_prefix' => 'PRI', 'registration_code' => 'PRI']);
         $this->secondary = Section::create(['name' => 'Secondary', 'head_title' => 'Principal', 'learner_term' => 'Student', 'registration_prefix' => 'SEC', 'registration_code' => 'SEC']);
         $this->primary->heads()->attach($this->head, ['school_id' => $this->school->id]);
@@ -422,7 +422,7 @@ class StudentRegistrationNumbersTest extends TestCase
     public function test_new_permissions_are_admin_only_except_section_scoped_number_change(): void
     {
         $adminRole = Role::where('name', 'School Admin')->firstOrFail();
-        $headRole = Role::where('name', 'Principal')->firstOrFail();
+        $headRole = Role::where('name', 'Head')->firstOrFail();
         foreach (['view_students', 'create_students', 'manage_student_accounts', 'manage_registration_numbers', 'change_registration_numbers'] as $permission) {
             $this->assertTrue($adminRole->permissions()->where('name', $permission)->exists(), $permission);
         }

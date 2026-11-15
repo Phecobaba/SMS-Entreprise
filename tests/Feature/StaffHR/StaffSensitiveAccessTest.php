@@ -92,7 +92,7 @@ class StaffSensitiveAccessTest extends TestCase
         $adminRole = Role::create(['name' => 'HR Admin']);
         $adminRole->permissions()->attach(Permission::firstOrCreate(['name' => 'manage_staff_records']));
         $admin->roles()->attach($adminRole);
-        $head->roles()->attach(Role::create(['name' => 'Principal']));
+        $head->roles()->attach(Role::create(['name' => 'Head']));
         $staff = Staff::create(['user_id' => $employee->id, 'role_title' => 'Teacher', 'employment_date' => '2025-01-01', 'contract_type' => 'Permanent', 'status' => 'Active']);
 
         $this->actingAs($head)->get(route('staff.edit', $staff))->assertForbidden();

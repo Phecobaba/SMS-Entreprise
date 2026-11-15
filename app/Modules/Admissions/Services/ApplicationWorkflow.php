@@ -12,6 +12,8 @@ use App\Modules\Core\Services\RecoveryMailer;
 use App\Modules\Core\Services\UsernameRules;
 use App\Modules\Core\TenantContext;
 use App\Modules\Payments\Services\PaystackCredentials;
+use App\Modules\Payments\Services\ReceiptDelivery;
+use App\Modules\Payments\Services\ReceiptIssuer;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
@@ -225,28 +227,33 @@ class ApplicationWorkflow
 
     public function finalize(ApplicationPaymentAttempt $attempt): string
     {
-        [$application, $send] = DB::transaction(function () use ($attempt): array {
+        [$application, $send, $receipt] = DB::transaction(function () use ($attempt): array {
             $attempt = ApplicationPaymentAttempt::whereKey($attempt->id)->lockForUpdate()->firstOrFail();
             $application = Application::whereKey($attempt->application_id)->lockForUpdate()->firstOrFail();
             $late = $application->status === self::REGISTERED && $application->confirmed_attempt_id !== $attempt->id;
             $attempt->update(['status' => 'Verified', 'active_application_id' => null, 'last_activity_at' => now(), 'late_success' => $late]);
             if ($late) {
                 $application->update(['needs_attention' => true]);
+                $receipt = app(ReceiptIssuer::class)->applicationPayment($application, $attempt, $application->guardian_name, 'Paystack online');
 
-                return [$application, false];
+                return [$application, false, $receipt];
             }
             if ($application->status === self::REGISTERED) {
-                return [$application, false];
+                return [$application, false, null];
             }
             $application->update([
                 'status' => self::REGISTERED, 'registered_at' => now(),
                 'confirmed_attempt_id' => $attempt->id,
             ]);
+            $receipt = app(ReceiptIssuer::class)->applicationPayment($application, $attempt, $application->guardian_name, 'Paystack online');
 
-            return [$application, true];
+            return [$application, true, $receipt];
         });
         if ($send) {
             $this->deferStatusMail($application, 'registered');
+        }
+        if ($receipt) {
+            app(ReceiptDelivery::class)->defer($receipt, $application->guardian_email);
         }
 
         return self::REGISTERED;
@@ -273,18 +280,24 @@ class ApplicationWorkflow
 
     public function markPaid(Application $application, User $actor, string $reason): void
     {
-        [$record, $send] = DB::transaction(function () use ($application): array {
+        [$record, $send, $receipt] = DB::transaction(function () use ($application, $actor): array {
             $record = Application::whereKey($application->id)->lockForUpdate()->firstOrFail();
             if ($record->status === self::REGISTERED) {
-                return [$record, false];
+                return [$record, false, null];
             }
             $record->update(['status' => self::REGISTERED, 'registered_at' => now()]);
+            $receipt = $record->fee_amount_kobo > 0
+                ? app(ReceiptIssuer::class)->applicationPayment($record, null, $record->guardian_name, 'Manual payment', $actor->name, $actor)
+                : null;
 
-            return [$record, true];
+            return [$record, true, $receipt];
         });
         app(AuditRecorder::class)->record($actor, 'application_marked_paid', $record, ['reason' => $reason], 'Admissions', 'Application marked paid manually.');
         if ($send) {
             $this->deferStatusMail($record, 'registered');
+        }
+        if ($receipt) {
+            app(ReceiptDelivery::class)->defer($receipt, $record->guardian_email);
         }
     }
 

@@ -12,6 +12,8 @@ use Illuminate\Support\Collection;
 
 class CbtAccessScope
 {
+    private array $managedExams = [];
+
     public function managementQuery(User $actor): Builder
     {
         $query = Exam::query();
@@ -29,7 +31,9 @@ class CbtAccessScope
 
     public function managedExam(User $actor, int $examId): Exam
     {
-        return $this->managementQuery($actor)->findOrFail($examId);
+        $key = spl_object_id(request()).':'.$actor->id.':'.$examId;
+
+        return $this->managedExams[$key] ??= $this->managementQuery($actor)->findOrFail($examId);
     }
 
     public function classes(User $actor): Collection

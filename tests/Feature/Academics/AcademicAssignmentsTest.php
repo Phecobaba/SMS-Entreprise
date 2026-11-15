@@ -207,7 +207,7 @@ class AcademicAssignmentsTest extends TestCase
         $head = User::create(['name' => 'Primary Head', 'email' => 'assignment-head@example.test', 'password' => 'password-long', 'status' => 'active']);
         $admin = User::create(['name' => 'Admin', 'email' => 'assignment-admin@example.test', 'password' => 'password-long', 'status' => 'active']);
         $teacher = User::create(['name' => 'Teacher', 'email' => 'assignment-teacher@example.test', 'password' => 'password-long', 'status' => 'active']);
-        $headRole = Role::create(['name' => 'Principal']);
+        $headRole = Role::create(['name' => 'Head']);
         $headRole->permissions()->attach([
             Permission::firstOrCreate(['name' => AcademicAssignmentManager::SUBJECT_PERMISSION]),
             Permission::firstOrCreate(['name' => AcademicAssignmentManager::TEACHER_PERMISSION]),

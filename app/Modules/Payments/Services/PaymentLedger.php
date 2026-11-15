@@ -118,7 +118,7 @@ class PaymentLedger
     {
         app(ResultPaymentAccess::class)->authorizeOwnership($studentId, $viewer);
         $readOnly = ! app(StudentDirectory::class)->isActive($studentId);
-        $rows = Invoice::with(['lines', 'payment', 'attempts', 'awaitingManualSubmission', 'partPayments.payment', 'partPayments.attempts', 'partPayments.awaitingManualSubmission'])
+        $rows = Invoice::with(['lines', 'payment.receipt', 'attempts', 'awaitingManualSubmission', 'partPayments.payment.receipt', 'partPayments.attempts', 'partPayments.awaitingManualSubmission'])
             ->where('student_id', $studentId)->whereNull('parent_invoice_id')
             ->when($readOnly, fn ($query) => $query->where('status', 'Paid')->where(function ($paid) {
                 $paid->whereHas('payment')->orWhereHas('partPayments.payment');
@@ -443,7 +443,7 @@ class PaymentLedger
 
     private function settle(Invoice $invoice, int $amountKobo, string $method, ?string $reference, User $actor): Payment
     {
-        return DB::transaction(function () use ($invoice, $amountKobo, $method, $reference, $actor): Payment {
+        [$payment, $receipt, $email] = DB::transaction(function () use ($invoice, $amountKobo, $method, $reference, $actor): array {
             if ($invoice->parent_invoice_id) {
                 Invoice::whereKey($invoice->parent_invoice_id)->lockForUpdate()->firstOrFail();
             }
@@ -454,7 +454,7 @@ class PaymentLedger
                     throw ValidationException::withMessages(['payment' => 'This invoice was settled by another transaction.']);
                 }
 
-                return $existing;
+                return [$existing, null, null];
             }
             if ($locked->status !== 'Unpaid') {
                 throw ValidationException::withMessages(['payment' => 'This invoice cannot be settled.']);
@@ -479,6 +479,7 @@ class PaymentLedger
             if ($locked->candidate_id && $locked->purpose === 'Registration') {
                 app(BillingRecipients::class)->confirmRegistration($locked->candidate_id, $actor);
             }
+            $receipt = app(ReceiptIssuer::class)->invoicePayment($payment, $locked, $actor);
             $message = 'Your '.$locked->purpose.' payment was confirmed. Receipt: '.$payment->receipt_number.'.';
             if ($locked->student_id) {
                 app(InAppNotifications::class)->sendForStudent(
@@ -491,7 +492,28 @@ class PaymentLedger
                 app(InAppNotifications::class)->send([app(BillingRecipients::class)->userIdFor($locked->candidate_id, null)], 'Payment confirmed', $message);
             }
 
-            return $payment;
+            return [$payment, $receipt, $this->receiptEmailForInvoice($locked, $actor, $method)];
         });
+        if ($receipt) {
+            app(ReceiptDelivery::class)->defer($receipt, $email);
+        }
+
+        return $payment;
+    }
+
+    private function receiptEmailForInvoice(Invoice $invoice, User $actor, string $method): ?string
+    {
+        if ($method === 'Online' && ! $actor->can('manage_payments') && $actor->email) {
+            return $actor->email;
+        }
+        if ($invoice->student_id) {
+            $parentIds = app(ParentAccountDirectory::class)->userIdsForStudents([$invoice->student_id]);
+            $parentEmail = User::whereIn('id', $parentIds)->whereNotNull('email')->value('email');
+            if ($parentEmail) {
+                return $parentEmail;
+            }
+        }
+
+        return app(BillingRecipients::class)->emailFor($invoice->candidate_id, $invoice->student_id);
     }
 }

@@ -39,12 +39,12 @@ class DefaultRoleCatalogTest extends TestCase
 
         app(TenantContext::class)->set(1);
         $admin = User::where('email', 'admin@oakfield.test')->firstOrFail();
-        $head = $this->userWithRole('Head', 'Principal');
+        $head = $this->userWithRole('Head', 'Head');
         $teacher = $this->userWithRole('Teacher', 'Teacher');
         $bursar = $this->userWithRole('Bursar', 'Bursar');
         $learner = $this->userWithRole('Learner', 'Student');
 
-        foreach (['Principal', 'Teacher', 'Bursar'] as $roleName) {
+        foreach (['Head', 'Teacher', 'Bursar'] as $roleName) {
             $actual = Role::where('name', $roleName)->firstOrFail()->permissions()->pluck('name')->sort()->values()->all();
             $expected = collect(app(DefaultRoleCatalog::class)->definitions()[$roleName])->sort()->values()->all();
             $this->assertSame($expected, $actual, "{$roleName} permissions differ from the catalog.");
@@ -115,7 +115,7 @@ class DefaultRoleCatalogTest extends TestCase
     {
         $school = School::create(['name' => 'Existing School']);
         app(TenantContext::class)->set($school->id);
-        $role = Role::create(['name' => 'Principal']);
+        $role = Role::create(['name' => 'Head']);
         $custom = Permission::firstOrCreate(['name' => 'school_custom_permission']);
         $role->permissions()->attach($custom);
 
@@ -124,7 +124,7 @@ class DefaultRoleCatalogTest extends TestCase
 
         $actual = $role->permissions()->pluck('name')->all();
         $this->assertContains('school_custom_permission', $actual);
-        foreach (app(DefaultRoleCatalog::class)->definitions()['Principal'] as $permission) {
+        foreach (app(DefaultRoleCatalog::class)->definitions()['Head'] as $permission) {
             $this->assertContains($permission, $actual);
         }
         $this->assertNotContains('approve_payments', $actual);
@@ -135,7 +135,7 @@ class DefaultRoleCatalogTest extends TestCase
     {
         $school = School::create(['name' => 'Existing Directory School']);
         app(TenantContext::class)->set($school->id);
-        foreach (['School Admin', 'Principal', 'Bursar', 'Teacher'] as $name) {
+        foreach (['School Admin', 'Head', 'Bursar', 'Teacher'] as $name) {
             Role::create(['name' => $name]);
         }
 
@@ -145,8 +145,8 @@ class DefaultRoleCatalogTest extends TestCase
         $this->assertTrue(Role::where('name', 'School Admin')->firstOrFail()->permissions()->where('name', 'view_parents')->exists());
         $this->assertTrue(Role::where('name', 'School Admin')->firstOrFail()->permissions()->where('name', 'view_all_parents')->exists());
         $this->assertTrue(Role::where('name', 'School Admin')->firstOrFail()->permissions()->where('name', 'manage_parent_accounts')->exists());
-        $this->assertTrue(Role::where('name', 'Principal')->firstOrFail()->permissions()->where('name', 'view_parents')->exists());
-        $this->assertFalse(Role::where('name', 'Principal')->firstOrFail()->permissions()->where('name', 'view_all_parents')->exists());
+        $this->assertTrue(Role::where('name', 'Head')->firstOrFail()->permissions()->where('name', 'view_parents')->exists());
+        $this->assertFalse(Role::where('name', 'Head')->firstOrFail()->permissions()->where('name', 'view_all_parents')->exists());
         $this->assertTrue(Role::where('name', 'Bursar')->firstOrFail()->permissions()->where('name', 'view_parents')->exists());
         $this->assertTrue(Role::where('name', 'Bursar')->firstOrFail()->permissions()->where('name', 'view_all_parents')->exists());
         $this->assertFalse(Role::where('name', 'Teacher')->firstOrFail()->permissions()->where('name', 'view_parents')->exists());

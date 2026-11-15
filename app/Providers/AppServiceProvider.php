@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Modules\Academics\Services\FormTeacherAssignments;
+use App\Modules\Academics\Services\ResultTeachingAssignments;
+use App\Modules\CBT\Services\CbtAccessScope;
 use App\Modules\Core\Http\Middleware\RequirePasswordChange;
 use App\Modules\Core\Models\User;
 use App\Modules\Core\Services\AppNavigation;
@@ -26,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->scoped(PortalContext::class);
         $this->app->scoped(AppNavigation::class);
         $this->app->scoped(ResultAttention::class);
+        $this->app->scoped(ResultTeachingAssignments::class);
+        $this->app->scoped(CbtAccessScope::class);
     }
 
     /**
@@ -89,16 +93,16 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage_parent_accounts', fn (User $user): bool => $user->hasPermission('manage_parent_accounts'));
         Gate::define('view_all_sections', fn (User $user): bool => $user->hasPermission('view_all_sections'));
         Gate::define('override_admission_checklist', fn (User $user): bool => $user->hasPermission('override_admission_checklist'));
-        Gate::define('view_results_workspace', fn (User $user): bool => $user->hasPermission('manage_result_settings') || $user->hasPermission('manage_section_result_settings') || $user->hasPermission('enter_results') || $user->hasPermission('approve_results') || $user->hasPermission('add_principal_comment') || $user->hasPermission('add_proprietor_comment'));
+        Gate::define('view_results_workspace', fn (User $user): bool => $user->hasPermission('manage_result_settings') || $user->hasPermission('manage_section_result_settings') || $user->hasPermission('enter_results') || app(ResultTeachingAssignments::class)->hasAssignments($user) || $user->hasPermission('approve_results') || $user->hasPermission('add_principal_comment') || $user->hasPermission('add_proprietor_comment'));
         Gate::define('manage_result_settings', fn (User $user): bool => $user->hasPermission('manage_result_settings'));
         Gate::define('manage_result_configuration', fn (User $user): bool => $user->hasPermission('manage_result_settings') || $user->hasPermission('manage_section_result_settings'));
-        Gate::define('enter_results', fn (User $user): bool => $user->hasPermission('enter_results'));
+        Gate::define('enter_results', fn (User $user): bool => $user->hasPermission('enter_results') || app(ResultTeachingAssignments::class)->hasAssignments($user));
         Gate::define('approve_results', fn (User $user): bool => $user->hasPermission('approve_results'));
         Gate::define('add_principal_comment', fn (User $user): bool => $user->hasPermission('add_principal_comment'));
         Gate::define('add_proprietor_comment', fn (User $user): bool => $user->hasPermission('add_proprietor_comment'));
         Gate::define('manage_cbt', fn (User $user): bool => $user->hasPermission('manage_cbt'));
         Gate::define('view_cbt_results', fn (User $user): bool => $user->hasPermission('view_cbt_results'));
-        Gate::define('mark_attendance', fn (User $user): bool => $user->hasPermission('mark_attendance'));
+        Gate::define('mark_attendance', fn (User $user): bool => $user->hasPermission('mark_attendance') || $user->formTeacherArms()->exists());
         Gate::define('manage_attendance', fn (User $user): bool => $user->hasPermission('manage_attendance'));
         Gate::define('view_attendance_alerts', fn (User $user): bool => $user->hasPermission('view_attendance_alerts'));
         Gate::define('add_class_teacher_comment', fn (User $user, ResultCard $card): bool => $user->hasPermission('enter_results') && app(FormTeacherAssignments::class)->isFormTeacher($card->class_arm_id, $user));

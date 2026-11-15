@@ -5,6 +5,7 @@ namespace App\Modules\Admissions\Models;
 use App\Modules\Academics\Models\AcademicLevel;
 use App\Modules\Core\Models\Concerns\BelongsToTenant;
 use App\Modules\Core\Models\User;
+use App\Modules\Payments\Models\Receipt;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -57,6 +58,11 @@ class Application extends Model
     public function candidate(): HasOne
     {
         return $this->hasOne(Candidate::class);
+    }
+
+    public function receipt(): HasOne
+    {
+        return $this->hasOne(Receipt::class);
     }
 
     public function assessmentRecorder(): BelongsTo

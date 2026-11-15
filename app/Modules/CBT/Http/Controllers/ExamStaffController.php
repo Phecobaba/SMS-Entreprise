@@ -347,7 +347,7 @@ class ExamStaffController extends Controller
             'terms' => AcademicTerm::with('session')->orderByDesc('start_date')->get(),
             'components' => AssessmentComponent::whereIn('section_id', $sectionIds)->orderBy('name')->get(['id', 'name', 'max_score']),
             'canManageEntrance' => $scope->mayManageClassless($request->user()),
-            'entranceLevels' => $scope->mayManageClassless($request->user())
+            'entranceLevels' => $scope->mayManageClassless($request->user()) && (! $exam || ! $exam->class_id)
                 ? AcademicLevel::with('section')->whereNotNull('section_id')->orderBy('name')->limit(100)->get() : collect(),
         ];
     }

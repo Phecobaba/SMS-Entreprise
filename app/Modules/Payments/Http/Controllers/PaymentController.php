@@ -41,8 +41,8 @@ class PaymentController extends Controller
     public function show(Invoice $invoice, InvoiceLifecycle $lifecycle, PaystackCredentials $credentials): View
     {
         $invoice->load([
-            'student.user', 'student.classArm.schoolClass', 'candidate', 'lines', 'payment', 'attempts',
-            'awaitingManualSubmission', 'parentInvoice', 'partPayments.payment', 'partPayments.attempts',
+            'student.user', 'student.classArm.schoolClass', 'candidate', 'lines', 'payment.receipt', 'attempts',
+            'awaitingManualSubmission', 'parentInvoice', 'partPayments.payment.receipt', 'partPayments.attempts',
             'partPayments.awaitingManualSubmission',
         ]);
 

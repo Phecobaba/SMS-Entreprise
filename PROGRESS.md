@@ -55,9 +55,9 @@ exit-gap closure is recorded below. Phase 5 is **not formally complete**;
 only the owner may mark it complete.
 
 `DemoDataSeeder` defines seven separate demo accounts (Admin, Teacher,
-Principal, Student, Parent, Candidate, Bursar) for hands-on review. It
+Head, Student, Parent, Candidate, Bursar) for hands-on review. It
 rebuilds them idempotently only in the local environment, using password
-values from ignored `.env` keys. The demo Principal is assigned to Secondary
+values from ignored `.env` keys. The demo Head is assigned to Secondary
 through `section_user`, the demo Teacher has a class/subject assignment, and
 the demo Parent is linked to the demo Student. On 2026-11-04 the owner-authorised
 unnumbered pupil and its login/dependent demo rows were removed from the
@@ -66,9 +66,60 @@ number. Passwords are never stored in this repository.
 
 ## In Progress
 
-- No task is currently in progress.
+_None._
 
 ## Completed
+
+- **Batch 7c — Head role and Head scope alignment (completed 2026-11-16).**
+  Separated ordinary “Works in” membership from “Head of” scope, centralised
+  role/scope synchronisation for the Academics and Staff access entry points,
+  renamed the leadership role to Head, preserved independently granted base
+  roles, added the dry-run-first audited repair command, and scoped Promotion
+  readiness to the actor's Sections. The migration backfills existing Head
+  scopes before renaming the role. The PHP 8.2 suite passed 312 tests / 3,831
+  assertions; Pint, Vite and `git diff --check` passed. Guarded QA at 1280px
+  and 390px passed Staff access, Academics Head assignment and Admin/Head
+  Promotion states with no horizontal overflow or target below 44px. The QA
+  database, script and screenshots were removed, and the persistent development
+  database fingerprint was unchanged. Definition of Done met.
+
+- **School-issued payment receipts (completed 2026-11-15).** Added one immutable,
+  idempotent receipt snapshot per confirmed tuition, part-payment or application-
+  fee payment, with locked per-school/year `OAK-YYYY-NNNNNN` numbering, A4 PDF,
+  deferred email, scrubbed delivery failures and owner-scoped downloads. Parent
+  and applicant status pages expose their own receipts; `manage_payments` staff
+  have a paginated list, view, download and audited resend. The PHP 8.2 suite
+  passed 308 tests / 3,783 assertions; Pint, Vite and diff checks passed. Guarded
+  QA at 1280px and 390px passed the receipt list, invoice, Parent fees and
+  applicant status views with no horizontal overflow or undersized new receipt
+  control; the one-page PDF was raster-inspected with its logo, PAID mark,
+  number and amounts unclipped. QA data and generated files were removed and the
+  persistent development database fingerprint was unchanged. Existing confirmed
+  development payments were counted but deliberately not backfilled.
+
+- **Batch 7b — staff who hold more than one role (completed 2026-11-15).**
+  One account now composes assignment-scoped Teaching, Section-scoped Head and
+  Admin abilities without a role switch. Active staff, including Admin and Head,
+  may be assigned; score entry remains exact-pair scoped; a Head cannot review
+  their own submission while an Admin own approval carries an audit flag; and
+  navigation, dashboards, phone tabs and live Results attention merge applicable
+  responsibilities. The PHP 8.2 suite passed 303 tests / 3,746 assertions; Pint,
+  Vite and diff checks passed. Guarded QA passed one-, two- and three-role checks
+  at 1280px and 390px, including Head teaching/review, overflow and 44px targets.
+  QA files were removed and the persistent development database fingerprint was
+  unchanged. No migration.
+
+- **Batch 7a — signed-in hover/focus states and Section Head picker
+  (completed 2026-11-15).** Added shared signed-in pointer, mouse-only hover,
+  keyboard-focus and disabled states without changing control dimensions;
+  replaced the result-approver-only Section Head picker with a searchable
+  active-staff picker; and made assignment preserve existing roles, add/remove
+  Head according to remaining Head scopes, and audit both actions. Admin
+  and Head Staff list/detail pages already existed and were left unchanged.
+  The PHP 8.2 suite passed 301 tests / 3,722 assertions; Pint, Vite and diff
+  checks passed. Guarded QA passed desktop hover/focus and 390px overflow/tap
+  checks plus Head search/assign/remove. QA files were removed and the
+  persistent development database fingerprint was unchanged. No migration.
 
 - **Landing build — approved public Home, Apply, Status and Privacy design
   (completed 2026-11-15).** Replaced the plain public pages with the approved
@@ -1858,6 +1909,18 @@ Phase 4 exit criteria are verified below for historical handoff context.
 
 ## Decisions Log
 
+| 2026-11-15 | **Head identity is synchronized:** Head scope and the Head role always go together through one shared service; removing the last scope removes the role. | Prevents role-only or scope-only leadership access regardless of which screen makes the assignment. | Owner decisions: Batch 7c |
+| 2026-11-15 | **Head naming and scope:** the leadership role is displayed simply as Head, while each Section keeps its own configurable title; Head scope is separate from ordinary “Works in” membership, and Director/Proprietor continue to use Admin. | Lets teaching membership span Sections without widening leadership access and leaves Admin/view-all behavior unchanged. | Owner decisions: Batch 7c |
+| 2026-11-15 | **Staff access and repair:** the base-role selector never offers or removes Head, “Works in” and “Head of” are separate groups, and a dry-run-first repair grants missing Head roles for existing scopes while only reporting role-without-scope accounts. | Makes the ordinary account editor safe for multi-role staff and provides an auditable one-time consistency repair. | Owner decisions: Batch 7c |
+| 2026-11-15 | **Promotion readiness follows access scope:** Heads are blocked and informed only by their own Section(s); Admin/view-all users receive one line for every unarranged Section. | An unrelated Early Years or other Section must not block a ready Head. | Owner decisions: Batch 7c |
+| 2026-11-15 | **One account has combined abilities; there is no role-switch mode.** Teaching abilities come only from exact Subject/Class or form-arm assignments, while Head and Admin scope remains independently permissioned. | Preserves one identity and permission union without allowing a teaching assignment to widen leadership scope. | Owner decisions: Batch 7b |
+| 2026-11-15 | **Result self-approval:** a Head cannot approve or reject their own submission; another Head or Admin acts. An Admin may approve their own submission, with `own_submission` recorded in the audit metadata and “You submitted this” shown during review. | Separates ordinary submission and approval while retaining the owner's explicit Admin exception. | Owner decisions: Batch 7b |
+| 2026-11-15 | **Composed staff shell:** Teaching, Head and Admin navigation/dashboard content appears only when applicable, in that order; phone dashboard tabs change visible content only, and the live Results bell combines approval and rejected-result attention. | Makes multiple responsibilities usable without changing authorization or introducing a role switch. | Owner decisions: Batch 7b |
+| 2026-11-15 | **Active staff assignment candidates:** Subject/Class and form-teacher pickers accept active staff accounts, including Admin and Head; an Admin without a Staff profile creates it through the existing Staff screens before assignment. | Lets leadership staff teach with the same explicit assignments as other staff and creates no profile automatically. | Owner decisions: Batch 7b |
+| 2026-11-15 | **Signed-in interaction states:** every button, button-style link, table action, sidebar item, tab, pagination control and icon button has a pointer cursor, visible mouse-only hover state, visible keyboard-focus outline and dimmed non-pointer disabled state, without size or tap-target changes. | Makes interactivity consistently discoverable without sticky phone hover or layout shift. | Owner decisions: Batch 7a |
+| 2026-11-15 | **Section Head assignment:** the searchable Head picker lists every active staff account, never portal or disabled accounts; assignment adds Principal while preserving existing roles and adds the Section scope, while removal drops Principal only after the user heads no other Section. Assignment and removal are audited. | Lets a Teacher also serve as Head without losing teaching access and keeps permissions aligned with Section ownership. | Owner decisions: Batch 7a |
+| 2026-11-15 | **Staff pages remain unchanged:** Admin retains school-wide Staff HR list/detail and Heads retain their own-Section Staff list/detail through the existing permissioned navigation. | Batch 7a requested a report only because both menu destinations already exist. | Owner decisions: Batch 7a |
+
 | 2026-11-13 | **Phone and tablet header school name:** show the full school name, wrapping to at most two compact lines or reducing its size as needed; do not truncate it, overflow the viewport or reduce any control below 44px. | Owner decision: Batch 6A Part A |
 
 | 2026-11-11 | **Batch 5 small fixes:** live Results attention no longer occupies the desktop sidebar; dashboard and phone content banners remain. The bell count is the live Results count plus stored unread notifications, is hidden at zero, and its page lists both sources with links. The sidebar brand shows the full school name, while Bulk subjects, Teacher assignments and Promotion use distinct book, checklist and upward-arrow icons. CBT Question CSV now uses `Question`, Options A–F and `Correct Answer`; a lone letter uses the exam's configured single-answer upload mark, a lone `LETTER=mark` overrides it, and multiple letters require a whole-number mark for each. Comma/semicolon, case and spacing variants are accepted; invalid, duplicate or empty-option letters are refused. Both earlier 13-column formats remain readable but cannot be mixed. The template contains three delete-marked examples, preview/apply remains all-or-nothing with the 200-question cap and the Admin/Head page includes a short How to use disclosure. | Replaces the Batch 4a desktop-sidebar placement and the 2026-11-07 fixed-layout CSV decision without adding notification persistence or changing partial scoring. | Owner decisions: Batch 5 small |
@@ -2165,3 +2228,9 @@ silently:
 _Last updated: 2026-11-06 — Phase 4 is complete; Phase 5 is substantially
 built but not formally complete. Batch 6C and Phase 6D-1/6D-2 are built; the
 remaining owner-ordered work is listed under Next Up._
+| 2026-11-15 | One school-issued receipt format covers application fees and tuition payments and remains separate from Paystack's email. | Keeps one printable proof-of-payment contract across online and manual collection paths. | Owner decision for Receipts |
+| 2026-11-15 | Receipt numbers are `OAK-YYYY-NNNNNN`, allocated once per school/year under a lock inside the payment-confirmation transaction; retries neither duplicate a receipt nor consume another number. | Makes confirmation idempotent across callback, webhook, scheduler, Check again and manual paths. | Owner decision for Receipts |
+| 2026-11-15 | A receipt is an immutable snapshot of the school, payer, pupil/applicant, class/Level, paid items, amount/currency, method, reference, tuition balance, manual receiver and issue time. | Later profile or invoice edits must not rewrite issued proof. | Owner decision for Receipts |
+| 2026-11-15 | Every payment, including a part-payment, gets its own receipt with the balance remaining after that payment; Bursar/Admin cash and transfer payments also issue receipts. | Preserves a one-to-one payment trail across collection methods. | Owner decision for Receipts |
+| 2026-11-15 | Receipt email is attempted after the response with a short timeout; failure never reverses payment and is logged without secrets. Parents/applicant guardians may download only their own, while `manage_payments` staff may list, view, download and resend. | Keeps settlement authoritative while making delivery recoverable and access server-enforced. | Owner decision for Receipts |
+| 2026-11-15 | Refunds, voiding, reissuing, stamps, signatures and backfilling earlier confirmed payments are out of scope. | Defines the smallest receipt lifecycle for this build. | Owner decision for Receipts |
