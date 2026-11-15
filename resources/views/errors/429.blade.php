@@ -1,0 +1,1 @@
+<x-error-page code="429" title="Please wait" message="Too many attempts. Please wait a moment." :action-url="auth()->check() ? route('dashboard') : route('login')" :action-label="auth()->check() ? 'Go to dashboard' : 'Sign in'" />

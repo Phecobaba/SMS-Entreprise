@@ -1,0 +1,8 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reset password</title>@vite(['resources/css/app.css','resources/js/app.js'])</head><body class="lg-body">
+@php($profile = app(\App\Modules\Core\Services\CurrentSchoolProfile::class)->landingPage())
+<div class="lg">@include('core._recovery-brand')<main class="lg-main"><div class="lg-card ac-recovery-card"><p class="ad-eyebrow">Account recovery</p><h1>Set a new password</h1><p class="oak-sub">Choose your new sign-in password.</p>
+@if(!$valid)<div class="oak-notice oak-notice-danger"><strong>This link has expired or has already been used.</strong> Ask for a new reset link.</div><a class="oak-btn oak-btn-primary oak-btn-block" href="{{ route('password.request') }}">Request a new link</a>
+@else
+@if($errors->any())<div class="oak-notice oak-notice-danger" role="alert">{{ $errors->first() }}</div>@endif
+<form class="lg-form" method="post" action="{{ route('password.update', ['token' => $token]) }}">@csrf<div class="oak-field"><label for="password">New password</label><input id="password" name="password" type="password" autocomplete="new-password" minlength="8" required></div><div class="oak-field"><label for="password_confirmation">Confirm new password</label><input id="password_confirmation" name="password_confirmation" type="password" autocomplete="new-password" minlength="8" required></div><ul class="ac-rules"><li>At least 8 characters</li><li>Not your username or the school name</li><li>Not all numbers or a common password</li></ul><button class="oak-btn oak-btn-primary oak-btn-block">Reset password</button></form>
+@endif</div></main></div></body></html>

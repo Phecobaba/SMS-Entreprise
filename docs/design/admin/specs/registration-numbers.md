@@ -6,7 +6,7 @@ Batch 6. States: Normal (prefix per Section) · Editing: year added · One prefi
 Admin (proposed `manage_school_settings`; Codex matches). 
 
 ## Stated current behaviour (Codex: confirm first)
-There is **no registration number column on students today** (per `docs/schema.md`, as I read it), so numbers, history and these settings are NEW. The older designs use sample numbers such as `PRI-0412` and `REG-0412`; the samples were inconsistent and are not data.
+Batch 6B is built: students have a current registration number, immutable history, school/Section/Level prefix settings and concurrency-safe sequences. The older sample numbers such as `PRI-0412` and `REG-0412` were design examples, not data.
 
 ## Design
 - **School prefix** (2 to 6 letters or numbers), **Number length** (zero-padded; 3 to 6), **Include the year** (optional), and **Use a different prefix for each Section** with one prefix per Section (blank falls back to the school prefix).
@@ -18,14 +18,14 @@ There is **no registration number column on students today** (per `docs/schema.m
 ## Promotion (5c): the decision this raises
 With per-Section prefixes, a pupil who moves Primary to Secondary changes Section, so a "never renumber" rule and a "prefix follows the Section" rule collide. The screen says so and **does not renumber anyone**. The earlier decision stands: keep numbers by default; reassign at acceptance if chosen; the old number stays in history.
 
-## NEW data
+## Built data
 Settings (prefix, length, year flag, per-Section prefixes), a sequence source, a history table of old numbers.
 
 ## Tests
 Unique constraint school-wide; allocation is safe under concurrent saves; a format change never alters issued numbers; a prefix with spaces or symbols is refused server-side; only the permitted role can save.
 
-## Open questions
-Is the sequence **one school-wide counter or one per prefix**? Can the next number be set (e.g. start at 0500)? Which year (calendar year at creation, or the session year)? Maximum length? Does a number kept in history block reuse?
+## Resolved implementation
+The locked movement policy chooses the counter rule; Admin may advance but not rewind a counter; the year is the calendar year at issue; length 3–6 is minimum padding and may overflow; and current or historical numbers block reuse.
 
 
 ## Follow-up changes — Batch 6 reissue (2026-10-31)

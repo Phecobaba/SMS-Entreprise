@@ -1,0 +1,1 @@
+<x-error-page code="500" title="Something went wrong" message="Something went wrong on our side. Please try again." :action-url="auth()->check() ? route('dashboard') : route('login')" :action-label="auth()->check() ? 'Go to dashboard' : 'Sign in'" />

@@ -8,6 +8,7 @@ use App\Modules\Core\Models\School;
 use App\Modules\Core\Models\User;
 use App\Modules\Core\TenantContext;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class AssignDemoRegistrationNumber extends Command
 {
@@ -43,7 +44,13 @@ class AssignDemoRegistrationNumber extends Command
             return self::SUCCESS;
         }
         if ($this->option('dry-run')) {
-            $this->info('DRY RUN — would assign '.$numbers->preview($student->class_arm_id).'. No changes written.');
+            DB::beginTransaction();
+            try {
+                $preview = $numbers->preview($student->class_arm_id);
+            } finally {
+                DB::rollBack();
+            }
+            $this->info('DRY RUN — would assign '.$preview.'. No changes written.');
 
             return self::SUCCESS;
         }

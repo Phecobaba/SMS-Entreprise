@@ -43,7 +43,7 @@ class CbtReleaseAndScoringTest extends TestCase
         $learner = User::create(['name' => 'Learner', 'email' => 'learner-cbt@example.test', 'password' => 'long-password-here', 'status' => 'active']);
         $role = Role::create(['name' => 'CBT Admin']);
         $permissions = [];
-        foreach (['manage_cbt', 'approve_cbt_results', 'enter_results', 'manage_result_settings', 'view_all_sections'] as $name) {
+        foreach (['manage_cbt', 'enter_results', 'manage_result_settings', 'view_all_sections'] as $name) {
             $permissions[] = Permission::firstOrCreate(['name' => $name])->id;
         }
         $role->permissions()->attach($permissions);
@@ -64,14 +64,14 @@ class CbtReleaseAndScoringTest extends TestCase
         $config->addTemplate('Secondary', $section->id, $level->id, null, $scheme->id, [$component->id]);
 
         $workflow = app(ExamWorkflow::class);
-        $type = $workflow->createType('Internal', $admin);
+        $type = $workflow->createType('School exam', $admin);
         $this->actingAs($admin)->get(route('cbt.staff.index'))->assertOk()->assertSee('Create exam');
         app(TenantContext::class)->set($school->id);
         $this->post(route('cbt.staff.exams.store'), [
             'exam_type_id' => $type->id, 'class_id' => $class->id, 'subject_id' => $subject->id,
             'term_id' => $term->id, 'assessment_component_id' => $component->id,
             'title' => 'Mathematics CBT', 'duration' => 45, 'result_release_type' => 'Manual',
-            'show_score' => 1, 'requires_approval' => 1,
+            'show_score' => 1,
         ])->assertSessionHasNoErrors();
         app(TenantContext::class)->set($school->id);
         $exam = Exam::firstOrFail();
@@ -104,16 +104,17 @@ class CbtReleaseAndScoringTest extends TestCase
         $this->assertSame('40.00', $attempt->raw_score);
         $this->assertSame('50.00', $attempt->max_score);
         $this->assertSame('56.00', $attempt->converted_score);
+        $this->assertDatabaseMissing('results', ['student_id' => $student->id]);
+        $this->actingAs($admin)->get(route('cbt.staff.conversion', $exam))->assertOk()->assertSee('Scores written');
+        $this->post(route('cbt.staff.convert', $exam))->assertOk()->assertSee('Conversion complete');
+        app(TenantContext::class)->set($school->id);
         $result = Result::where('student_id', $student->id)->firstOrFail();
         $this->assertSame('Draft', $result->status);
         $this->assertSame('56.00', ResultItem::where('result_id', $result->id)->firstOrFail()->score);
 
-        $this->get(route('cbt.result', $attempt))->assertOk()->assertSee('Result not released yet')
+        $this->actingAs($learner)->get(route('cbt.result', $attempt))->assertOk()->assertSee('Result not released yet')
             ->assertDontSee('40.00')->assertDontSee('First question')->assertDontSee('Correct answer');
-        $this->post(route('cbt.staff.approve', $exam))->assertForbidden();
         $this->actingAs($admin)->post(route('cbt.staff.release', $exam))->assertSessionHasNoErrors();
-        $this->actingAs($learner)->get(route('cbt.result', $attempt))->assertOk()->assertSee('Result not released yet')->assertDontSee('40.00');
-        $this->actingAs($admin)->post(route('cbt.staff.approve', $exam))->assertSessionHasNoErrors();
         $this->actingAs($learner)->get(route('cbt.result', $attempt))->assertOk()->assertSee('40.00');
         app(TenantContext::class)->set($school->id);
         $exam->refresh()->update(['result_release_type' => 'Scheduled', 'result_release_at' => now()->addDay()]);
@@ -131,8 +132,10 @@ class CbtReleaseAndScoringTest extends TestCase
         $admin = User::create(['name' => 'Admin', 'email' => 'admissions-cbt@example.test', 'password' => 'long-password-here', 'status' => 'active']);
         $role = Role::create(['name' => 'CBT Admin']);
         $permission = Permission::create(['name' => 'manage_cbt']);
+        $allSections = Permission::firstOrCreate(['name' => 'view_all_sections']);
         $paymentsPermission = Permission::firstOrCreate(['name' => 'manage_payments']);
         $role->permissions()->attach($permission);
+        $role->permissions()->attach($allSections);
         $role->permissions()->attach($paymentsPermission);
         $admin->roles()->attach($role);
         $section = Section::create(['name' => 'Primary School', 'head_title' => 'Head Teacher']);

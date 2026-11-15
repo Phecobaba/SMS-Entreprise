@@ -93,17 +93,51 @@ and a domain whose document root can be set to the application's
    `php artisan key:generate --show`. Back up that `APP_KEY` securely before
    go-live and before every key rotation: saved Paystack credentials cannot be
    decrypted without the same application key.
+   Keep `APP_DEBUG=false` in production so errors use the friendly pages and
+   never expose a stack trace or configuration detail.
 3. Set the domain's cPanel document root to
    `/home/CPANEL_USER/oakfield-sms/current/public`.
 4. Add the deployment computer's public SSH key to the cPanel account.
 5. Configure cPanel cron to run `php /home/CPANEL_USER/oakfield-sms/current/artisan
-   schedule:run` every minute. The initial configuration uses
+   schedule:run` every minute. This also runs the tenant-safe Paystack pending
+   attempt recheck every five minutes (2 minutes to 48 hours old, at most 50
+   attempts per run). The initial configuration uses
    `QUEUE_CONNECTION=sync`; no persistent queue worker or Node server is
    required. If the purchased plan provides a different PHP CLI version,
    verify compatibility before changing the pinned 8.2.x release check.
+   During local Paystack testing, keep `php artisan schedule:work` running in
+   a second terminal. A provider webhook cannot reach an ordinary local URL;
+   without that scheduler a successful test payment can remain **Still
+   confirming** until a payer or Payments staff member presses **Check again**.
 6. Sign in as a School Admin and set the final Test or Live Paystack keys on
    the Payment gateway page. Do not copy final gateway secrets into source
    files or deployment scripts.
+7. Configure the school's domain mailbox through the private `MAIL_*`
+   environment values. Leave `PASSWORD_RESET_PERMISSION` empty so every active
+   account with an email address can request a reset link. Set a permission only
+   if the school deliberately wants to restrict recovery. Send the three
+   recovery messages to an external test mailbox, and confirm no reset link is
+   handled by the `log` mailer. Run
+   `php artisan oakfield:mail-test test-address@example.com` first;
+   it reports the configured mailer, host, port and scheme without printing
+   credentials, refuses the `log` transport, and sends one plain test message.
+   No queue worker is needed: Laravel's deferred callback sends recovery mail
+   synchronously after the HTTP response without writing a queued job.
+   Keep `php artisan oakfield:reset-admin-password <email-or-username>` in the
+   restricted operator runbook as the break-glass path.
+
+### If a reset email does not arrive
+
+Find the single `Password reset request outcome=...` line for the request in
+the application log. `no_matching_account`, `account_has_no_email`,
+`not_eligible`, and `throttled` explain why no delivery was attempted;
+`queued_for_send` means the mail transport accepted the message without a
+terminal delivery receipt; `sent` means it returned a send receipt; and
+`send_failed` includes only the scrubbed exception class and message. Run
+`php artisan oakfield:mail-test <external-address>` when delivery failed or a
+queued/sent message still does not appear, then check the mailbox provider's
+delivery log and spam filtering. The browser deliberately shows the same
+confirmation for every outcome.
 
 The `.env` file is never uploaded by the deployment command. Application
 storage is also shared between releases.

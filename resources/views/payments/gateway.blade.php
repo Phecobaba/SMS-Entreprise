@@ -8,8 +8,7 @@
         <div class="oak-locked"><x-icon name="lock" /><h3>Only an Admin can change the payment gateway</h3><p>The Bursar can record bank payments but cannot see or change the Paystack keys. Ask the school Admin.</p></div>
     @else
         @if(session('status'))<div class="oak-notice oak-notice-success" role="status"><div>{{ session('status') }}</div></div>@endif
-        @if(session('connection_ok'))<div class="oak-notice oak-notice-success" role="status"><div><strong>Connection OK.</strong> Paystack accepted the {{ ucfirst($gateway['mode']) }} keys. No money moved.</div></div>@endif
-        @if(session('connection_failed'))<div class="oak-notice oak-notice-danger" role="alert"><div><strong>Connection failed.</strong> Paystack did not accept the configured keys. Check and save them again.</div></div>@endif
+        @if(session('connection_result'))<div class="oak-notice {{ session('connection_result.ok') ? 'oak-notice-success' : 'oak-notice-danger' }}" role="{{ session('connection_result.ok') ? 'status' : 'alert' }}"><div>{{ session('connection_result.message') }}</div></div>@endif
         @if($gateway['unreadable'])<div class="oak-notice oak-notice-danger" role="alert"><div><strong>The saved keys can't be read. Please enter them again.</strong><p>Online payment is unavailable until new keys are saved.</p></div></div>
         @elseif($gateway['source'] === 'environment')<div class="oak-notice oak-notice-info"><div><strong>Using environment keys.</strong><p>No keys are saved here. Save keys below to manage them from this page; saved keys are used first.</p></div></div>
         @elseif(!$gateway['configured'])<div class="oak-notice oak-notice-info"><div><strong>Online payment isn't set up yet.</strong><p>Parents and students will see this message instead of Pay buttons. Bank teller payments keep working.</p></div></div>@endif
@@ -36,7 +35,12 @@
             </form>
         </section>
 
-        <section class="ad-card"><div class="ad-card-head"><div><h2>Webhook address</h2><p>Paystack uses this to tell the school when a payment succeeds.</p></div></div><div class="gw-copy"><code>{{ $webhookUrl }}</code><button class="oak-btn oak-btn-secondary" type="button" data-copy-text="{{ $webhookUrl }}">Copy</button></div><p class="ad-meta mt-2">Add this URL as the webhook URL in your Paystack dashboard's API Keys &amp; Webhooks settings, using the same Test or Live mode as these keys.</p></section>
+        <section class="ad-card"><div class="ad-card-head"><div><h2>Paystack URLs</h2><p>Use these exact addresses in the matching Test or Live fields in Paystack.</p></div></div>
+            @unless($gatewayUrlsArePublic)<div class="oak-notice oak-notice-warning" role="alert"><div><strong>Paystack's servers cannot reach this address.</strong><p>Use a tunnel such as ngrok or Cloudflare Tunnel and set APP_URL to its https address.</p></div></div>@endunless
+            <div class="oak-field mt-4"><label for="paystack-callback-url">Callback URL</label><div class="gw-copy"><code id="paystack-callback-url">{{ $callbackUrl }}</code><button class="oak-btn oak-btn-secondary" type="button" data-copy-text="{{ $callbackUrl }}">Copy</button></div></div>
+            <div class="oak-field mt-4"><label for="paystack-webhook-url">Webhook URL</label><div class="gw-copy"><code id="paystack-webhook-url">{{ $webhookUrl }}</code><button class="oak-btn oak-btn-secondary" type="button" data-copy-text="{{ $webhookUrl }}">Copy</button></div></div>
+            <p class="ad-meta mt-2">Add both URLs in your Paystack dashboard's API Keys &amp; Webhooks settings, using the same Test or Live mode as these keys.</p>
+        </section>
         <div class="ad-impact"><div><x-icon name="info-circle" /><span>Changes are logged with who and when, never the values. Other Admins are notified.</span></div><div><x-icon name="alert-triangle" /><span>Keys are encrypted with the application key. If that key is lost or changed, enter the Paystack keys again.</span></div></div>
     @endif
 </main>

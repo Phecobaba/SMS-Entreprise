@@ -61,7 +61,14 @@ class CurrentSchoolProfile
             'contact_email' => $settings?->contact_email,
             'contact_phone' => $settings?->contact_phone,
             'address' => $settings?->address,
-            'admissions_form_target' => $this->safeAdmissionsTarget($settings?->admissions_form_target),
+            'admissions_form_target' => ($settings?->admissions_open ?? true) ? '/apply' : null,
+            'whatsapp_number' => $settings?->whatsapp_number,
+            'opening_hours' => $settings?->opening_hours,
+            'admissions_key_dates' => $settings?->admissions_key_dates,
+            'admissions_reopen_text' => $settings?->admissions_reopen_text,
+            'privacy_contact_email' => $settings?->privacy_contact_email,
+            'privacy_last_updated_at' => $settings?->privacy_last_updated_at,
+            'non_admitted_retention_text' => $settings?->non_admitted_retention_text,
         ];
     }
 

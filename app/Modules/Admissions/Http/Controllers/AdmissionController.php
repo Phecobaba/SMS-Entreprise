@@ -8,12 +8,15 @@ use App\Modules\Academics\Services\SectionAccess;
 use App\Modules\Admissions\Models\AdmissionChecklistItem;
 use App\Modules\Admissions\Models\Candidate;
 use App\Modules\Admissions\Services\AdmissionPipeline;
+use App\Modules\Admissions\Services\CandidateAccount;
+use App\Modules\Admissions\Services\CandidateSlipPdf;
 use App\Modules\Core\Models\School;
 use App\Modules\Core\Services\PasswordRules;
 use App\Modules\Core\TenantContext;
 use App\Modules\Payments\Services\PaymentLedger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -60,7 +63,10 @@ class AdmissionController extends Controller
 
     public function index(Request $request, SectionAccess $sections): View
     {
-        $candidates = $sections->scopeCandidates(Candidate::with(['offer', 'appliedLevel.section']), $request->user());
+        $candidates = $sections->scopeCandidates(Candidate::with([
+            'offer', 'appliedLevel.section', 'application.examSession',
+            'examSubmissions' => fn ($query) => $query->where('status', 'Submitted')->latest('submitted_at'),
+        ]), $request->user());
 
         return view('admissions.index', [
             'candidates' => $candidates->latest()->paginate(20),
@@ -135,15 +141,29 @@ class AdmissionController extends Controller
         return redirect()->route('admissions.show', $candidate)->with('status', 'Expired offer marked lapsed.');
     }
 
-    public function convert(int $candidate, AdmissionPipeline $pipeline, Request $request): RedirectResponse
+    public function convert(int $candidate, AdmissionPipeline $pipeline, Request $request): RedirectResponse|Response
     {
         app(SectionAccess::class)->assertCandidate($request->user(), $candidate);
         $data = $request->validate([
             'class_arm_id' => ['required', 'integer'],
             'override' => ['sometimes', 'boolean'],
-            'override_reason' => ['nullable', 'string', 'max:2000'],
+            'override_reason' => ['nullable', 'required_if:override,1', 'string', 'min:10', 'max:500'],
         ]);
         $pipeline->convert(Candidate::findOrFail($candidate), $request->user(), (int) $data['class_arm_id'], (bool) ($data['override'] ?? false), $data['override_reason'] ?? null);
+        $credential = $pipeline->takeParentCredential();
+        if ($credential) {
+            $slip = app(CandidateAccount::class)->parentSlip(
+                $credential['user'], $credential['temporary_password'], $credential['children'],
+            );
+            $pdf = app(CandidateSlipPdf::class)->render([$slip]);
+
+            return response($pdf, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="parent-credentials.pdf"',
+                'Cache-Control' => 'no-store, no-cache, must-revalidate, private',
+                'Pragma' => 'no-cache',
+            ]);
+        }
 
         return redirect()->route('admissions.show', $candidate)->with('status', 'Candidate converted to student.');
     }

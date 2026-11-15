@@ -3,8 +3,11 @@
 namespace App\Modules\Payments\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Admissions\Models\ApplicationPaymentAttempt;
 use App\Modules\Admissions\Services\BillingRecipients;
+use App\Modules\Assignments\Services\ParentAccountDirectory;
 use App\Modules\Core\Models\SchoolSetting;
+use App\Modules\Core\Services\ParentEmail;
 use App\Modules\Payments\Models\Expense;
 use App\Modules\Payments\Models\Invoice;
 use App\Modules\Payments\Models\ManualPaymentSubmission;
@@ -31,6 +34,7 @@ class PaymentController extends Controller
             'expenses' => Expense::latest()->paginate(20, ['*'], 'expenses_page'),
             'paymentRule' => SchoolSetting::first()?->result_access_payment_rule ?? 'TermInvoicePaid',
             'onlinePaymentsAvailable' => $credentials->isConfigured(),
+            'applicationPayments' => ApplicationPaymentAttempt::with('application')->latest()->paginate(20, ['*'], 'application_payments_page'),
         ]);
     }
 
@@ -139,7 +143,7 @@ class PaymentController extends Controller
             })->latest('id')->paginate(20)->withQueryString();
 
         $selected = $request->integer('invoice')
-            ? Invoice::with(['student.user', 'student.classArm.schoolClass', 'candidate'])->findOrFail($request->integer('invoice'))
+            ? Invoice::with(['student.user', 'student.classArm.schoolClass', 'candidate', 'attempts'])->findOrFail($request->integer('invoice'))
             : null;
 
         return view('payments.record', compact('invoices', 'selected', 'query'));
@@ -212,27 +216,53 @@ class PaymentController extends Controller
         return Storage::disk('local')->download($submission->photo_path);
     }
 
-    public function begin(int $invoice, Request $request, PaymentLedger $ledger): RedirectResponse
+    public function begin(int $invoice, Request $request, PaymentLedger $ledger, ParentEmail $parentEmail): RedirectResponse
     {
+        if (app(ParentAccountDirectory::class)->existsForUser($request->user()->id) && blank($request->user()->email)) {
+            $data = $request->validate(['payment_email' => ['required', 'email', 'max:255']]);
+            $parentEmail->saveFromPayment($request->user(), $data['payment_email']);
+            $request->user()->refresh();
+        }
         $attempt = $ledger->beginPaystack(Invoice::findOrFail($invoice), $request->user());
 
         return redirect()->away($attempt->authorization_url);
     }
 
+    public function check(PaymentAttempt $attempt, Request $request, PaymentLedger $ledger): RedirectResponse
+    {
+        $result = $ledger->checkPaystackAgain($attempt, $request->user());
+        $message = match ($result) {
+            PaymentLedger::PAYSTACK_PAID => 'Paid. The invoice and receipt are up to date.',
+            PaymentLedger::PAYSTACK_FAILED => 'Failed. Paystack says this attempt did not succeed. The invoice is still unpaid.',
+            default => 'Still confirming. Paystack has not confirmed the payment yet. Try again shortly.',
+        };
+        $invoice = $attempt->invoice;
+        if (! $request->user()->can('manage_payments') && $invoice->student_id) {
+            return redirect()->route('payments.mine.index', ['student' => $invoice->student_id])->with('status', $message);
+        }
+
+        return redirect()->route('payments.invoices.show', $invoice->parent_invoice_id ?: $invoice->id)->with('status', $message);
+    }
+
     public function verify(Request $request, PaymentLedger $ledger): RedirectResponse
     {
         $data = $request->validate(['reference' => ['required', 'string', 'max:80']]);
-        $ledger->verifyPaystack($data['reference']);
+        $result = $ledger->verifyPaystackResult($data['reference']);
 
         $attempt = PaymentAttempt::with('invoice')->where('reference', $data['reference'])->first();
         $invoice = $attempt?->invoice;
+        $message = match ($result['status']) {
+            PaymentLedger::PAYSTACK_PAID => 'Paid. The invoice and receipt are up to date.',
+            PaymentLedger::PAYSTACK_FAILED => 'Failed. Paystack says this attempt did not succeed. The invoice is still unpaid.',
+            default => 'Still confirming. Paystack has not confirmed the payment yet. Try again shortly.',
+        };
         if ($request->user() && $invoice?->student_id
             && app(BillingRecipients::class)->owns($invoice->candidate_id, $invoice->student_id, $request->user())) {
             return redirect()->route('payments.mine.index', ['student' => $invoice->student_id])
-                ->with('status', 'Payment verification checked. Your invoice status is shown below.');
+                ->with('status', $message);
         }
 
-        return redirect()->route('home')->with('status', 'Payment verification checked.');
+        return redirect()->route('home')->with('status', $message);
     }
 
     public function expense(Request $request): RedirectResponse

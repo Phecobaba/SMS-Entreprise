@@ -73,15 +73,12 @@ class DefaultRoleCatalogTest extends TestCase
         $configuration->addTemplate('Secondary default', $section->id, $level->id, null, $scheme->id, [$exam->id]);
 
         $this->actingAs($teacher)->get(route('dashboard'))->assertOk();
-        $this->post(route('results.drafts.store'), [
-            'student_id' => $student->id,
-            'subject_id' => $subject->id,
-            'term_id' => $term->id,
+        $this->post(route('results.teacher.draft', [$class, $subject, $student]), [
             'scores' => [$exam->id => 80],
         ])->assertSessionHasNoErrors();
         app(TenantContext::class)->set(1);
         $result = Result::firstOrFail();
-        $this->post(route('results.submit', $result))->assertSessionHasNoErrors();
+        $this->post(route('results.teacher.submit', [$class, $subject, $student]))->assertSessionHasNoErrors();
 
         $this->actingAs($head)->get(route('dashboard'))->assertOk();
         $this->post(route('results.approve', $result))->assertSessionHasNoErrors();
@@ -132,6 +129,27 @@ class DefaultRoleCatalogTest extends TestCase
         }
         $this->assertNotContains('approve_payments', $actual);
         $this->assertNotContains('manage_payment_gateway', $actual);
+    }
+
+    public function test_parent_directory_migration_adds_read_and_manage_permissions_to_existing_roles(): void
+    {
+        $school = School::create(['name' => 'Existing Directory School']);
+        app(TenantContext::class)->set($school->id);
+        foreach (['School Admin', 'Principal', 'Bursar', 'Teacher'] as $name) {
+            Role::create(['name' => $name]);
+        }
+
+        $migration = require app_path('Modules/Core/Database/Migrations/2026_11_11_000100_grant_parent_directory_permissions.php');
+        $migration->up();
+
+        $this->assertTrue(Role::where('name', 'School Admin')->firstOrFail()->permissions()->where('name', 'view_parents')->exists());
+        $this->assertTrue(Role::where('name', 'School Admin')->firstOrFail()->permissions()->where('name', 'view_all_parents')->exists());
+        $this->assertTrue(Role::where('name', 'School Admin')->firstOrFail()->permissions()->where('name', 'manage_parent_accounts')->exists());
+        $this->assertTrue(Role::where('name', 'Principal')->firstOrFail()->permissions()->where('name', 'view_parents')->exists());
+        $this->assertFalse(Role::where('name', 'Principal')->firstOrFail()->permissions()->where('name', 'view_all_parents')->exists());
+        $this->assertTrue(Role::where('name', 'Bursar')->firstOrFail()->permissions()->where('name', 'view_parents')->exists());
+        $this->assertTrue(Role::where('name', 'Bursar')->firstOrFail()->permissions()->where('name', 'view_all_parents')->exists());
+        $this->assertFalse(Role::where('name', 'Teacher')->firstOrFail()->permissions()->where('name', 'view_parents')->exists());
     }
 
     private function userWithRole(string $name, string $roleName): User

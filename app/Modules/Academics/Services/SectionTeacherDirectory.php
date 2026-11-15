@@ -6,6 +6,7 @@ use App\Modules\Academics\Models\ClassArm;
 use App\Modules\Academics\Models\SchoolClass;
 use App\Modules\Academics\Models\TeacherSubjectAssignment;
 use App\Modules\Core\Models\User;
+use App\Modules\Core\Services\SchoolUserDirectory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -35,7 +36,7 @@ class SectionTeacherDirectory
 
     public function candidates(int $sectionId, array $permissions, bool $includeOtherTeachers): array
     {
-        $eligible = User::where('status', 'active')
+        $eligible = app(SchoolUserDirectory::class)->scopeStaffAccounts(User::where('status', 'active'))
             ->whereHas('roles.permissions', fn (Builder $query) => $query->whereIn('permissions.name', $permissions))
             ->orderBy('name')->limit(200)->get(['id', 'name', 'email', 'status']);
         $inSectionIds = $this->teacherIdsForSection($sectionId);
@@ -50,7 +51,10 @@ class SectionTeacherDirectory
 
     public function isEligible(User $user, int $sectionId, array $permissions, bool $allowOtherTeacher): bool
     {
-        if ($user->status !== 'active' || ! $user->roles()->whereHas('permissions', fn (Builder $query) => $query->whereIn('permissions.name', $permissions))->exists()) {
+        $eligibleStaff = app(SchoolUserDirectory::class)->scopeStaffAccounts(
+            User::whereKey($user->id)->where('status', 'active'),
+        )->whereHas('roles.permissions', fn (Builder $query) => $query->whereIn('permissions.name', $permissions))->exists();
+        if (! $eligibleStaff) {
             return false;
         }
 

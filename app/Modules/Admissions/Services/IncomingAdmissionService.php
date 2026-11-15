@@ -41,11 +41,25 @@ class IncomingAdmissionService
 
         return [
             'section' => $section,
+            'sourceSection' => $this->sourceSectionFor($section),
             'classes' => $classes,
             'students' => $students,
             'suggestions' => $suggestions,
             'hasRegistrationNumber' => Schema::hasColumn('students', 'registration_number'),
         ];
+    }
+
+    public function sourceSectionFor(Section $section): ?Section
+    {
+        $sourcePosition = $this->sourcePosition($section);
+        if ($sourcePosition === null) {
+            return null;
+        }
+
+        return SchoolClass::with('level.section')
+            ->where('position', $sourcePosition)
+            ->whereHas('level', fn (Builder $query) => $query->where('section_id', '!=', $section->id))
+            ->first()?->level?->section;
     }
 
     public function previewAccept(User $actor, int $sectionId, array $placements): array
@@ -61,7 +75,7 @@ class IncomingAdmissionService
 
         return DB::transaction(function () use ($actor, $section, $placements): array {
             Student::whereIn('id', array_map('intval', array_keys($placements)))->lockForUpdate()->get();
-            $plan = $this->acceptPlan($section, $placements, true);
+            $plan = $this->acceptPlan($section, $placements, true, true);
 
             foreach ($plan['rows'] as $row) {
                 if ($row['unchanged']) {
@@ -75,6 +89,11 @@ class IncomingAdmissionService
                     'awaiting_from_class_arm_id' => $student->awaiting_from_class_arm_id,
                     'awaiting_admission_at' => $student->awaiting_admission_at?->toIso8601String(),
                 ];
+                if ($student->registration_number) {
+                    app(RegistrationNumbers::class)->applyMovementPlan($student, $row['registration'], $actor);
+                } else {
+                    app(RegistrationNumbers::class)->applyInitialPlan($student, $row['registration'], $actor);
+                }
                 $student->update([
                     'status' => Student::STATUS_ACTIVE,
                     'class_arm_id' => $row['arm']->id,
@@ -85,6 +104,7 @@ class IncomingAdmissionService
                     'from' => $from,
                     'to' => ['status' => Student::STATUS_ACTIVE, 'class_arm_id' => $row['arm']->id],
                     'destination_section_id' => $section->id,
+                    'registration_number' => $row['registration'],
                 ]);
                 app(FeeInvoicingService::class)->automaticallyInvoice($student, $actor);
             }
@@ -186,7 +206,7 @@ class IncomingAdmissionService
         return ['class' => $destination, 'arm' => $arm];
     }
 
-    private function acceptPlan(Section $section, array $placements, bool $allowIdempotent = false): array
+    private function acceptPlan(Section $section, array $placements, bool $allowIdempotent = false, bool $reserveNumbers = false): array
     {
         if ($placements === []) {
             throw ValidationException::withMessages(['students' => 'Select at least one pupil to review.']);
@@ -198,6 +218,7 @@ class IncomingAdmissionService
             ->whereIn('id', $ids)->get()->keyBy('id');
         $rows = collect();
         $errors = [];
+        $numberState = [];
 
         foreach ($ids as $id) {
             $student = $students->get($id);
@@ -216,7 +237,22 @@ class IncomingAdmissionService
 
                 continue;
             }
-            $rows->push(['student' => $student, 'arm' => $arm, 'unchanged' => $unchanged]);
+            if ($unchanged) {
+                $registration = [
+                    'old_number' => $student->registration_number, 'new_number' => $student->registration_number,
+                    'changed' => false, 'adjusted' => false, 'reason' => 'movement_policy_kept_number',
+                ];
+            } elseif ($student->registration_number) {
+                $registration = app(RegistrationNumbers::class)->planMovement(
+                    $student, $arm, $numberState, $reserveNumbers
+                );
+            } else {
+                $registration = app(RegistrationNumbers::class)->planInitial($arm, $numberState, $reserveNumbers);
+            }
+            $rows->push([
+                'student' => $student, 'arm' => $arm, 'unchanged' => $unchanged,
+                'registration' => $registration,
+            ]);
         }
         if ($errors !== []) {
             throw ValidationException::withMessages($errors);

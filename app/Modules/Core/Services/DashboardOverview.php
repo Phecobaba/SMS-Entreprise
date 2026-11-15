@@ -4,7 +4,9 @@ namespace App\Modules\Core\Services;
 
 use App\Modules\Academics\Models\Section;
 use App\Modules\Academics\Services\FormTeacherAssignments;
+use App\Modules\Academics\Services\LearnerTerminology;
 use App\Modules\Academics\Services\ResultTeachingAssignments;
+use App\Modules\Academics\Services\TeacherFacingLabel;
 use App\Modules\Admissions\Services\AdmissionPipeline;
 use App\Modules\Admissions\Services\StudentDirectory;
 use App\Modules\Attendance\Services\AttendanceService;
@@ -50,6 +52,9 @@ class DashboardOverview
             return [
                 'kind' => $kind,
                 'section' => $section,
+                'learners_term' => $kind === 'head'
+                    ? app(LearnerTerminology::class)->word($section, true)
+                    : 'Students',
                 'students' => app(StudentDirectory::class)->count($actor, $sectionId),
                 'teachers' => app(ResultTeachingAssignments::class)->dashboardTeacherCount($actor, $sectionId),
                 'attendance' => $attendance,
@@ -61,14 +66,28 @@ class DashboardOverview
         }
 
         if ($kind === 'teacher') {
-            $arm = app(FormTeacherAssignments::class)->dashboardArm($actor);
-            $context = app(ResultTeachingAssignments::class)->dashboardTeacherContext($actor);
+            $arms = app(FormTeacherAssignments::class)->dashboardArms($actor);
+            $arm = $arms->first();
+            $assignments = app(ResultTeachingAssignments::class)->assignedPairs($actor);
+            $assignedPairs = $assignments->map(
+                fn ($assignment): string => app(TeacherFacingLabel::class)->pair(
+                    $assignment->subject?->name,
+                    $assignment->schoolClass?->name,
+                ),
+            );
+            $learnerScope = $arms->map->schoolClass
+                ->merge($assignments->pluck('schoolClass'))
+                ->filter();
             $session = now('Africa/Lagos')->hour < 12 ? 'Morning' : 'Afternoon';
             $roster = $arm ? app(AttendanceService::class)->dashboardRoster($arm->id, $session) : [];
 
             return [
                 'kind' => 'teacher',
-                'context' => trim(($arm?->schoolClass?->name ?? $context['class'] ?? '').' '.($context['subject'] ?? $arm?->name ?? '')),
+                'context' => null,
+                'form_arms' => $arms->map(fn ($item): string => app(TeacherFacingLabel::class)->arm($item->schoolClass?->name, $item->name))->values(),
+                'assigned_pairs' => $assignedPairs,
+                'learner_term' => app(LearnerTerminology::class)->word($learnerScope),
+                'learners_term' => app(LearnerTerminology::class)->word($learnerScope, true),
                 'students' => $arm ? app(StudentDirectory::class)->countForArm($arm->id) : 0,
                 'attendance' => $arm ? app(AttendanceService::class)->dashboardToday($arm->id) : null,
                 'pending' => app(ResultWorkflow::class)->dashboardTeacherPending($actor),

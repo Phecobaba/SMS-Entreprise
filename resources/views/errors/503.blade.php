@@ -1,0 +1,1 @@
+<x-error-page code="503" title="Temporarily unavailable" message="The school system is temporarily unavailable for maintenance. Please try again shortly." :action-url="route('home')" action-label="Go to the school website" />

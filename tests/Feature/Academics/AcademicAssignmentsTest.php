@@ -158,8 +158,11 @@ class AcademicAssignmentsTest extends TestCase
         $dual->roles()->attach($role);
         $f['primary']->heads()->attach($dual, ['school_id' => $f['school']->id]);
         $f['secondary']->heads()->attach($dual, ['school_id' => $f['school']->id]);
+        $mixedPortalTeacher = User::create(['name' => 'Mixed Portal Teacher', 'email' => 'mixed-teacher@example.test', 'password' => 'password-long', 'status' => 'active']);
+        $mixedPortalTeacher->roles()->attach([$role->id, Role::create(['name' => 'Student'])->id]);
+        $f['primary']->heads()->attach($mixedPortalTeacher, ['school_id' => $f['school']->id]);
 
-        foreach ([$outside, $inactive, $nonTeacher] as $candidate) {
+        foreach ([$outside, $inactive, $nonTeacher, $mixedPortalTeacher] as $candidate) {
             $this->actingAs($f['head'])->post(route('academics.teacher-assignments.review'), [
                 'section_id' => $f['primary']->id, 'mode' => 'class', 'class_id' => $f['primaryClass']->id,
                 'teachers' => [$f['math']->id => $candidate->id],
@@ -169,6 +172,7 @@ class AcademicAssignmentsTest extends TestCase
         $this->tenant($f);
         $service = app(AcademicAssignmentManager::class);
         $directory = app(SectionTeacherDirectory::class);
+        $this->assertFalse($directory->isEligible($mixedPortalTeacher, $f['primary']->id, SectionTeacherDirectory::SUBJECT_PERMISSIONS, false));
         $this->assertTrue($directory->isEligible($dual, $f['primary']->id, SectionTeacherDirectory::SUBJECT_PERMISSIONS, false));
         $this->assertTrue($directory->isEligible($dual, $f['secondary']->id, SectionTeacherDirectory::SUBJECT_PERMISSIONS, false));
         $this->assertTrue($service->teacherCatalog($f['head'], $f['primary']->id)['teachers']->contains('id', $dual->id));

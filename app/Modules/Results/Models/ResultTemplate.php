@@ -15,11 +15,17 @@ class ResultTemplate extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['section_id', 'academic_level_id', 'class_id', 'grading_scheme_id', 'name', 'scope_key', 'active_scope_key', 'show_subject_remarks', 'retired_at', 'retired_by'];
+    protected $fillable = ['section_id', 'academic_level_id', 'class_id', 'grading_scheme_id', 'name', 'scope_key', 'active_scope_key', 'show_subject_remarks', 'show_overall_total', 'show_average', 'show_position', 'retired_at', 'retired_by'];
 
     protected function casts(): array
     {
-        return ['show_subject_remarks' => 'boolean', 'retired_at' => 'datetime'];
+        return [
+            'show_subject_remarks' => 'boolean',
+            'show_overall_total' => 'boolean',
+            'show_average' => 'boolean',
+            'show_position' => 'boolean',
+            'retired_at' => 'datetime',
+        ];
     }
 
     protected static function booted(): void

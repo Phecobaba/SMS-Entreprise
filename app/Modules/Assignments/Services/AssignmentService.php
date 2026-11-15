@@ -5,6 +5,7 @@ namespace App\Modules\Assignments\Services;
 use App\Modules\Academics\Models\ClassArm;
 use App\Modules\Academics\Services\ResultAcademicCatalog;
 use App\Modules\Academics\Services\ResultTeachingAssignments;
+use App\Modules\Academics\Services\TeacherFacingLabel;
 use App\Modules\Admissions\Services\StudentDirectory;
 use App\Modules\Assignments\Models\Assignment;
 use App\Modules\Assignments\Models\AssignmentSubmission;
@@ -32,6 +33,9 @@ class AssignmentService
     {
         Gate::forUser($actor)->authorize('mark_assignments');
         $arm = ClassArm::findOrFail((int) $data['class_arm_id']);
+        if ($arm->class_id !== (int) $data['class_id']) {
+            throw ValidationException::withMessages(['class_arm_id' => 'Choose an arm from the selected class.']);
+        }
         app(ResultAcademicCatalog::class)->assertClassSubject($arm->class_id, (int) $data['subject_id']);
         $this->assertMayTeach($actor, $arm, (int) $data['subject_id']);
 
@@ -86,6 +90,7 @@ class AssignmentService
             $user = new User;
             $user->fill(['name' => trim($data['name']), 'username' => strtolower(trim($data['username'])),
                 'email' => filled($data['email'] ?? null) ? strtolower(trim($data['email'])) : null,
+                'email_verified_at' => filled($data['email'] ?? null) ? now() : null,
                 'must_change_password' => true, 'status' => 'active']);
             $user->setRawAttributes(array_merge($user->getAttributes(), ['password' => app(TemporaryCredentials::class)->hash($temporary)]));
             $user->save();
@@ -102,7 +107,7 @@ class AssignmentService
 
     public function staffList(User $actor)
     {
-        $query = Assignment::orderByDesc('id');
+        $query = Assignment::with(['subject', 'classArm.schoolClass'])->orderByDesc('id');
         if (! Gate::forUser($actor)->allows('manage_assignments')) {
             $scopes = app(ResultTeachingAssignments::class)->resultScopesFor($actor);
             $query->where(function ($builder) use ($scopes): void {
@@ -122,13 +127,15 @@ class AssignmentService
 
     public function submissions(int $assignmentId, User $actor): array
     {
-        $assignment = Assignment::findOrFail($assignmentId);
+        $assignment = Assignment::with(['subject', 'classArm.schoolClass'])->findOrFail($assignmentId);
         $arm = ClassArm::findOrFail($assignment->class_arm_id);
         $this->assertMayTeach($actor, $arm, $assignment->subject_id);
         $roster = app(StudentDirectory::class)->rosterForArm($arm->id);
         $rows = AssignmentSubmission::where('assignment_id', $assignmentId)->get()->keyBy('student_id');
 
-        return compact('assignment', 'arm', 'roster', 'rows');
+        $pairLabel = app(TeacherFacingLabel::class)->pair($assignment->subject?->name, $arm->schoolClass?->name);
+
+        return compact('assignment', 'arm', 'roster', 'rows', 'pairLabel');
     }
 
     public function forStudent(User $actor, string $show = 'todo')

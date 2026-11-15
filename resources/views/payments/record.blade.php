@@ -9,7 +9,9 @@
     <section class="ad-card"><form method="get" action="{{ route('payments.record.index') }}" class="ad-payment-search"><label for="payment-search">Find an invoice</label><div><input id="payment-search" name="q" value="{{ $query }}" placeholder="Student name or registration number"><button class="oak-btn oak-btn-secondary">Search</button></div></form></section>
     @if($selected)
         @php($owner = $selected->student?->user?->name ?? $selected->candidate?->name ?? 'Payer')
+        @php($recentPendingAttempt = $selected->attempts->where('status', 'Pending')->sortByDesc('id')->first(fn ($attempt) => $attempt->created_at?->gte(now()->subHours(48))))
         <section class="ad-card"><div class="ad-card-head"><div><h2>{{ $owner }}</h2><p>{{ $selected->purpose }} · Invoice #{{ $selected->id }} · ₦{{ number_format($selected->amount_kobo / 100, 2) }}</p></div></div>
+            @if($recentPendingAttempt)<div class="oak-notice oak-notice-warning" role="alert"><x-icon name="alert-triangle" /><div><strong>A Paystack payment for this invoice is still being confirmed.</strong><p>Check it before recording a manual payment, or the invoice could be credited twice.</p></div></div>@endif
             <form method="post" action="{{ route('payments.manual', $selected) }}" enctype="multipart/form-data" class="ad-form-grid">@csrf
                 <label>Bank<input name="bank" value="{{ old('bank') }}" maxlength="120" required></label>
                 <label>Teller number<input name="teller_number" value="{{ old('teller_number') }}" maxlength="120" required></label>

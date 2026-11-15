@@ -4,6 +4,7 @@ namespace App\Modules\Results\Models;
 
 use App\Modules\Academics\Models\ClassArm;
 use App\Modules\Core\Models\Concerns\BelongsToTenant;
+use App\Modules\Core\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -32,6 +33,11 @@ class Result extends Model
     public function classArm(): BelongsTo
     {
         return $this->belongsTo(ClassArm::class, 'class_arm_id');
+    }
+
+    public function submittedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'submitted_by');
     }
 
     public function audit(): HasMany

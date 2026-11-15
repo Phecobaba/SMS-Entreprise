@@ -11,7 +11,7 @@ class GrantCbtAccess extends Command
 {
     protected $signature = 'oakfield:grant-cbt-access';
 
-    protected $description = 'Grant existing school administrators CBT authoring and release approval access';
+    protected $description = 'Grant existing school administrators CBT management access';
 
     public function handle(TenantContext $context): int
     {
@@ -24,7 +24,7 @@ class GrantCbtAccess extends Command
                 return self::FAILURE;
             }
             $ids = [];
-            foreach (['manage_cbt', 'approve_cbt_results'] as $name) {
+            foreach (['manage_cbt', 'view_cbt_results'] as $name) {
                 $ids[] = Permission::firstOrCreate(['name' => $name])->id;
             }
             $role->permissions()->syncWithoutDetaching($ids);

@@ -3,6 +3,8 @@
 namespace App\Modules\Payments\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Admissions\Models\ApplicationPaymentAttempt;
+use App\Modules\Admissions\Services\ApplicationWorkflow;
 use App\Modules\Payments\Services\PaymentLedger;
 use App\Modules\Payments\Services\PaystackCredentials;
 use Illuminate\Http\Request;
@@ -22,7 +24,12 @@ class PaystackWebhookController extends Controller
         $payload = $request->json()->all();
         if (($payload['event'] ?? null) === 'charge.success' && is_string($payload['data']['reference'] ?? null)) {
             try {
-                $payment = $ledger->verifyPaystack($payload['data']['reference']);
+                if (ApplicationPaymentAttempt::where('reference', $payload['data']['reference'])->exists()) {
+                    app(ApplicationWorkflow::class)->verifyReference($payload['data']['reference']);
+
+                    return response('OK', 200);
+                }
+                $payment = $ledger->verifyPaystackResult($payload['data']['reference'])['payment'];
                 if ($payment) {
                     Log::info('Paystack webhook payment verification', [
                         'payment_id' => $payment->id,

@@ -1,0 +1,3 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Check your email</title>@vite(['resources/css/app.css','resources/js/app.js'])</head><body class="lg-body">
+@php($profile = app(\App\Modules\Core\Services\CurrentSchoolProfile::class)->landingPage())
+<div class="lg">@include('core._recovery-brand')<main class="lg-main"><div class="lg-card ac-recovery-card"><p class="ad-eyebrow">Account recovery</p><h1>Check your email</h1><div class="oak-notice oak-notice-success">If an account matches, a reset link has been sent.</div><a class="oak-btn oak-btn-primary oak-btn-block" href="{{ route('login') }}">Back to sign in</a></div></main></div></body></html>

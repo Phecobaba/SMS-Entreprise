@@ -14,11 +14,11 @@ use Illuminate\Validation\ValidationException;
 
 class SectionAdministration
 {
-    public function createSection(string $name, string $headTitle, User $actor): Section
+    public function createSection(string $name, string $headTitle, User $actor, string $learnerTerm = 'Student'): Section
     {
         Gate::forUser($actor)->authorize('view_all_sections');
 
-        return Section::create(['name' => trim($name), 'head_title' => trim($headTitle)]);
+        return Section::create(['name' => trim($name), 'head_title' => trim($headTitle), 'learner_term' => $learnerTerm]);
     }
 
     public function assignHead(Section $section, ?User $head, User $actor): Section

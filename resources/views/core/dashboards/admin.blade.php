@@ -11,9 +11,9 @@
 
 <div class="ad-metrics">
     <div class="oak-metric"><span>Students</span><strong>{{ number_format($overview['students']) }}</strong></div>
-    <div class="oak-metric"><span>Teachers assigned</span><strong>{{ number_format($overview['teachers']) }}</strong>@if(!$overview['selected_section_id'])<small>Each teacher is counted once across sections.</small>@endif</div>
+    <div class="oak-metric"><span>Teachers assigned <x-oak.tooltip text="Distinct people assigned to teach. A teacher assigned to several subjects or classes is counted once." label="How Teachers assigned is counted" /></span><strong>{{ number_format($overview['teachers']) }}</strong>@if(!$overview['selected_section_id'])<small>Each teacher is counted once across sections.</small>@endif</div>
     @include('core.dashboards._attendance-metric')
-    <div class="oak-metric"><span>Unpaid tuition invoices</span><strong class="oak-metric-accent">₦{{ number_format($overview['outstanding_kobo'] / 100) }}</strong></div>
+    <div class="oak-metric"><span>Unpaid tuition invoices <x-oak.tooltip text="The total unpaid balance across open term-fee invoices in this view." label="What Unpaid tuition invoices means" /></span><strong class="oak-metric-accent">₦{{ number_format($overview['outstanding_kobo'] / 100) }}</strong></div>
 </div>
 
 <div class="oak-two-col oak-section">

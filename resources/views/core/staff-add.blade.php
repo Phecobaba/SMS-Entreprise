@@ -1,6 +1,6 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Add staff</title>@vite(['resources/css/app.css','resources/js/app.js'])</head><body>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Create staff account</title>@vite(['resources/css/app.css','resources/js/app.js'])</head><body>
 @include('core._shell-start')
-<main class="ad-page ac-page"><header class="ad-page-head"><div><p class="ad-eyebrow">Administration</p><h1>Add staff</h1><p>Create the sign-in account here. Employment, contract, salary and private documents remain in Staff HR.</p></div></header>
+<main class="ad-page ac-page"><header class="ad-page-head"><div><p class="ad-eyebrow">Administration</p><h1>Create staff account</h1><p>Create the sign-in account here. Employment, contract, salary and private documents remain in Staff HR.</p></div></header>
 @if($errors->any())<div class="oak-notice oak-notice-danger" role="alert">{{ $errors->first() }}</div>@endif
 <form method="post" action="{{ route('staff.accounts.store') }}" class="ad-card ac-form" autocomplete="off">@csrf
 <div class="ad-form-grid"><label>Full name<input name="name" value="{{ old('name') }}" required maxlength="255"></label><label>Role<select name="role_id" required><option value="">Choose a role</option>@foreach($roles as $role)<option value="{{ $role->id }}" @selected((string)old('role_id')===(string)$role->id)>{{ $role->name === 'Principal' ? 'Head (Principal)' : $role->name }}</option>@endforeach</select></label></div>

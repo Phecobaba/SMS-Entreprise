@@ -1,0 +1,1 @@
+<x-error-page code="404" title="Page not found" message="We could not find that page." :action-url="auth()->check() ? route('dashboard') : route('login')" :action-label="auth()->check() ? 'Go to dashboard' : 'Sign in'" />

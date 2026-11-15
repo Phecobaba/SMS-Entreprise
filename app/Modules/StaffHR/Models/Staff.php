@@ -30,4 +30,9 @@ class Staff extends Model
     {
         return $this->hasMany(StaffSalaryHistory::class)->orderBy('effective_from');
     }
+
+    public function disciplinaryLogs(): HasMany
+    {
+        return $this->hasMany(StaffDisciplinaryLog::class)->orderByDesc('date')->orderByDesc('id');
+    }
 }

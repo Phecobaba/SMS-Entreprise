@@ -6,8 +6,10 @@ use App\Modules\Academics\Models\AcademicLevel;
 use App\Modules\Academics\Models\ClassArm;
 use App\Modules\Academics\Models\SchoolClass;
 use App\Modules\Academics\Models\Section;
+use App\Modules\Academics\Services\LearnerTerminology;
 use App\Modules\Admissions\Models\RegistrationNumberSequence;
 use App\Modules\Admissions\Models\Student;
+use App\Modules\Admissions\Models\StudentRegistrationNumberHistory;
 use App\Modules\Admissions\Services\RegistrationNumbers;
 use App\Modules\Admissions\Services\StudentAccounts;
 use App\Modules\Assignments\Models\ParentProfile;
@@ -60,23 +62,31 @@ class StudentRegistrationNumbersTest extends TestCase
         $this->admin->roles()->attach($roles['School Admin'], ['school_id' => $this->school->id]);
         $this->head = $this->user('Primary Head', 'head');
         $this->head->roles()->attach($roles['Principal'], ['school_id' => $this->school->id]);
-        $this->primary = Section::create(['name' => 'Primary', 'head_title' => 'Head Teacher', 'registration_prefix' => 'PRI']);
-        $this->secondary = Section::create(['name' => 'Secondary', 'head_title' => 'Principal', 'registration_prefix' => 'SEC']);
+        $this->primary = Section::create(['name' => 'Primary', 'head_title' => 'Head Teacher', 'learner_term' => 'Pupil', 'registration_prefix' => 'PRI', 'registration_code' => 'PRI']);
+        $this->secondary = Section::create(['name' => 'Secondary', 'head_title' => 'Principal', 'learner_term' => 'Student', 'registration_prefix' => 'SEC', 'registration_code' => 'SEC']);
         $this->primary->heads()->attach($this->head, ['school_id' => $this->school->id]);
-        $this->level = AcademicLevel::create(['section_id' => $this->primary->id, 'name' => 'Primary 1', 'registration_prefix' => 'P1']);
-        $otherLevel = AcademicLevel::create(['section_id' => $this->secondary->id, 'name' => 'JSS 1']);
+        $this->level = AcademicLevel::create(['section_id' => $this->primary->id, 'name' => 'Primary 1', 'registration_prefix' => 'P1', 'registration_code' => 'P1']);
+        $otherLevel = AcademicLevel::create(['section_id' => $this->secondary->id, 'name' => 'JSS 1', 'registration_code' => 'J1']);
         $class = SchoolClass::create(['academic_level_id' => $this->level->id, 'name' => 'Primary One']);
         $otherClass = SchoolClass::create(['academic_level_id' => $otherLevel->id, 'name' => 'Junior One']);
         $this->arm = ClassArm::create(['class_id' => $class->id, 'name' => 'Gold']);
         $this->otherArm = ClassArm::create(['class_id' => $otherClass->id, 'name' => 'Blue']);
+        app(RegistrationNumbers::class)->settings()->update([
+            'registration_include_school' => false, 'registration_include_section' => false,
+            'registration_include_level' => true, 'registration_school_code' => 'OAK',
+            'registration_separator' => '-', 'registration_year_digits' => 4,
+        ]);
     }
 
-    public function test_two_allocation_saves_never_share_a_number_and_prefixes_resolve_level_section_school(): void
+    public function test_two_allocation_saves_never_share_a_number_under_the_composed_format(): void
     {
         $numbers = app(RegistrationNumbers::class);
         $first = $this->student('First Pupil', $this->arm);
         $second = $this->student('Second Pupil', $this->arm);
         $numbers->assignAutomatic($first, $this->admin);
+        // Simulate a stale contender reading the old counter. The reservation
+        // loop and unique constraints must still advance to a free value.
+        RegistrationNumberSequence::where('sequence_key', 'school')->update(['next_number' => 1]);
         $numbers->assignAutomatic($second, $this->admin);
         $this->assertSame('P1-0001', $first->refresh()->registration_number);
         $this->assertSame('P1-0002', $second->refresh()->registration_number);
@@ -90,15 +100,6 @@ class StudentRegistrationNumbersTest extends TestCase
             $this->assertSame('P1-0002', $second->refresh()->registration_number);
         }
 
-        $this->level->update(['registration_prefix' => null]);
-        $third = $this->student('Third Pupil', $this->arm);
-        $numbers->assignAutomatic($third, $this->admin);
-        $this->assertSame('PRI-0003', $third->refresh()->registration_number);
-        $this->primary->update(['registration_prefix' => null]);
-        $numbers->settings()->update(['registration_prefix' => 'SCH']);
-        $fourth = $this->student('Fourth Pupil', $this->arm);
-        $numbers->assignAutomatic($fourth, $this->admin);
-        $this->assertSame('SCH-0004', $fourth->refresh()->registration_number);
     }
 
     public function test_number_length_is_minimum_padding_and_the_ten_thousandth_number_stays_unique(): void
@@ -117,20 +118,37 @@ class StudentRegistrationNumbersTest extends TestCase
         $this->assertNotSame($tenThousandth->registration_number, $next->registration_number);
     }
 
-    public function test_prefixes_are_validated_and_typed_numbers_need_the_number_management_permission(): void
+    public function test_required_and_duplicate_codes_and_school_code_rules_are_enforced(): void
     {
         $numbers = app(RegistrationNumbers::class);
         try {
-            $numbers->saveSettings([
-                'registration_prefix' => 'BAD PREFIX!', 'registration_number_length' => 4,
-                'registration_include_year' => false,
-                'registration_move_policy' => RegistrationNumbers::KEEP_DIGITS_CHANGE_PREFIX,
-                'section_prefixes' => [], 'level_prefixes' => [], 'next_numbers' => [],
-            ], $this->admin);
-            $this->fail('An invalid school prefix was accepted.');
+            $numbers->saveSettings($this->formatData(['registration_include_school' => true, 'registration_school_code' => 'X']), $this->admin);
+            $this->fail('An invalid School code was accepted.');
         } catch (ValidationException $exception) {
-            $this->assertArrayHasKey('registration_prefix', $exception->errors());
+            $this->assertArrayHasKey('registration_school_code', $exception->errors());
         }
+
+        $codes = AcademicLevel::pluck('registration_code', 'id')->all();
+        $codes[$this->level->id] = null;
+        try {
+            $numbers->saveSettings($this->formatData(['level_codes' => $codes]), $this->admin);
+            $this->fail('A selected Level part accepted a missing code.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('level_codes.'.$this->level->id, $exception->errors());
+        }
+
+        $codes = AcademicLevel::pluck('registration_code', 'id')->all();
+        $codes[array_key_last($codes)] = 'P1';
+        try {
+            $numbers->saveSettings($this->formatData(['level_codes' => $codes]), $this->admin);
+            $this->fail('A duplicate school-wide Level code was accepted.');
+        } catch (ValidationException $exception) {
+            $this->assertStringContainsString('used twice', collect($exception->errors())->flatten()->join(' '));
+        }
+    }
+
+    public function test_typed_numbers_need_the_number_management_permission(): void
+    {
 
         $clerk = $this->user('Admissions Clerk', 'admissions.clerk');
         $role = Role::create(['name' => 'Admissions Clerk']);
@@ -148,6 +166,32 @@ class StudentRegistrationNumbersTest extends TestCase
             $this->assertSame(403, $exception->getStatusCode());
         }
         $this->assertSame($beforeStudents, Student::count());
+    }
+
+    public function test_learner_words_follow_the_section_and_add_student_ignores_a_posted_status(): void
+    {
+        $words = app(LearnerTerminology::class);
+        $this->assertSame('Pupil', $words->word($this->primary));
+        $this->assertSame('pupils', $words->word($this->primary, true, false));
+        $this->assertSame('Student', $words->word($this->secondary));
+        $this->assertSame('Students', $words->word([$this->primary, $this->secondary], true));
+        $this->assertSame('Pupil', LearnerTerminology::defaultForExistingSectionName('NURSERY School'));
+        $this->assertSame('Pupil', LearnerTerminology::defaultForExistingSectionName('Lower Primary'));
+        $this->assertSame('Student', LearnerTerminology::defaultForExistingSectionName('Secondary School'));
+        $this->assertSame('Student', Section::create(['name' => 'Sixth Form', 'head_title' => 'Principal'])->refresh()->learner_term);
+
+        $this->actingAs($this->admin)->get(route('students.create', ['class_arm_id' => $this->arm->id]))
+            ->assertOk()->assertSee('Add a pupil')->assertDontSee('<label>Status', false);
+
+        $this->post(route('students.store'), [
+            'name' => 'New Primary Pupil', 'class_arm_id' => $this->arm->id,
+            'registration_mode' => 'automatic', 'username' => 'new.primary.pupil',
+            'email' => null, 'parent_mode' => 'none', 'status' => Student::STATUS_GRADUATED,
+        ])->assertOk()->assertSee('Pupil sign-in')->assertSee('Pupil name');
+
+        app(TenantContext::class)->set($this->school->id);
+        $created = Student::whereHas('user', fn ($query) => $query->where('username', 'new.primary.pupil'))->firstOrFail();
+        $this->assertSame(Student::STATUS_ACTIVE, $created->status);
     }
 
     public function test_student_identity_edit_is_audited_and_can_set_a_missing_username(): void
@@ -191,30 +235,74 @@ class StudentRegistrationNumbersTest extends TestCase
         $automatic = $this->student('Automatic Pupil', $this->arm);
         $numbers->assignAutomatic($automatic, $this->admin);
         try {
-            $numbers->saveSettings([
-                'registration_prefix' => 'P1', 'registration_number_length' => 4,
-                'registration_include_year' => false,
-                'registration_move_policy' => RegistrationNumbers::KEEP_DIGITS_CHANGE_PREFIX,
-                'section_prefixes' => [], 'level_prefixes' => [], 'next_numbers' => ['school' => 1],
-            ], $this->admin);
+            $numbers->saveSettings($this->formatData(['registration_next_number' => 1]), $this->admin);
             $this->fail('The next number moved below an issued sequence value.');
         } catch (ValidationException $exception) {
-            $this->assertArrayHasKey('next_numbers', $exception->errors());
+            $this->assertArrayHasKey('registration_next_number', $exception->errors());
         }
-        $numbers->saveSettings([
-            'registration_prefix' => 'NEW', 'registration_number_length' => 6,
-            'registration_include_year' => true,
-            'registration_move_policy' => RegistrationNumbers::KEEP_DIGITS_CHANGE_PREFIX,
-            'section_prefixes' => [], 'level_prefixes' => [], 'next_numbers' => [],
-        ], $this->admin);
+        $numbers->saveSettings($this->formatData([
+            'registration_include_school' => true, 'registration_school_code' => 'NEW',
+            'registration_include_level' => false, 'registration_number_length' => 6,
+            'registration_include_year' => true, 'registration_next_number' => 2,
+        ]), $this->admin);
         $this->assertSame($issued, $first->refresh()->registration_number);
         $this->assertNotNull($numbers->settings()->registration_move_policy_locked_at);
         $this->expectException(ValidationException::class);
-        $numbers->saveSettings([
-            'registration_prefix' => 'NEW', 'registration_number_length' => 6,
-            'registration_include_year' => true,
+        $numbers->saveSettings($this->formatData([
             'registration_move_policy' => RegistrationNumbers::NEW_PREFIX_SEQUENCE,
-        ], $this->admin);
+            'registration_next_number' => 2,
+        ]), $this->admin);
+    }
+
+    public function test_multi_part_formats_are_unique_with_a_counter_per_prefix(): void
+    {
+        $numbers = app(RegistrationNumbers::class);
+        $numbers->saveSettings($this->formatData([
+            'registration_include_school' => true, 'registration_include_section' => true,
+            'registration_include_level' => true, 'registration_include_year' => true,
+            'registration_year_digits' => 2, 'registration_move_policy' => RegistrationNumbers::NEW_PREFIX_SEQUENCE,
+        ]), $this->admin);
+        $one = $this->student('Prefix One', $this->arm);
+        $two = $this->student('Prefix Two', $this->arm);
+        $other = $this->student('Other Prefix', $this->otherArm);
+        $numbers->assignAutomatic($one, $this->admin);
+        RegistrationNumberSequence::where('sequence_key', 'like', 'prefix:OAK-PRI-P1-%')
+            ->update(['next_number' => 1]);
+        $numbers->assignAutomatic($two, $this->admin);
+        $numbers->assignAutomatic($other, $this->admin);
+
+        $this->assertMatchesRegularExpression('/^OAK-PRI-P1-\d{2}-0001$/', $one->refresh()->registration_number);
+        $this->assertMatchesRegularExpression('/^OAK-PRI-P1-\d{2}-0002$/', $two->refresh()->registration_number);
+        $this->assertMatchesRegularExpression('/^OAK-SEC-J1-\d{2}-0001$/', $other->refresh()->registration_number);
+        $this->assertSame(3, collect([$one->registration_number, $two->registration_number, $other->registration_number])->unique()->count());
+    }
+
+    public function test_each_allowed_separator_and_two_digit_year_can_be_allocated_searched_and_displayed(): void
+    {
+        foreach (['-', '/', '.', ''] as $index => $separator) {
+            $numbers = app(RegistrationNumbers::class);
+            $numbers->saveSettings($this->formatData([
+                'registration_include_school' => true, 'registration_include_level' => true,
+                'registration_include_year' => true, 'registration_year_digits' => 2,
+                'registration_separator' => $separator, 'registration_next_number' => $index + 1,
+            ]), $this->admin);
+            $student = $this->student('Format '.$index, $this->arm);
+            $numbers->assignAutomatic($student, $this->admin);
+            $issued = $student->refresh()->registration_number;
+            $this->assertStringContainsString(now('Africa/Lagos')->format('y'), $issued);
+            $this->actingAs($this->admin)->get(route('students.index', ['search' => $issued]))
+                ->assertOk()->assertSee($issued);
+            app(TenantContext::class)->set($this->school->id);
+        }
+    }
+
+    public function test_only_the_permitted_role_can_save_the_format(): void
+    {
+        $data = $this->formatData();
+        $this->actingAs($this->head)->put(route('registration-numbers.update'), $data)->assertForbidden();
+        app(TenantContext::class)->set($this->school->id);
+        $this->actingAs($this->admin)->put(route('registration-numbers.update'), $data)
+            ->assertRedirect(route('registration-numbers.edit'));
     }
 
     public function test_number_changes_are_section_scoped_awaiting_is_admin_only_and_every_change_is_logged(): void
@@ -342,6 +430,38 @@ class StudentRegistrationNumbersTest extends TestCase
         $this->assertFalse($headRole->permissions()->whereIn('name', ['view_students', 'create_students', 'manage_student_accounts', 'manage_registration_numbers'])->exists());
     }
 
+    public function test_demo_number_command_dry_run_real_run_repeat_and_environment_guard(): void
+    {
+        $demoUser = User::create([
+            'name' => 'Demo Student', 'username' => 'demo.student',
+            'email' => 'demo-student@oakfield.test', 'password' => 'ValidPass88', 'status' => 'active',
+        ]);
+        $demoUser->roles()->attach(Role::where('name', 'Student')->firstOrFail(), ['school_id' => $this->school->id]);
+        $student = Student::create([
+            'user_id' => $demoUser->id, 'class_arm_id' => $this->arm->id,
+            'status' => Student::STATUS_ACTIVE, 'admission_date' => today(),
+        ]);
+
+        app()->detectEnvironment(fn (): string => 'local');
+        $before = [RegistrationNumberSequence::count(), StudentRegistrationNumberHistory::count(), AuditLog::count()];
+        $this->artisan('oakfield:assign-demo-registration-number --dry-run')->assertSuccessful();
+        $this->assertNull($student->fresh()->registration_number);
+        $this->assertSame($before, [RegistrationNumberSequence::count(), StudentRegistrationNumberHistory::count(), AuditLog::count()]);
+
+        $this->artisan('oakfield:assign-demo-registration-number', ['--actor' => $this->admin->id])->assertSuccessful();
+        $issued = $student->fresh()->registration_number;
+        $this->assertNotNull($issued);
+        $historyCount = StudentRegistrationNumberHistory::count();
+        $auditCount = AuditLog::count();
+        $this->artisan('oakfield:assign-demo-registration-number', ['--actor' => $this->admin->id])->assertSuccessful();
+        $this->assertSame($issued, $student->fresh()->registration_number);
+        $this->assertSame($historyCount, StudentRegistrationNumberHistory::count());
+        $this->assertSame($auditCount, AuditLog::count());
+
+        app()->detectEnvironment(fn (): string => 'testing');
+        $this->artisan('oakfield:assign-demo-registration-number')->assertFailed();
+    }
+
     private function user(string $name, string $slug): User
     {
         return User::create(['name' => $name, 'username' => $slug, 'email' => $slug.'@example.test', 'password' => 'ValidPass88', 'status' => 'active']);
@@ -355,5 +475,25 @@ class StudentRegistrationNumbersTest extends TestCase
         $user->roles()->attach($role, ['school_id' => $this->school->id]);
 
         return Student::create(['user_id' => $user->id, 'class_arm_id' => $arm->id, 'status' => Student::STATUS_ACTIVE, 'admission_date' => today()]);
+    }
+
+    private function formatData(array $overrides = []): array
+    {
+        $settings = app(RegistrationNumbers::class)->settings();
+
+        return array_replace([
+            'registration_include_school' => (bool) $settings->registration_include_school,
+            'registration_include_section' => (bool) $settings->registration_include_section,
+            'registration_include_level' => (bool) $settings->registration_include_level,
+            'registration_include_year' => (bool) $settings->registration_include_year,
+            'registration_school_code' => $settings->registration_school_code,
+            'registration_separator' => $settings->registration_separator,
+            'registration_number_length' => (int) $settings->registration_number_length,
+            'registration_year_digits' => (int) $settings->registration_year_digits,
+            'registration_move_policy' => $settings->registration_move_policy,
+            'registration_next_number' => app(RegistrationNumbers::class)->nextNumber(),
+            'section_codes' => Section::pluck('registration_code', 'id')->all(),
+            'level_codes' => AcademicLevel::pluck('registration_code', 'id')->all(),
+        ], $overrides);
     }
 }

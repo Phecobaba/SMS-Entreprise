@@ -3,8 +3,8 @@
 <div class="oak-notice oak-notice-info ad-notice-action" role="status"><x-icon name="info-circle" /><div><strong>{{ $entry['session'] }} is not held today.</strong> It is left out of attendance percentages. @can('manage_attendance')<a class="oak-link" href="{{ route('attendance.settings') }}" wire:navigate>Sessions &amp; times</a>@endcan</div></div>
 @endforeach
 <div class="ad-metrics">
-    <div class="oak-metric"><span>Students</span><strong>{{ number_format($overview['students']) }}</strong></div>
-    <div class="oak-metric"><span>Teachers assigned</span><strong>{{ number_format($overview['teachers']) }}</strong></div>
+    <div class="oak-metric"><span>{{ $overview['learners_term'] }}</span><strong>{{ number_format($overview['students']) }}</strong></div>
+    <div class="oak-metric"><span>Teachers assigned <x-oak.tooltip text="Distinct people assigned to teach in this Section. A teacher assigned to several subjects or classes is counted once." label="How Teachers assigned is counted" /></span><strong>{{ number_format($overview['teachers']) }}</strong></div>
     @include('core.dashboards._attendance-metric')
     <div class="oak-metric"><span>Results awaiting approval</span><strong>{{ $overview['approval_count'] }}</strong></div>
 </div>

@@ -5,6 +5,58 @@ const oakSheets = () => {
 };
 
 document.addEventListener('click', (event) => {
+    const tooltip = event.target.closest('[data-oak-tooltip-trigger]');
+    if (tooltip) {
+        const wrapper = tooltip.closest('[data-oak-tooltip]');
+        const opening = !wrapper.hasAttribute('data-open');
+        document.querySelectorAll('[data-oak-tooltip][data-open]').forEach((item) => {
+            item.removeAttribute('data-open');
+            item.querySelector('[data-oak-tooltip-trigger]')?.setAttribute('aria-expanded', 'false');
+        });
+        wrapper.toggleAttribute('data-open', opening);
+        tooltip.setAttribute('aria-expanded', String(opening));
+        return;
+    }
+    document.querySelectorAll('[data-oak-tooltip][data-open]').forEach((item) => {
+        item.removeAttribute('data-open');
+        item.querySelector('[data-oak-tooltip-trigger]')?.setAttribute('aria-expanded', 'false');
+    });
+
+    const credentials = event.target.closest('[data-copy-credentials]');
+    if (credentials) {
+        const sheet = document.querySelector('[data-credential-sheet]');
+        const status = document.querySelector('[data-copy-status]');
+        const text = [...(sheet?.querySelectorAll('[data-credential-slip]') ?? [])].map((slip) => {
+            const username = slip.querySelector('[data-credential-username]')?.textContent.trim() ?? '';
+            const password = slip.querySelector('[data-credential-password]')?.textContent.trim() ?? '';
+            return `Username: ${username}\nPassword: ${password}`;
+        }).join('\n\n');
+        const confirm = (message) => {
+            if (!status) return;
+            status.textContent = message;
+            window.clearTimeout(status._oakTimer);
+            status._oakTimer = window.setTimeout(() => { status.textContent = ''; }, 3500);
+        };
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(text).then(() => confirm('Copied')).catch(() => {
+                const selection = window.getSelection();
+                const range = document.createRange();
+                range.selectNodeContents(sheet);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                confirm('Copy is unavailable. The details are selected; press copy.');
+            });
+        } else {
+            const selection = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(sheet);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            confirm('Copy is unavailable. The details are selected; press copy.');
+        }
+        return;
+    }
+
     const copy = event.target.closest('[data-copy-text]');
     if (copy) {
         navigator.clipboard?.writeText(copy.dataset.copyText).then(() => {
@@ -24,6 +76,24 @@ document.addEventListener('click', (event) => {
         return;
     }
 
+    const group = event.target.closest('[data-more-group]');
+    if (group) {
+        const sheet = group.closest('.oak-sheet');
+        sheet.querySelector('[data-more-root]').hidden = true;
+        sheet.querySelector(`[data-more-panel="${group.dataset.moreGroup}"]`).hidden = false;
+        sheet.querySelector('[data-more-back]')?.focus();
+        return;
+    }
+
+    const back = event.target.closest('[data-more-back]');
+    if (back) {
+        const sheet = back.closest('.oak-sheet');
+        sheet.querySelectorAll('[data-more-panel]').forEach((panel) => { panel.hidden = true; });
+        sheet.querySelector('[data-more-root]').hidden = false;
+        sheet.querySelector('[data-more-group]')?.focus();
+        return;
+    }
+
     const closer = event.target.closest('[data-close-sheet]');
     const scrim = closer?.closest('.oak-scrim') ?? (event.target.classList?.contains('oak-scrim') ? event.target : null);
     if (scrim) {
@@ -33,7 +103,13 @@ document.addEventListener('click', (event) => {
 });
 
 document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') oakSheets();
+    if (event.key === 'Escape') {
+        oakSheets();
+        document.querySelectorAll('[data-oak-tooltip][data-open]').forEach((item) => {
+            item.removeAttribute('data-open');
+            item.querySelector('[data-oak-tooltip-trigger]')?.setAttribute('aria-expanded', 'false');
+        });
+    }
 });
 
 const startTicker = (ticker) => {

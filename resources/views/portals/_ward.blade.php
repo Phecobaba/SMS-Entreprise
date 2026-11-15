@@ -1,7 +1,7 @@
 @if(($context['kind'] ?? null) === 'parent' && $context['selected'])
     <div class="oak-ward-bar">
         <span class="oak-ward-avatar" aria-hidden="true">{{ mb_substr($context['selected']['name'], 0, 1) }}</span>
-        <div class="oak-ward-who"><small>Viewing</small><strong>{{ $context['selected']['name'] }}</strong><span>{{ $context['selected']['class'] }}@if($context['selected']['section']) · {{ $context['selected']['section'] }}@endif</span></div>
+        <div class="oak-ward-who"><small>Viewing {{ strtolower($context['selected']['learner'] ?? 'Student') }}</small><strong>{{ $context['selected']['name'] }}</strong><span>{{ $context['selected']['class'] }}@if($context['selected']['section']) · {{ $context['selected']['section'] }}@endif</span></div>
         @if(count($context['wards']) > 1)<button class="oak-btn oak-btn-quiet" type="button" data-open-sheet="oak-ward-sheet">Switch child</button>@endif
     </div>
     @if(count($context['wards']) > 1)

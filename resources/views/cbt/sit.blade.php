@@ -13,8 +13,10 @@
 <main class="ex-main"><section><div class="ex-card">
     @foreach($questions as $question)
     @php($answer = $saved->get($question->id))
+    @php($selectedIds = $answer?->selectedOptionIds() ?? [])
     <article class="ex-question" data-question="{{ $question->id }}" data-position="{{ $loop->index }}" data-flagged="{{ $answer?->flagged ? '1' : '0' }}"><div class="ex-qhead"><span>Question {{ $loop->iteration }} of {{ $questions->count() }} · {{ number_format((float) $question->marks, (float) $question->marks == (int) $question->marks ? 0 : 2) }} {{ \Illuminate\Support\Str::plural('mark', (float) $question->marks) }}</span><button class="ex-flag" type="button" aria-pressed="{{ $answer?->flagged ? 'true' : 'false' }}"><x-icon name="flag" /><span>{{ $answer?->flagged ? 'Marked to check later' : 'Check later' }}</span></button></div><h2 class="ex-q">{{ $question->text }}</h2><fieldset class="ex-options"><legend class="sr-only">Choose one answer</legend>
-        @foreach($question->options as $option)<label class="ex-opt"><input type="radio" name="answers[{{ $question->id }}]" value="{{ $option->id }}" @checked((int) $answer?->selected_option_id === $option->id)><span class="ex-letter">{{ chr(65 + $loop->index) }}</span><span>{{ $option->text }}</span></label>@endforeach
+        <span data-answer-limit="{{ $question->answerLimit() }}" hidden></span>@if($question->answerLimit() > 1)<p class="mb-3 text-sm font-semibold text-slate-700">Choose up to {{ $question->answerLimit() }} answers.</p>@endif
+        @foreach($question->options as $option)<label class="ex-opt"><input data-answer-option type="{{ $question->answerLimit() > 1 ? 'checkbox' : 'radio' }}" name="answers[{{ $question->id }}]{{ $question->answerLimit() > 1 ? '[]' : '' }}" value="{{ $option->id }}" @checked(in_array($option->id, $selectedIds, true))><span class="ex-letter">{{ chr(65 + $loop->index) }}</span><span>{{ $option->text }}</span></label>@endforeach
     </fieldset></article>
     @endforeach
 </div><div class="ex-nav-row"><button class="oak-btn oak-btn-secondary" id="exam-prev" type="button"><x-icon name="chevron-left" />Previous</button><button class="oak-btn oak-btn-primary" id="exam-next" type="button"><span>Next</span><x-icon name="chevron-right" /></button></div></section>
@@ -36,29 +38,38 @@
     try { Object.assign(state, JSON.parse(localStorage.getItem(storageKey) || '{}')); } catch (_) {}
     questions.forEach((question) => {
         const id = question.dataset.question;
-        state[id] ??= { option_id: question.querySelector('input:checked')?.value ?? null, flagged: question.dataset.flagged === '1', pending: false };
-        const localOption = state[id].option_id;
-        if (localOption && question.querySelector(`input[value="${CSS.escape(String(localOption))}"]`)) question.querySelector(`input[value="${CSS.escape(String(localOption))}"]`).checked = true;
+        const serverOptions = [...question.querySelectorAll('[data-answer-option]:checked')].map((input) => input.value);
+        state[id] ??= { option_ids: serverOptions, flagged: question.dataset.flagged === '1', pending: false };
+        if (!Array.isArray(state[id].option_ids)) state[id].option_ids = state[id].option_id ? [state[id].option_id] : serverOptions;
+        state[id].option_ids.forEach((option) => { const input = question.querySelector(`[data-answer-option][value="${CSS.escape(String(option))}"]`); if (input) input.checked = true; });
         question.dataset.flagged = state[id].flagged ? '1' : '0';
     });
     const persist = () => localStorage.setItem(storageKey, JSON.stringify(state));
-    const saveLabel = document.getElementById('exam-save'), offline = document.getElementById('exam-offline');
+    const saveLabel = document.getElementById('exam-save'), offline = document.getElementById('exam-offline'), saveChains = {};
     const setSave = (text, icon = 'device-floppy') => { saveLabel.innerHTML = `<svg class="oak-i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg><span class="ex-save-text">${text}</span>`; };
-    const queueSave = async (id, delay = 0) => {
+    const performSave = async (id, delay, version, optionIds, flagged) => {
         state[id].pending = true; persist(); setSave('Saving…');
         if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
         try {
-            const response = await fetch(body.dataset.autosaveUrl, { method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf}, body: JSON.stringify({question_id: Number(id), option_id: state[id].option_id ? Number(state[id].option_id) : null, flagged: Boolean(state[id].flagged)}) });
+            const response = await fetch(body.dataset.autosaveUrl, { method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf}, body: JSON.stringify({question_id: Number(id), option_ids: optionIds, flagged}) });
             if (!response.ok) throw new Error(String(response.status));
-            state[id].pending = false; persist(); offline.hidden = true; setSave('Answers saved');
+            if (state[id].version === version) { state[id].pending = false; persist(); offline.hidden = true; setSave('Answers saved'); }
         } catch (error) {
             offline.hidden = false; setSave('Saved on this device');
-            if (!submitted && remaining > 0 && error.message !== '422' && error.message !== '403') window.setTimeout(() => queueSave(id, Math.min(8000, Math.max(1000, delay * 2))), 1000);
+            if (state[id].version === version && !submitted && remaining > 0 && error.message !== '422' && error.message !== '403') window.setTimeout(() => queueSave(id, Math.min(8000, Math.max(1000, delay * 2))), 1000);
         }
+    };
+    const queueSave = (id, delay = 0) => {
+        const version = (state[id].version ?? 0) + 1, optionIds = state[id].option_ids.map(Number), flagged = Boolean(state[id].flagged);
+        state[id].version = version; state[id].pending = true; persist(); setSave('Saving...');
+        return saveChains[id] = (saveChains[id] ?? Promise.resolve()).then(() => performSave(id, delay, version, optionIds, flagged));
     };
     questions.forEach((question) => {
         const id = question.dataset.question, flag = question.querySelector('.ex-flag');
-        question.querySelectorAll('input[type="radio"]').forEach((input) => input.addEventListener('change', () => { state[id].option_id = input.value; queueSave(id); paint(); }));
+        const options = [...question.querySelectorAll('[data-answer-option]')], limit = Number(question.querySelector('[data-answer-limit]').dataset.answerLimit);
+        const lockOptions = () => { const chosen = options.filter((input) => input.checked); options.forEach((input) => { input.disabled = input.type === 'checkbox' && !input.checked && chosen.length >= limit; }); };
+        options.forEach((input) => input.addEventListener('change', () => { state[id].option_ids = options.filter((item) => item.checked).map((item) => item.value); lockOptions(); queueSave(id); paint(); }));
+        lockOptions();
         flag.addEventListener('click', () => { state[id].flagged = !state[id].flagged; question.dataset.flagged = state[id].flagged ? '1' : '0'; flag.setAttribute('aria-pressed', String(state[id].flagged)); flag.querySelector('span').textContent = state[id].flagged ? 'Marked to check later' : 'Check later'; queueSave(id); paint(); });
         if (state[id].pending) queueSave(id);
     });

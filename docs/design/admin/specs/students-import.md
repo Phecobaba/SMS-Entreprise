@@ -14,7 +14,17 @@ Whether any student import exists today. How classes, parents and fees are linke
 3. **Review.** *Errors found:* the page says **"Nothing was created"**, lists every problem as **Row, column, message** with a way to download them, and offers only **Upload a corrected file**. There is no partial import: **a file is imported only when every row is valid**.
 4. *No errors:* summary **Ready, Skipped, Errors** and a preview of the first rows, then **Create N students**. **Skipped** = a row that matches an existing student exactly (same name, class and registration number), so re-uploading the same file is safe (**proposal**; Codex confirms what "already exists" means).
 5. **Confirm runs in one transaction**, re-validates (data may have changed since Check), and is **idempotent**: confirming twice, or two tabs confirming, creates nothing the second time. If anything fails the whole import rolls back and the page shows the Errors state.
-6. **Done:** report with **Created, Skipped, Errors** and the skipped rows. Then the **sign-in details**: temporary passwords for each new student and each newly created parent, shown **once** with **Print slips** (a few slips per page) and **Download** (a file made at that moment). After the user leaves, or returns later, the report remains but the credentials do not (state *credentials gone*, with "reset the password from the student").
+6. **Done:** report with **Created, Skipped, Errors** and the skipped rows. Then the **sign-in details**: temporary passwords for each new student and each newly created parent, shown **once** as an A4 print layout with eight slips per page and one **Print / Save as PDF** action. There is no credential spreadsheet download. After the user leaves, or returns later, the report remains but the credentials do not (state *credentials gone*, with "reset the password from the student").
+
+## Confirmed correction (owner, 2026-11-02)
+
+The CSV columns are `full_name`, `class`, `arm`, `registration_number`,
+`username`, `email`, `parent_name`, `parent_username`, `parent_email`. Staff
+enter the ordinary Class name and the Arm separately. A blank Arm is accepted
+only for a class with one Arm. When a Class name occurs under more than one
+Level or Section, the row lists each full Section / Level / Class path and the
+Admin may use one of those paths in `class`. The upload page shows a small
+Class/Arm table with Copy controls; it has no text-file class-list download.
 
 ## Credentials: how they must be handled
 Hash only in the database. The plain text must not be stored with the import record, the session, flash data, logs, `audit_logs`, queue payloads or any file left on the server. It exists only in the response to the confirm request (or a one-time, short-lived, encrypted fetch that deletes on first read: Codex proposes). **If the confirm would run as a queued job, the plain text cannot pass through the queue, so run it synchronously or generate on download: open question for Codex.**

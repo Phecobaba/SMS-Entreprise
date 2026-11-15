@@ -19,12 +19,15 @@ use App\Modules\Core\TenantContext;
 use App\Modules\Payments\Models\Invoice;
 use App\Modules\Payments\Models\ManualPaymentSubmission;
 use App\Modules\Payments\Models\Payment;
+use App\Modules\Payments\Models\PaymentAttempt;
 use App\Modules\Payments\Services\ManualPaymentService;
+use App\Modules\Payments\Services\PaymentLedger;
 use App\Modules\Payments\Services\ResultPaymentAccess;
 use App\Modules\Results\Models\ResultCard;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -171,6 +174,85 @@ class ManualPaymentApprovalTest extends TestCase
         app(ManualPaymentService::class)->record($f['invoice'], $this->details('SHORT', 4499999), $f['bursar']);
     }
 
+    public function test_payment_pages_render_with_a_pending_manual_payment(): void
+    {
+        $f = $this->fixture();
+        $submission = app(ManualPaymentService::class)->record(
+            $f['invoice'],
+            $this->details(),
+            $f['bursar'],
+        )['submission'];
+
+        $this->actingAs($f['admin'])->get(route('payments.approvals.index'))
+            ->assertOk()
+            ->assertSee($submission->teller_number);
+        $this->actingAs($f['bursar'])->get(route('payments.record.index'))
+            ->assertOk()
+            ->assertSee('Record payment');
+        $this->actingAs($f['admin'])->get(route('payments.invoices.show', $f['invoice']))
+            ->assertOk()
+            ->assertSee('Awaiting approval');
+    }
+
+    public function test_recent_pending_paystack_warning_and_old_not_confirmed_state_are_visible_without_changing_invoice(): void
+    {
+        $f = $this->fixture();
+        $attempt = PaymentAttempt::create([
+            'invoice_id' => $f['invoice']->id,
+            'reference' => 'pending-warning',
+            'amount_kobo' => $f['invoice']->amount_kobo,
+            'initiated_by' => $f['student']->user_id,
+            'status' => 'Pending',
+        ]);
+
+        $this->actingAs($f['bursar'])->get(route('payments.record.index', ['invoice' => $f['invoice']->id]))
+            ->assertOk()
+            ->assertSee('A Paystack payment for this invoice is still being confirmed.')
+            ->assertSee('Check it before recording a manual payment, or the invoice could be credited twice.');
+
+        $attempt->forceFill(['created_at' => now()->subHours(49), 'updated_at' => now()->subHours(49)])->saveQuietly();
+        $this->get(route('payments.record.index', ['invoice' => $f['invoice']->id]))
+            ->assertOk()->assertDontSee('could be credited twice');
+        $this->actingAs($f['admin'])->get(route('payments.invoices.show', $f['invoice']))
+            ->assertOk()
+            ->assertSee('Not confirmed')
+            ->assertSee('Check this transaction in your Paystack dashboard.')
+            ->assertSee('Check again');
+        $this->assertSame('Unpaid', $f['invoice']->fresh()->status);
+        $this->assertSame('Pending', $attempt->fresh()->status);
+    }
+
+    public function test_manual_settlement_followed_by_paystack_confirmation_credits_the_invoice_once(): void
+    {
+        $f = $this->fixture();
+        config()->set('services.paystack.secret_key', 'sk_test_fake_only');
+        config()->set('services.paystack.public_key', 'pk_test_fake_only');
+        $attempt = PaymentAttempt::create([
+            'invoice_id' => $f['invoice']->id,
+            'reference' => 'manual-then-paystack',
+            'amount_kobo' => $f['invoice']->amount_kobo,
+            'initiated_by' => $f['student']->user_id,
+            'status' => 'Pending',
+        ]);
+        $submission = app(ManualPaymentService::class)->record($f['invoice'], $this->details(), $f['bursar'])['submission'];
+        app(ManualPaymentService::class)->approve($submission, $f['admin']);
+
+        Http::fake(['api.paystack.co/transaction/verify/*' => Http::response([
+            'status' => true,
+            'data' => [
+                'status' => 'success', 'reference' => $attempt->reference,
+                'currency' => 'NGN', 'amount' => $attempt->amount_kobo,
+            ],
+        ])]);
+        $result = app(PaymentLedger::class)->verifyPaystackResult($attempt->reference);
+
+        $this->assertSame(PaymentLedger::PAYSTACK_PAID, $result['status']);
+        $this->assertSame('Paid', $f['invoice']->fresh()->status);
+        $this->assertSame('Verified', $attempt->fresh()->status);
+        $this->assertSame(1, Payment::where('invoice_id', $f['invoice']->id)->count());
+        $this->assertSame($f['invoice']->amount_kobo, Payment::where('invoice_id', $f['invoice']->id)->sum('amount_kobo'));
+    }
+
     public function test_one_step_is_admin_only_defaults_off_notifies_other_admins_and_leaves_waiting_rows_untouched(): void
     {
         $f = $this->fixture(secondAdmin: true);
@@ -210,6 +292,7 @@ class ManualPaymentApprovalTest extends TestCase
         $adminRole->permissions()->attach([
             Permission::firstOrCreate(['name' => 'manage_payments'])->id,
             Permission::firstOrCreate(['name' => 'approve_payments'])->id,
+            Permission::firstOrCreate(['name' => 'manage_fee_schedule'])->id,
         ]);
         $bursarRole = Role::create(['name' => 'Bursar']);
         $bursarRole->permissions()->attach(Permission::where('name', 'manage_payments')->firstOrFail());

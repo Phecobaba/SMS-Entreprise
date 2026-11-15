@@ -9,7 +9,9 @@ use App\Modules\Core\Services\AppNavigation;
 use App\Modules\Core\TenantContext;
 use App\Modules\Portals\Services\PortalContext;
 use App\Modules\Results\Models\ResultCard;
+use App\Modules\Results\Services\ResultAttention;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
 
@@ -23,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(TenantContext::class);
         $this->app->scoped(PortalContext::class);
         $this->app->scoped(AppNavigation::class);
+        $this->app->scoped(ResultAttention::class);
     }
 
     /**
@@ -30,6 +33,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $database = (string) config('database.connections.sqlite.database');
+        if (app()->environment('local') && basename($database) === 'qa.sqlite') {
+            Log::notice('QA database connection resolved.', [
+                'database' => realpath($database) ?: $database,
+            ]);
+        }
+
         Livewire::addPersistentMiddleware(RequirePasswordChange::class);
 
         $this->loadMigrationsFrom(app_path('Modules/Core/Database/Migrations'));
@@ -55,6 +65,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage_promotions', fn (User $user): bool => $user->hasPermission('manage_promotions'));
         Gate::define('manage_school_profile', fn (User $user): bool => $user->hasPermission('manage_school_profile'));
         Gate::define('manage_admissions', fn (User $user): bool => $user->hasPermission('manage_admissions'));
+        Gate::define('manage_exam_sessions', fn (User $user): bool => $user->hasPermission('manage_exam_sessions'));
         Gate::define('manage_payments', fn (User $user): bool => $user->hasPermission('manage_payments'));
         Gate::define('approve_payments', fn (User $user): bool => $user->hasPermission('approve_payments'));
         Gate::define('manage_fee_schedule', fn (User $user): bool => $user->hasPermission('manage_fee_schedule'));
@@ -65,11 +76,17 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('create_staff', fn (User $user): bool => $user->hasPermission('create_staff'));
         Gate::define('manage_staff_access', fn (User $user): bool => $user->hasPermission('manage_staff_access'));
         Gate::define('view_sign_in_rules', fn (User $user): bool => $user->hasPermission('view_sign_in_rules'));
+        Gate::define('view_activity_log', fn (User $user): bool => $user->hasPermission('view_activity_log'));
+        Gate::define('view_section_staff', fn (User $user): bool => $user->hasPermission('view_section_staff'));
+        Gate::define('record_section_discipline', fn (User $user): bool => $user->hasPermission('record_section_discipline'));
         Gate::define('view_students', fn (User $user): bool => $user->hasPermission('view_students'));
         Gate::define('create_students', fn (User $user): bool => $user->hasPermission('create_students'));
         Gate::define('manage_student_accounts', fn (User $user): bool => $user->hasPermission('manage_student_accounts'));
         Gate::define('manage_registration_numbers', fn (User $user): bool => $user->hasPermission('manage_registration_numbers'));
         Gate::define('change_registration_numbers', fn (User $user): bool => $user->hasPermission('change_registration_numbers'));
+        Gate::define('view_parents', fn (User $user): bool => $user->hasPermission('view_parents'));
+        Gate::define('view_all_parents', fn (User $user): bool => $user->hasPermission('view_all_parents'));
+        Gate::define('manage_parent_accounts', fn (User $user): bool => $user->hasPermission('manage_parent_accounts'));
         Gate::define('view_all_sections', fn (User $user): bool => $user->hasPermission('view_all_sections'));
         Gate::define('override_admission_checklist', fn (User $user): bool => $user->hasPermission('override_admission_checklist'));
         Gate::define('view_results_workspace', fn (User $user): bool => $user->hasPermission('manage_result_settings') || $user->hasPermission('manage_section_result_settings') || $user->hasPermission('enter_results') || $user->hasPermission('approve_results') || $user->hasPermission('add_principal_comment') || $user->hasPermission('add_proprietor_comment'));
@@ -80,7 +97,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('add_principal_comment', fn (User $user): bool => $user->hasPermission('add_principal_comment'));
         Gate::define('add_proprietor_comment', fn (User $user): bool => $user->hasPermission('add_proprietor_comment'));
         Gate::define('manage_cbt', fn (User $user): bool => $user->hasPermission('manage_cbt'));
-        Gate::define('approve_cbt_results', fn (User $user): bool => $user->hasPermission('approve_cbt_results'));
+        Gate::define('view_cbt_results', fn (User $user): bool => $user->hasPermission('view_cbt_results'));
         Gate::define('mark_attendance', fn (User $user): bool => $user->hasPermission('mark_attendance'));
         Gate::define('manage_attendance', fn (User $user): bool => $user->hasPermission('manage_attendance'));
         Gate::define('view_attendance_alerts', fn (User $user): bool => $user->hasPermission('view_attendance_alerts'));

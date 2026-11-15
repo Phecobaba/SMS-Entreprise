@@ -25,33 +25,38 @@ class RegistrationNumbers
 
     public const KEEP_WHOLE_NUMBER = 'keep_whole_number';
 
+    public function __construct(private readonly RegistrationNumberBuilder $builder) {}
+
     public function settings(): SchoolSetting
     {
         return SchoolSetting::firstOrCreate(
             ['school_id' => app(TenantContext::class)->id()],
             ['registration_prefix' => 'REG', 'registration_number_length' => 4,
-                'registration_include_year' => false, 'registration_move_policy' => self::KEEP_DIGITS_CHANGE_PREFIX],
+                'registration_include_year' => false, 'registration_move_policy' => self::KEEP_DIGITS_CHANGE_PREFIX,
+                'registration_include_school' => true, 'registration_include_section' => false,
+                'registration_include_level' => false, 'registration_separator' => '-',
+                'registration_year_digits' => 4, 'registration_school_code' => 'REG',
+                'registration_next_number' => 1],
         );
     }
 
     public function prefixForArm(int $armId): string
     {
         $arm = ClassArm::with('schoolClass.level.section')->findOrFail($armId);
-        $level = $arm->schoolClass?->level;
 
-        return $this->normalizePrefix($level?->registration_prefix
-            ?: $level?->section?->registration_prefix
-            ?: $this->settings()->registration_prefix);
+        return $this->builder->prefixForArm($arm, $this->settings());
     }
 
     public function preview(int $armId): string
     {
-        $prefix = $this->prefixForArm($armId);
+        $arm = ClassArm::with('schoolClass.level.section')->findOrFail($armId);
         $settings = $this->settings();
+        $prefix = $this->builder->prefixForArm($arm, $settings);
         $key = $this->sequenceKey($prefix, $settings->registration_move_policy);
-        $number = (int) (RegistrationNumberSequence::where('sequence_key', $key)->value('next_number') ?: 1);
+        $number = (int) (RegistrationNumberSequence::where('sequence_key', $key)->value('next_number')
+            ?: $settings->registration_next_number ?: 1);
 
-        return $this->format($prefix, $number, $settings);
+        return $this->builder->buildForArm($arm, $number, $settings);
     }
 
     public function assignAutomatic(Student $student, User $actor): Student
@@ -63,20 +68,28 @@ class RegistrationNumbers
                     if ($student->registration_number) {
                         return $student;
                     }
-                    $prefix = $this->prefixForArm($student->class_arm_id);
+                    $arm = ClassArm::with('schoolClass.level.section')->findOrFail($student->class_arm_id);
                     $settings = $this->settings();
+                    $prefix = $this->builder->prefixForArm($arm, $settings);
                     $key = $this->sequenceKey($prefix, $settings->registration_move_policy);
-                    RegistrationNumberSequence::firstOrCreate(['sequence_key' => $key], ['next_number' => 1]);
+                    RegistrationNumberSequence::firstOrCreate(
+                        ['sequence_key' => $key],
+                        ['next_number' => (int) ($settings->registration_next_number ?: 1)],
+                    );
                     $sequence = RegistrationNumberSequence::where('sequence_key', $key)->lockForUpdate()->firstOrFail();
                     $value = (int) $sequence->next_number;
-                    $number = $this->format($prefix, $value, $settings);
+                    $number = $this->builder->buildForArm($arm, $value, $settings);
                     while (Student::where('registration_number', $number)->exists()
                         || StudentRegistrationNumberHistory::where('new_number', $number)->exists()) {
                         $value++;
-                        $number = $this->format($prefix, $value, $settings);
+                        $number = $this->builder->buildForArm($arm, $value, $settings);
                     }
-                    $this->reserveAndApply($student, $number, $actor, $value);
+                    $allocation = $this->builder->allocationForArm($arm);
+                    $this->reserveAndApply($student, $number, $actor, $value, $allocation, 'initial_allocation');
                     $sequence->update(['next_number' => $value + 1]);
+                    if ($key === 'school') {
+                        $settings->update(['registration_next_number' => $value + 1]);
+                    }
 
                     return $student->refresh();
                 });
@@ -101,7 +114,10 @@ class RegistrationNumbers
                 return $student;
             }
             $this->assertAvailable($number, $student->id);
-            $this->reserveAndApply($student, $number, $actor, null);
+            $arm = ClassArm::with('schoolClass.level.section')->findOrFail($student->class_arm_id);
+            $this->reserveAndApply(
+                $student, $number, $actor, null, $this->builder->allocationForArm($arm), 'manual_change'
+            );
 
             return $student->refresh();
         });
@@ -125,32 +141,90 @@ class RegistrationNumbers
         abort_unless($actor->can('manage_registration_numbers'), 403);
         $settings = $this->settings();
         $policy = (string) $data['registration_move_policy'];
-        $hasNumbers = Student::whereNotNull('registration_number')->exists();
+        $hasNumbers = $settings->registration_move_policy_locked_at !== null
+            || Student::whereNotNull('registration_number')->exists()
+            || StudentRegistrationNumberHistory::exists();
         if ($hasNumbers && $policy !== $settings->registration_move_policy) {
             throw ValidationException::withMessages(['registration_move_policy' => 'This choice is locked because pupils already have registration numbers.']);
         }
 
-        DB::transaction(function () use ($data, $settings, $policy, $hasNumbers, $actor): void {
+        $includeSchool = (bool) ($data['registration_include_school'] ?? false);
+        $includeSection = (bool) ($data['registration_include_section'] ?? false);
+        $includeLevel = (bool) ($data['registration_include_level'] ?? false);
+        $schoolCode = $this->optionalCode($data['registration_school_code'] ?? null, 'registration_school_code', 2);
+        if ($includeSchool && $schoolCode === null) {
+            throw ValidationException::withMessages(['registration_school_code' => 'Use 2 to 6 letters or numbers for the School code.']);
+        }
+        $schoolCode ??= $settings->registration_school_code;
+        if (! in_array((string) ($data['registration_separator'] ?? ''), ['-', '/', '.', ''], true)) {
+            throw ValidationException::withMessages(['registration_separator' => 'Choose hyphen, slash, dot or no separator.']);
+        }
+        if (! in_array((int) ($data['registration_number_length'] ?? 0), range(3, 6), true)) {
+            throw ValidationException::withMessages(['registration_number_length' => 'Choose a number length from 3 to 6.']);
+        }
+        if (! in_array((int) ($data['registration_year_digits'] ?? 0), [2, 4], true)) {
+            throw ValidationException::withMessages(['registration_year_digits' => 'Choose a 2-digit or 4-digit year.']);
+        }
+
+        $sections = Section::with('levels')->orderBy('id')->get();
+        $sectionCodes = $this->codesFor($sections, $data['section_codes'] ?? [], 'section_codes');
+        $levels = AcademicLevel::orderBy('id')->get();
+        $levelCodes = $this->codesFor($levels, $data['level_codes'] ?? [], 'level_codes');
+        $this->validateCodes($sections, $levels, $sectionCodes, $levelCodes, $includeSection, $includeLevel);
+
+        $next = (int) $data['registration_next_number'];
+        $highest = $this->highestIssued();
+        if ($next <= $highest) {
+            throw ValidationException::withMessages([
+                'registration_next_number' => 'The next number cannot be below the highest number already issued.',
+            ]);
+        }
+
+        DB::transaction(function () use ($data, $settings, $policy, $hasNumbers, $actor, $includeSchool, $includeSection, $includeLevel, $schoolCode, $sections, $levels, $sectionCodes, $levelCodes, $next): void {
             $settings->update([
-                'registration_prefix' => $this->normalizePrefix($data['registration_prefix']),
+                'registration_prefix' => $schoolCode ?: $settings->registration_prefix,
+                'registration_school_code' => $schoolCode,
                 'registration_number_length' => (int) $data['registration_number_length'],
                 'registration_include_year' => (bool) ($data['registration_include_year'] ?? false),
+                'registration_include_school' => $includeSchool,
+                'registration_include_section' => $includeSection,
+                'registration_include_level' => $includeLevel,
+                'registration_separator' => (string) $data['registration_separator'],
+                'registration_year_digits' => (int) $data['registration_year_digits'],
+                'registration_next_number' => $next,
                 'registration_move_policy' => $policy,
                 'registration_move_policy_locked_at' => $hasNumbers ? ($settings->registration_move_policy_locked_at ?: now()) : null,
             ]);
-            foreach ($data['section_prefixes'] ?? [] as $id => $prefix) {
-                Section::findOrFail((int) $id)->update(['registration_prefix' => $this->optionalPrefix($prefix)]);
+            foreach ($sections as $section) {
+                $section->update(['registration_code' => $sectionCodes[$section->id]]);
             }
-            foreach ($data['level_prefixes'] ?? [] as $id => $prefix) {
-                AcademicLevel::findOrFail((int) $id)->update(['registration_prefix' => $this->optionalPrefix($prefix)]);
+            foreach ($levels as $level) {
+                $level->update(['registration_code' => $levelCodes[$level->id]]);
             }
-            foreach ($data['next_numbers'] ?? [] as $key => $next) {
-                $this->setNext((string) $key, (int) $next);
+            foreach (RegistrationNumberSequence::get() as $sequence) {
+                $sequence->update(['next_number' => $next]);
             }
             app(AuditRecorder::class)->record($actor, 'registration_number_settings_changed', $settings, [
-                'move_policy' => $policy,
+                'move_policy' => $policy, 'parts' => array_values(array_filter([
+                    $includeSchool ? 'school' : null, $includeSection ? 'section' : null,
+                    $includeLevel ? 'level' : null, ($data['registration_include_year'] ?? false) ? 'year' : null,
+                    'number',
+                ])),
             ]);
         });
+    }
+
+    public function highestIssued(): int
+    {
+        return (int) (StudentRegistrationNumberHistory::whereNotNull('sequence_value')->max('sequence_value') ?: 0);
+    }
+
+    public function nextNumber(): int
+    {
+        return max(
+            (int) ($this->settings()->registration_next_number ?: 1),
+            (int) (RegistrationNumberSequence::max('next_number') ?: 1),
+        );
     }
 
     public function assertAvailable(string $number, ?int $exceptStudentId = null): void
@@ -164,7 +238,121 @@ class RegistrationNumbers
         }
     }
 
-    private function reserveAndApply(Student $student, string $number, User $actor, ?int $sequenceValue): void
+    /**
+     * @param  array{numbers?:array<string,bool>,counters?:array<string,int>}  $state
+     * @return array{old_number:?string,new_number:?string,sequence_value:?int,issued_year:?int,section_code:?string,level_code:?string,changed:bool,adjusted:bool,reason:string}
+     */
+    public function planMovement(Student $student, ClassArm $destination, array &$state = [], bool $reserveCounter = false): array
+    {
+        $student->loadMissing('classArm.schoolClass.level.section');
+        $destination->loadMissing('schoolClass.level.section');
+        $old = $student->registration_number;
+        $unchanged = [
+            'old_number' => $old, 'new_number' => $old, 'sequence_value' => null,
+            'issued_year' => null, 'section_code' => null, 'level_code' => null,
+            'changed' => false, 'adjusted' => false, 'reason' => 'movement_policy_kept_number',
+        ];
+        if (! $old) {
+            return $unchanged;
+        }
+
+        $settings = $this->settings();
+        $sourceLevel = $student->classArm?->schoolClass?->level;
+        $destinationLevel = $destination->schoolClass?->level;
+        $sectionChanged = (bool) $settings->registration_include_section
+            && $sourceLevel?->section_id !== $destinationLevel?->section_id;
+        $levelChanged = (bool) $settings->registration_include_level
+            && $sourceLevel?->id !== $destinationLevel?->id;
+        if ((! $sectionChanged && ! $levelChanged)
+            || $settings->registration_move_policy === self::KEEP_WHOLE_NUMBER) {
+            return $unchanged;
+        }
+
+        $allocation = StudentRegistrationNumberHistory::where('student_id', $student->id)
+            ->where('new_number', $old)->latest('changed_at')->latest('id')->first();
+        $issuedYear = $allocation?->issued_year ?: (int) $allocation?->changed_at?->format('Y');
+        $adjusted = false;
+
+        if ($settings->registration_move_policy === self::KEEP_DIGITS_CHANGE_PREFIX) {
+            if (! $allocation?->sequence_value) {
+                throw ValidationException::withMessages([
+                    'registration_number' => 'The stored number sequence is missing for '.$student->user?->name.'. Assign a number before moving this pupil.',
+                ]);
+            }
+            $value = (int) $allocation->sequence_value;
+            $number = $this->builder->buildForArm($destination, $value, $settings, $issuedYear);
+            if (! $this->availableForPlan($number, $student->id, $state)) {
+                $adjusted = true;
+                [$value, $number] = $this->nextFromPrefix($destination, $settings, $state, $reserveCounter);
+                $issuedYear = (int) now('Africa/Lagos')->format('Y');
+            }
+        } else {
+            [$value, $number] = $this->nextFromPrefix($destination, $settings, $state, $reserveCounter);
+            $issuedYear = (int) now('Africa/Lagos')->format('Y');
+        }
+
+        $state['numbers'][$number] = true;
+        $metadata = $this->builder->allocationForArm($destination, $issuedYear);
+
+        return [
+            'old_number' => $old, 'new_number' => $number, 'sequence_value' => $value,
+            ...$metadata, 'changed' => $old !== $number, 'adjusted' => $adjusted,
+            'reason' => $adjusted ? 'movement_policy_clash_adjustment' : 'movement_policy',
+        ];
+    }
+
+    /**
+     * @param  array{numbers?:array<string,bool>,counters?:array<string,int>}  $state
+     * @return array{old_number:null,new_number:string,sequence_value:int,issued_year:int,section_code:?string,level_code:?string,changed:true,adjusted:false,reason:string}
+     */
+    public function planInitial(ClassArm $destination, array &$state = [], bool $reserveCounter = false): array
+    {
+        $settings = $this->settings();
+        $prefix = $this->builder->prefixForArm($destination, $settings);
+        $key = $this->sequenceKey($prefix, $settings->registration_move_policy);
+        [$value, $number] = $this->nextFromKey($destination, $settings, $key, $state, $reserveCounter);
+        $state['numbers'][$number] = true;
+        $metadata = $this->builder->allocationForArm($destination);
+
+        return [
+            'old_number' => null, 'new_number' => $number, 'sequence_value' => $value,
+            ...$metadata, 'changed' => true, 'adjusted' => false, 'reason' => 'incoming_acceptance',
+        ];
+    }
+
+    /** @param array<string,mixed> $plan */
+    public function applyMovementPlan(Student $student, array $plan, User $actor): Student
+    {
+        if (! ($plan['changed'] ?? false)) {
+            return $student;
+        }
+        if ($student->registration_number !== $plan['old_number']) {
+            throw ValidationException::withMessages(['registration_number' => 'The pupil registration number changed after preview. Review the movement again.']);
+        }
+        $this->reserveAndApply($student, $plan['new_number'], $actor, $plan['sequence_value'], [
+            'issued_year' => $plan['issued_year'], 'section_code' => $plan['section_code'],
+            'level_code' => $plan['level_code'],
+        ], $plan['reason'], (bool) $plan['adjusted']);
+
+        return $student->refresh();
+    }
+
+    /** @param array<string,mixed> $plan */
+    public function applyInitialPlan(Student $student, array $plan, User $actor): Student
+    {
+        if ($student->registration_number) {
+            return $student;
+        }
+        $this->reserveAndApply($student, $plan['new_number'], $actor, $plan['sequence_value'], [
+            'issued_year' => $plan['issued_year'], 'section_code' => $plan['section_code'],
+            'level_code' => $plan['level_code'],
+        ], $plan['reason']);
+
+        return $student->refresh();
+    }
+
+    /** @param array{issued_year:?int,section_code:?string,level_code:?string} $allocation */
+    private function reserveAndApply(Student $student, string $number, User $actor, ?int $sequenceValue, array $allocation, string $reason, bool $adjusted = false): void
     {
         $this->assertAvailable($number, $student->id);
         StudentRegistrationNumberHistory::create([
@@ -172,6 +360,9 @@ class RegistrationNumbers
             'old_number' => $student->registration_number,
             'new_number' => $number,
             'sequence_value' => $sequenceValue,
+            'issued_year' => $allocation['issued_year'],
+            'section_code' => $allocation['section_code'],
+            'level_code' => $allocation['level_code'],
             'changed_by' => $actor->id,
             'changed_at' => now(),
         ]);
@@ -184,41 +375,71 @@ class RegistrationNumbers
         app(AuditRecorder::class)->record($actor, 'student_registration_number_changed', $student, [
             'old_number' => $old,
             'new_number' => $number,
+            'reason' => $reason,
+            'clash_adjusted' => $adjusted,
         ]);
     }
 
-    private function setNext(string $key, int $next): void
+    /** @param array{numbers?:array<string,bool>,counters?:array<string,int>} $state */
+    private function availableForPlan(string $number, int $studentId, array $state): bool
     {
-        if ($key !== 'school' && preg_match('/^prefix:[A-Z0-9]{2,6}$/', $key) !== 1) {
-            throw ValidationException::withMessages(['next_numbers' => 'Choose a valid school or prefix sequence.']);
+        if (isset($state['numbers'][$number])) {
+            return false;
         }
-        if ($next < 1) {
-            throw ValidationException::withMessages(['next_numbers' => 'The next number must be at least 1.']);
-        }
-        $prefix = str_starts_with($key, 'prefix:') ? substr($key, 7) : null;
-        $issued = StudentRegistrationNumberHistory::whereNotNull('sequence_value')
-            ->when($prefix, fn ($query) => $query->where('new_number', 'like', $prefix.'-%'))
-            ->max('sequence_value') ?: 0;
-        if ($next <= $issued) {
-            throw ValidationException::withMessages(['next_numbers' => 'The next number cannot be below the highest number already issued.']);
-        }
-        RegistrationNumberSequence::updateOrCreate(['sequence_key' => $key], ['next_number' => $next]);
+
+        return ! Student::where('registration_number', $number)->whereKeyNot($studentId)->exists()
+            && ! StudentRegistrationNumberHistory::where('new_number', $number)->exists();
     }
 
-    private function format(string $prefix, int $number, SchoolSetting $settings): string
+    /**
+     * @param  array{numbers?:array<string,bool>,counters?:array<string,int>}  $state
+     * @return array{0:int,1:string}
+     */
+    private function nextFromPrefix(ClassArm $destination, SchoolSetting $settings, array &$state, bool $reserveCounter): array
     {
-        $parts = [$prefix];
-        if ($settings->registration_include_year) {
-            $parts[] = now('Africa/Lagos')->format('Y');
-        }
-        $parts[] = str_pad((string) $number, (int) $settings->registration_number_length, '0', STR_PAD_LEFT);
+        $prefix = $this->builder->prefixForArm($destination, $settings);
+        $key = 'prefix:'.($prefix !== '' ? $prefix : 'plain');
 
-        return implode('-', $parts);
+        return $this->nextFromKey($destination, $settings, $key, $state, $reserveCounter);
+    }
+
+    /**
+     * @param  array{numbers?:array<string,bool>,counters?:array<string,int>}  $state
+     * @return array{0:int,1:string}
+     */
+    private function nextFromKey(ClassArm $destination, SchoolSetting $settings, string $key, array &$state, bool $reserveCounter): array
+    {
+        if (! isset($state['counters'][$key])) {
+            $query = RegistrationNumberSequence::where('sequence_key', $key);
+            if ($reserveCounter) {
+                RegistrationNumberSequence::firstOrCreate(
+                    ['sequence_key' => $key], ['next_number' => (int) ($settings->registration_next_number ?: 1)]
+                );
+                $state['counters'][$key] = (int) $query->lockForUpdate()->value('next_number');
+            } else {
+                $state['counters'][$key] = (int) ($query->value('next_number') ?: $settings->registration_next_number ?: 1);
+            }
+        }
+        $value = $state['counters'][$key];
+        $number = $this->builder->buildForArm($destination, $value, $settings);
+        while (! $this->availableForPlan($number, 0, $state)) {
+            $value++;
+            $number = $this->builder->buildForArm($destination, $value, $settings);
+        }
+        $state['counters'][$key] = $value + 1;
+        if ($reserveCounter) {
+            RegistrationNumberSequence::where('sequence_key', $key)->update(['next_number' => $value + 1]);
+            if ($key === 'school') {
+                $settings->update(['registration_next_number' => $value + 1]);
+            }
+        }
+
+        return [$value, $number];
     }
 
     private function sequenceKey(string $prefix, string $policy): string
     {
-        return $policy === self::NEW_PREFIX_SEQUENCE ? 'prefix:'.$prefix : 'school';
+        return $policy === self::NEW_PREFIX_SEQUENCE ? 'prefix:'.($prefix !== '' ? $prefix : 'plain') : 'school';
     }
 
     private function normalizePrefix(?string $prefix): string
@@ -231,16 +452,11 @@ class RegistrationNumbers
         return $prefix;
     }
 
-    private function optionalPrefix(?string $prefix): ?string
-    {
-        return trim((string) $prefix) === '' ? null : $this->normalizePrefix($prefix);
-    }
-
     private function normalizeNumber(string $number): string
     {
         $number = strtoupper(trim($number));
-        if (strlen($number) > 32 || ! preg_match('/^[A-Z0-9-]+$/', $number)) {
-            throw ValidationException::withMessages(['registration_number' => 'Use letters, numbers and dashes only.']);
+        if (strlen($number) > 64 || ! preg_match('/^[A-Z0-9.\/-]+$/', $number)) {
+            throw ValidationException::withMessages(['registration_number' => 'Use letters, numbers, hyphens, slashes or dots only.']);
         }
 
         return $number;
@@ -250,5 +466,71 @@ class RegistrationNumbers
     {
         return in_array((string) ($exception->errorInfo[0] ?? ''), ['23000', '23505'], true)
             || str_contains(strtolower($exception->getMessage()), 'unique');
+    }
+
+    private function optionalCode(mixed $value, string $field, int $minimum = 1): ?string
+    {
+        $code = strtoupper(trim((string) $value));
+        if ($code === '') {
+            return null;
+        }
+        if (preg_match('/^[A-Z0-9]{'.$minimum.',6}$/', $code) !== 1) {
+            throw ValidationException::withMessages([$field => 'Use '.$minimum.' to 6 letters or numbers.']);
+        }
+
+        return $code;
+    }
+
+    /** @return array<int, string|null> */
+    private function codesFor($models, array $submitted, string $field): array
+    {
+        $known = $models->pluck('id')->map(fn ($id) => (string) $id)->all();
+        foreach (array_keys($submitted) as $id) {
+            if (! in_array((string) $id, $known, true)) {
+                throw ValidationException::withMessages([$field => 'Choose codes only for this school.']);
+            }
+        }
+
+        return $models->mapWithKeys(fn ($model) => [
+            $model->id => $this->optionalCode(
+                array_key_exists($model->id, $submitted) ? $submitted[$model->id] : $model->registration_code,
+                $field.'.'.$model->id,
+            ),
+        ])->all();
+    }
+
+    private function validateCodes($sections, $levels, array $sectionCodes, array $levelCodes, bool $includeSection, bool $includeLevel): void
+    {
+        $errors = [];
+        if ($includeSection) {
+            $seen = [];
+            foreach ($sections as $section) {
+                $code = $sectionCodes[$section->id];
+                if (! $code) {
+                    $errors['section_codes.'.$section->id] = $section->name.' needs a code.';
+                } elseif (isset($seen[$code])) {
+                    $errors['section_codes.'.$section->id] = 'Section code '.$code.' is used twice.';
+                } else {
+                    $seen[$code] = true;
+                }
+            }
+        }
+        if ($includeLevel) {
+            $seen = [];
+            foreach ($levels as $level) {
+                $code = $levelCodes[$level->id];
+                $group = $includeSection ? (string) ($level->section_id ?: 'no-section') : 'school';
+                if (! $code) {
+                    $errors['level_codes.'.$level->id] = $level->name.' needs a code.';
+                } elseif (isset($seen[$group][$code])) {
+                    $errors['level_codes.'.$level->id] = 'Level code '.$code.' is used twice.';
+                } else {
+                    $seen[$group][$code] = true;
+                }
+            }
+        }
+        if ($errors) {
+            throw ValidationException::withMessages($errors);
+        }
     }
 }

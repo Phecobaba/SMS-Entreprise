@@ -86,7 +86,12 @@ class StudentAccounts
         DB::transaction(function () use ($student, $data, $actor, $username, $email): void {
             $user = $student->user()->lockForUpdate()->firstOrFail();
             $before = $user->only(['name', 'username', 'email']);
-            $user->update(['name' => trim($data['name']), 'username' => $username, 'email' => $email]);
+            $user->forceFill([
+                'name' => trim($data['name']),
+                'username' => $username,
+                'email' => $email,
+                'email_verified_at' => $email ? now() : null,
+            ])->save();
             app(AuditRecorder::class)->record($actor, 'student_identity_changed', $student, [
                 'before' => $before,
                 'after' => $user->only(['name', 'username', 'email']),
@@ -122,6 +127,7 @@ class StudentAccounts
         ]);
         $user->setRawAttributes(array_merge($user->getAttributes(), [
             'password' => app(TemporaryCredentials::class)->hash($password),
+            'email_verified_at' => filled($email) ? now() : null,
         ]));
         $user->save();
         $role = Role::firstOrCreate(['name' => $roleName]);

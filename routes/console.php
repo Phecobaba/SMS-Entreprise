@@ -12,3 +12,7 @@ Artisan::command('inspire', function () {
 Schedule::command('oakfield:lapse-expired-offers')->dailyAt('00:15')->timezone('Africa/Lagos');
 Schedule::command('oakfield:sync-entrance-cbt-outcomes')->everyMinute()->timezone('Africa/Lagos');
 Schedule::command('oakfield:attendance-alerts')->everyFiveMinutes()->timezone('Africa/Lagos');
+Schedule::command('oakfield:cleanup-student-imports')->hourly()->timezone('Africa/Lagos');
+Schedule::command('oakfield:cleanup-cbt-question-uploads')->hourly()->timezone('Africa/Lagos');
+Schedule::command('oakfield:recheck-pending-paystack')->everyFiveMinutes()->timezone('Africa/Lagos');
+Schedule::command('oakfield:purge-expired-applications')->dailyAt('01:10')->timezone('Africa/Lagos');

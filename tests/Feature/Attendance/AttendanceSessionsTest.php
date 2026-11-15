@@ -54,9 +54,42 @@ class AttendanceSessionsTest extends TestCase
         $this->assertSame(['Afternoon', 'Morning'], AttendanceRecord::where('student_id', $f['students'][0]->id)->orderBy('session')->pluck('session')->all());
     }
 
+    public function test_afternoon_opens_at_noon_for_form_teachers_without_changing_other_date_rules(): void
+    {
+        $f = $this->fixture();
+        $statuses = [$f['students'][0]->id => 'Present', $f['students'][1]->id => 'Absent'];
+
+        CarbonImmutable::setTestNow('2026-10-19 11:59:00 Africa/Lagos');
+        $this->actingAs($f['teacher'])->get(route('attendance.day', [
+            'arm' => $f['armA']->id, 'date' => '2026-10-19', 'session' => 'Afternoon',
+        ]))->assertOk()->assertSee('Afternoon attendance opens at 12:00.')->assertDontSee('Save afternoon roll');
+        $this->post(route('attendance.mark', $f['armA']->id), [
+            'date' => '2026-10-19', 'session' => 'Afternoon', 'statuses' => $statuses,
+        ])->assertSessionHasErrors(['attendance' => 'Afternoon attendance opens at 12:00.']);
+        $this->post(route('attendance.mark', $f['armA']->id), [
+            'date' => '2026-10-19', 'session' => 'Morning', 'statuses' => $statuses,
+        ])->assertSessionHasNoErrors();
+
+        $this->actingAs($f['admin'])->post(route('attendance.mark', $f['armA']->id), [
+            'date' => '2026-10-19', 'session' => 'Afternoon', 'statuses' => $statuses,
+        ])->assertSessionHasNoErrors();
+
+        CarbonImmutable::setTestNow('2026-10-19 12:00:00 Africa/Lagos');
+        $this->actingAs($f['teacher'])->post(route('attendance.mark', $f['armA']->id), [
+            'date' => '2026-10-19', 'session' => 'Afternoon', 'statuses' => $statuses,
+        ])->assertSessionHasNoErrors();
+        $this->post(route('attendance.mark', $f['armA']->id), [
+            'date' => '2026-10-20', 'session' => 'Morning', 'statuses' => $statuses,
+        ])->assertSessionHasErrors(['date' => 'Attendance can only be marked or changed on the same school day.']);
+        $this->post(route('attendance.mark', $f['armA']->id), [
+            'date' => '2026-10-18', 'session' => 'Morning', 'statuses' => $statuses,
+        ])->assertSessionHasErrors(['date' => 'Attendance can only be marked or changed on the same school day.']);
+    }
+
     public function test_lock_is_per_session(): void
     {
         $f = $this->fixture();
+        CarbonImmutable::setTestNow(today('Africa/Lagos')->toDateString().' 13:00:00 Africa/Lagos');
         $date = today('Africa/Lagos')->toDateString();
         $statuses = [$f['students'][0]->id => 'Present', $f['students'][1]->id => 'Absent'];
         $service = app(AttendanceService::class);
@@ -265,6 +298,25 @@ class AttendanceSessionsTest extends TestCase
         $this->post(route('attendance.mark', $f['armA']), [
             'date' => $date, 'session' => 'Morning', 'statuses' => $statuses,
         ])->assertForbidden();
+    }
+
+    public function test_dashboard_exact_date_query_matches_the_previous_date_function_numbers(): void
+    {
+        $f = $this->fixture();
+        CarbonImmutable::setTestNow('2026-10-19 13:00:00 Africa/Lagos');
+        foreach (AttendanceService::SESSIONS as $session) {
+            $this->record($f['students'][0], $f['armA'], '2026-10-19', $session, 'Present', $f['teacher']);
+            $this->record($f['students'][1], $f['armA'], '2026-10-19', $session, 'Absent', $f['teacher']);
+        }
+
+        $legacy = AttendanceRecord::where('class_arm_id', $f['armA']->id)
+            ->whereDate('date', '2026-10-19')->where('session', 'Morning');
+        $summary = app(AttendanceService::class)->dashboardSummary($f['admin']);
+
+        $this->assertSame(2, (clone $legacy)->distinct()->count('student_id'));
+        $this->assertSame(1, (clone $legacy)->whereIn('status', ['Present', 'Late'])->distinct()->count('student_id'));
+        $this->assertSame(50, $summary['sessions']['Morning']['percentage']);
+        $this->assertSame(1, $summary['sessions']['Morning']['marked_arms']);
     }
 
     private function fixture(): array

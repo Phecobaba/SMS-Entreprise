@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Incoming from Primary · Oakfield</title>@vite(['resources/css/app.css', 'resources/js/app.js'])</head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Incoming from {{ $sourceSection?->name ?? 'previous section' }} · Oakfield</title>@vite(['resources/css/app.css', 'resources/js/app.js'])</head>
 <body>
 @php($pageTitle = 'Promotion')
 @include('core._shell-start')
@@ -10,7 +10,7 @@
         <span class="oak-role-pill">{{ $canViewAll ? 'Admin' : ($section->head_title ?? 'Head') }}</span>
     </div>
 
-    <nav class="ad-tabs" aria-label="Promotion areas"><a href="{{ route('academics.promotion.index', ['section' => $canViewAll ? $selectedSection : null]) }}">Promote classes</a><a href="{{ route('academics.promotion.incoming.index', ['section' => $selectedSection]) }}" aria-current="page">Incoming from Primary</a></nav>
+    <nav class="ad-tabs" aria-label="Promotion areas"><a href="{{ route('academics.promotion.index', ['section' => $canViewAll ? $selectedSection : null]) }}">Promote classes</a><a href="{{ route('academics.promotion.incoming.index', ['section' => $selectedSection]) }}" aria-current="page">Incoming from {{ $sourceSection?->name ?? 'previous section' }}</a></nav>
 
     @if($errors->any())<div class="oak-notice oak-notice-danger" role="alert"><div><b>We couldn't review this action.</b><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div></div>@endif
 
@@ -19,7 +19,7 @@
         <section class="ad-card"><form method="get" action="{{ route('academics.promotion.incoming.index') }}" class="ad-form-grid ad-filter-row"><label>Receiving section<select class="ad-inline-select" name="section" onchange="this.form.submit()">@foreach($sections as $available)<option value="{{ $available->id }}" @selected($selectedSection === $available->id)>{{ $available->name }}</option>@endforeach</select></label></form></section>
     @endif
 
-    <div class="oak-notice oak-notice-info"><x-icon name="info-circle" /><div><b>Accept, not continue.</b><p>Acceptance keeps each pupil's current registration number and creates no invoice. Pupils marked not continuing become Graduated: they and their parents keep read-only access to past report cards, paid receipts and, while payment-gated access allows it, Attendance for the last 30 recorded school days. Pupils still Awaiting admission remain limited to past report cards and receipts.</p></div></div>
+    <div class="oak-notice oak-notice-info"><x-icon name="info-circle" /><div><b>Accept, not continue.</b><p>Acceptance applies the school's locked registration-number movement policy and creates no invoice. Pupils marked not continuing become Graduated: they and their parents keep read-only access to past report cards, paid receipts and, while payment-gated access allows it, Attendance for the last 30 recorded school days. Pupils still Awaiting admission remain limited to past report cards and receipts.</p></div></div>
 
     @if($report)
         <section class="oak-notice oak-notice-success pr-report" role="status"><x-icon name="circle-check" /><div>
@@ -29,6 +29,7 @@
                 @if($report['unchanged']) {{ $report['unchanged'] }} already accepted and unchanged. @endif
                 {{ $report['remaining'] }} still waiting.
             </p>
+            @foreach($report['registration_changes'] ?? [] as $change)<p><b>{{ $change['name'] }}:</b> {{ $change['old'] ?: 'Not issued' }} → {{ $change['new'] }}@if($change['adjusted']) <span class="ad-tag">Adjusted — number already used</span>@endif</p>@endforeach
         </div></section>
     @endif
 
@@ -42,7 +43,7 @@
                     <div class="pr-review-row"><div><b>{{ $pupil->user?->name }}</b><small>{{ $pupil->awaitingFromClassArm?->schoolClass?->name }}</small></div><span>{{ $intent === 'accept' ? $row['arm']->schoolClass?->name.' · '.$row['arm']->name : 'Not continuing' }}</span></div>
                 @endforeach
             </div>
-            @if($intent === 'accept')<p class="ad-meta"><b>Registration numbers:</b> Keep each pupil's current number.</p>@endif
+            @if($intent === 'accept')<div class="ad-meta"><b>Registration numbers</b>@foreach($plan['rows'] as $row)<p>{{ $row['student']->user?->name }}: {{ $row['registration']['old_number'] ?: 'Not issued' }} → {{ $row['registration']['new_number'] }}@if($row['registration']['adjusted']) · Adjusted because that number is already used @endif</p>@endforeach</div>@endif
             <form method="post" action="{{ $intent === 'accept' ? route('academics.promotion.incoming.accept') : route('academics.promotion.incoming.not-continuing') }}" class="ad-bar">@csrf
                 <input type="hidden" name="section_id" value="{{ $selectedSection }}"><input type="hidden" name="intent" value="{{ $intent }}">
                 @if($plan['all_remaining'] ?? false)<input type="hidden" name="all_remaining" value="1">@endif
@@ -69,7 +70,7 @@
                         <label><span class="in-mobile-label">Arm</span><select class="ad-inline-select" name="arm[{{ $student->id }}]" data-row-arm><option value="">Choose an arm</option>@foreach($classes as $class)@foreach($class->arms->sortBy('name', SORT_NATURAL) as $arm)<option value="{{ $arm->id }}" data-class="{{ $class->id }}" @selected($suggestion['arm']?->id === $arm->id)>{{ $arm->name }}</option>@endforeach@endforeach</select></label>
                     </div>
                 @empty
-                    <div class="oak-empty"><x-icon name="users" /><strong>No pupils are waiting for this section.</strong><p>When Primary 6 pupils are promoted, they will appear here.</p></div>
+                    <div class="oak-empty"><x-icon name="users" /><strong>No pupils are waiting for this section.</strong><p>When pupils finish the last arranged class in {{ $sourceSection?->name ?? 'the previous section' }}, they will appear here.</p></div>
                 @endforelse
             </section>
             @if($students->hasPages())<div class="pr-pages">{{ $students->links() }}</div>@endif

@@ -75,10 +75,11 @@ class ClassOrderingService
 
         return DB::transaction(function () use ($data, $actor, $level, $section): SchoolClass {
             SchoolClass::lockForUpdate()->get(['id']);
+            $name = $this->assertSchoolWideNameIsUnique($data['name']);
             $class = SchoolClass::create([
                 'academic_level_id' => $level->id,
                 'department_id' => $data['department_id'] ?? null,
-                'name' => trim($data['name']),
+                'name' => $name,
                 'position' => null,
             ]);
 
@@ -108,6 +109,7 @@ class ClassOrderingService
 
         return DB::transaction(function () use ($class, $data, $actor, $level, $targetSection): SchoolClass {
             SchoolClass::lockForUpdate()->get(['id']);
+            $name = $this->assertSchoolWideNameIsUnique($data['name'], $class->id);
             $before = $class->only(['academic_level_id', 'department_id', 'name', 'position']);
             $levelChanged = $class->academic_level_id !== $level->id;
             $positionChanged = array_key_exists('comes_after_id', $data) || $levelChanged;
@@ -119,7 +121,7 @@ class ClassOrderingService
             $class->update([
                 'academic_level_id' => $level->id,
                 'department_id' => $data['department_id'] ?? null,
-                'name' => trim($data['name']),
+                'name' => $name,
                 'position' => $positionChanged ? null : $class->position,
             ]);
 
@@ -134,6 +136,23 @@ class ClassOrderingService
 
             return $class->refresh();
         });
+    }
+
+    public function assertSchoolWideNameIsUnique(string $name, ?int $exceptClassId = null): string
+    {
+        $name = trim($name);
+        $existing = SchoolClass::with('level')
+            ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower($name)])
+            ->when($exceptClassId, fn ($query) => $query->whereKeyNot($exceptClassId))
+            ->first();
+
+        if ($existing) {
+            throw ValidationException::withMessages([
+                'name' => 'A class with this name already exists ('.($existing->level?->name ?? 'Unknown level').').',
+            ]);
+        }
+
+        return $name;
     }
 
     public function move(SchoolClass $class, string $direction, User $actor): SchoolClass

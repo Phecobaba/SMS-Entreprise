@@ -4,6 +4,8 @@
         'Exams', 'My Exams', 'CBT' => 'device-laptop',
         'Results' => 'report',
         'Academics', 'Classes' => 'school',
+        'Bulk subjects' => 'book',
+        'Teacher assignments' => 'clipboard-list',
         'Promotion' => 'arrow-up',
         'Assignments' => 'clipboard-list',
         'Attendance', 'Alerts' => 'calendar-check',

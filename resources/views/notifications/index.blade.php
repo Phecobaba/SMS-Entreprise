@@ -8,9 +8,10 @@
     @if(($context['kind'] ?? null) === 'parent' && ! $context['student_id'])
         @include('portals._empty')
     @else
-    <div class="oak-section-head"><div><h1>Notifications</h1><p class="oak-subpage-note">{{ $unreadCount }} unread</p></div>@if($unreadCount)<form method="post" action="{{ route('notifications.read-all', ($context['kind'] ?? null) === 'parent' && $context['student_id'] ? ['student' => $context['student_id']] : []) }}">@csrf<button class="oak-btn oak-btn-quiet">Mark all read</button></form>@endif</div>
+    <div class="oak-section-head"><div><h1>Notifications</h1><p class="oak-subpage-note">{{ $waitingCount }} waiting</p></div>@if($unreadCount)<form method="post" action="{{ route('notifications.read-all', ($context['kind'] ?? null) === 'parent' && $context['student_id'] ? ['student' => $context['student_id']] : []) }}">@csrf<button class="oak-btn oak-btn-quiet">Mark all read</button></form>@endif</div>
     @if(session('status'))<p class="bg-green-50 p-3">{{ session('status') }}</p>@endif
     <section class="nt-list">
+        @if($attention)<article class="nt-row" data-live-result-attention><div><h3><a href="{{ $attention['url'] }}" wire:navigate>{{ $attention['text'] }}</a><span class="oak-status-pill oak-status-new">Live</span></h3><p>Open the results workspace to take action.</p></div></article>@endif
         @forelse($notifications as $notification)
             <article class="nt-row" @unless($notification->read_at) data-unread @endunless>
                 <div><h3>@if($notification->url)<a href="{{ $notification->url }}" wire:navigate>{{ $notification->title }}</a>@else{{ $notification->title }}@endif @unless($notification->read_at)<span class="oak-status-pill oak-status-new">New</span>@endunless</h3><p>{{ $notification->body }}</p><time datetime="{{ $notification->created_at->toIso8601String() }}">{{ $notification->created_at->diffForHumans() }}</time></div>

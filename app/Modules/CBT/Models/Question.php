@@ -16,4 +16,14 @@ class Question extends Model
     {
         return $this->hasMany(QuestionOption::class);
     }
+
+    public function totalMarks(): int
+    {
+        return (int) $this->options->where('is_correct', true)->sum('marks');
+    }
+
+    public function answerLimit(): int
+    {
+        return $this->options->where('is_correct', true)->count();
+    }
 }

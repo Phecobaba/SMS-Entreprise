@@ -57,6 +57,12 @@ class PromotionController extends Controller
         ])->with('promotion_report', [
             'moved' => $plan['moved'], 'stayed' => $plan['stayed'], 'skipped' => $plan['skipped'],
             'final_status' => $plan['final_status'],
+            'registration_changes' => $plan['rows']->filter(fn ($row) => $row['registration']['changed'] ?? false)
+                ->map(fn ($row) => [
+                    'name' => $row['student']->user?->name,
+                    'old' => $row['registration']['old_number'], 'new' => $row['registration']['new_number'],
+                    'adjusted' => $row['registration']['adjusted'],
+                ])->values()->all(),
         ]);
     }
 
@@ -81,6 +87,9 @@ class PromotionController extends Controller
         $canPromote = $actor->can('manage_promotions');
         $sections = $canPromote ? $catalog->sectionsFor($actor) : collect();
         $incomingSections = $canPromote ? app(IncomingAdmissionService::class)->sectionsFor($actor) : collect();
+        $incomingSource = $incomingSections->first()
+            ? app(IncomingAdmissionService::class)->sourceSectionFor($incomingSections->first())
+            : null;
         $hasSection = $actor->can('view_all_sections') || $sections->isNotEmpty();
         $waiting = $canPromote ? $catalog->waitingForArrangement() : collect();
         $selectedSection = null;
@@ -117,6 +126,7 @@ class PromotionController extends Controller
             'canViewAll' => $actor->can('view_all_sections'),
             'showIncomingTab' => $actor->can('view_all_sections') || $incomingSections->isNotEmpty(),
             'incomingSectionId' => $incomingSections->first()?->id,
+            'incomingSourceName' => $incomingSource?->name,
             'report' => $request->session()->get('promotion_report'),
             'plan' => null,
             'submittedPlacements' => [],

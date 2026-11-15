@@ -39,9 +39,12 @@ once it meets the Definition of Done in `CONTRIBUTING.md`.
 - Automated tests must use SQLite in-memory only. `tests/TestCase.php`
   deliberately fails before test database setup unless the resolved connection
   is `sqlite` with `DB_DATABASE=:memory:`.
-- QA and browser checks must use a separate throwaway SQLite file such as
-  `database/qa.sqlite`, selected through an environment override. Delete it
-  after the check; `database/*.sqlite` is gitignored.
+- QA and browser checks start through `php artisan qa:prepare <absolute
+  database/qa.sqlite path> --serve`; see `docs/QA.md`. Do not log in or access
+  fixtures until its live HTTP database proof passes. Delete the throwaway file
+  after the check; `database/*.sqlite` is gitignored. Compare the persistent
+  development database SHA-256 hash, size and modified time before and after
+  every QA session; investigate and report any difference as an incident.
 - Never run `migrate:fresh`, seed QA fixtures, or point a test/browser runner at
   `database/database.sqlite`. That file is the persistent local development
   database.

@@ -32,8 +32,11 @@ class FeeInvoicingController extends Controller
 
         return view('payments.fee-schedule', [
             'terms' => AcademicTerm::with('session')->latest('start_date')->get(), 'termId' => $termId,
-            'items' => FeeItem::withCount(['scheduleLines', 'invoiceLines'])->orderBy('name')->get(),
-            'lines' => FeeScheduleLine::with(['feeItem', 'level', 'schoolClass', 'department'])->where('term_id', $termId)->get(),
+            'items' => FeeItem::withCount(['scheduleLines', 'invoiceLines'])->orderBy('name')
+                ->paginate(20, ['*'], 'items_page')->withQueryString(),
+            'lines' => FeeScheduleLine::with(['feeItem', 'level', 'schoolClass', 'department'])
+                ->where('term_id', $termId)->orderBy('id')
+                ->paginate(20, ['*'], 'lines_page')->withQueryString(),
             'levels' => AcademicLevel::orderBy('name')->limit(100)->get(),
             'classes' => SchoolClass::with('level')->orderBy('position')->limit(100)->get(),
             'departments' => Department::orderBy('name')->limit(100)->get(),

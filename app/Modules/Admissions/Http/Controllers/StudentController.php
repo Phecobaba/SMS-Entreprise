@@ -9,6 +9,7 @@ use App\Modules\Admissions\Models\Student;
 use App\Modules\Admissions\Services\RegistrationNumbers;
 use App\Modules\Admissions\Services\StudentAccounts;
 use App\Modules\Assignments\Models\ParentProfile;
+use App\Modules\Assignments\Services\ParentDirectory;
 use App\Modules\Core\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -61,7 +62,9 @@ class StudentController extends Controller
                 ->orWhere('username', 'like', '%'.$parentSearch.'%')->orWhere('email', 'like', '%'.$parentSearch.'%'))
             ->limit(20)->get();
 
-        return view('students.create', compact('arms', 'selectedArm', 'parentSearch', 'parents') + [
+        $selectedArmModel = $selectedArm ? $arms->firstWhere('id', $selectedArm) : null;
+
+        return view('students.create', compact('arms', 'selectedArm', 'selectedArmModel', 'parentSearch', 'parents') + [
             'preview' => $selectedArm && $arms->contains('id', $selectedArm) ? $numbers->preview($selectedArm) : null,
         ]);
     }
@@ -73,7 +76,7 @@ class StudentController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'class_arm_id' => ['required', 'integer'],
             'registration_mode' => ['required', Rule::in(['automatic', 'typed'])],
-            'registration_number' => ['nullable', 'required_if:registration_mode,typed', 'string', 'max:32'],
+            'registration_number' => ['nullable', 'required_if:registration_mode,typed', 'string', 'max:64'],
             'username' => ['required', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:255', Rule::unique('users', 'email')->where('school_id', app(TenantContext::class)->id())],
             'parent_mode' => ['required', Rule::in(['none', 'new', 'existing'])],
@@ -83,6 +86,7 @@ class StudentController extends Controller
             'parent_id' => ['nullable', 'required_if:parent_mode,existing', 'integer'],
         ]);
         $created = $accounts->create($data, $request->user());
+        $created['student']->loadMissing('classArm.schoolClass');
 
         return response()->view('students.credentials', $created)
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, private')
@@ -91,8 +95,10 @@ class StudentController extends Controller
 
     public function show(Student $student, Request $request, RegistrationNumbers $numbers): View
     {
-        abort_unless($request->user()->can('manage_student_accounts') || $request->user()->can('change_registration_numbers'), 403);
-        if (! $request->user()->can('manage_student_accounts')) {
+        abort_unless($request->user()->can('manage_student_accounts') || $request->user()->can('change_registration_numbers') || $request->user()->can('view_parents'), 403);
+        if ($request->user()->can('view_parents') && ! $request->user()->can('manage_student_accounts') && ! $request->user()->can('change_registration_numbers')) {
+            app(ParentDirectory::class)->assertStudentVisible($request->user(), $student);
+        } elseif (! $request->user()->can('manage_student_accounts')) {
             $numbers->authorizeChange($student, $request->user());
         }
         $student->load(['user', 'classArm.schoolClass.level.section', 'registrationHistory.changedBy', 'parents.user', 'parents.students.user']);
@@ -115,7 +121,7 @@ class StudentController extends Controller
 
     public function changeNumber(Student $student, Request $request, RegistrationNumbers $numbers): RedirectResponse
     {
-        $data = $request->validate(['registration_number' => ['required', 'string', 'max:32']]);
+        $data = $request->validate(['registration_number' => ['required', 'string', 'max:64']]);
         $numbers->change($student, $data['registration_number'], $request->user());
 
         return redirect()->route('students.show', $student)->with('status', 'Registration number changed.');
@@ -123,7 +129,7 @@ class StudentController extends Controller
 
     public function resetStudent(Student $student, Request $request, StudentAccounts $accounts): Response
     {
-        $reset = $accounts->resetStudent($student->load('user'), $request->user());
+        $reset = $accounts->resetStudent($student->load('user', 'classArm.schoolClass'), $request->user());
 
         return response()->view('students.reset-credentials', $reset + ['heading' => $student->user->name, 'student' => $student])
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, private')->header('Pragma', 'no-cache');
@@ -132,9 +138,9 @@ class StudentController extends Controller
     public function resetParent(Student $student, ParentProfile $parent, Request $request, StudentAccounts $accounts): Response
     {
         abort_unless($parent->students()->whereKey($student->id)->exists(), 404);
-        $reset = $accounts->resetParent($parent->load('user'), $request->user());
+        $reset = $accounts->resetParent($parent->load('user', 'students.user'), $request->user());
 
-        return response()->view('students.reset-credentials', $reset + ['heading' => $parent->user->name, 'student' => $student])
+        return response()->view('students.reset-credentials', $reset + ['heading' => $parent->user->name, 'student' => $student, 'parent' => $parent])
             ->header('Cache-Control', 'no-store, no-cache, must-revalidate, private')->header('Pragma', 'no-cache');
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Core\Services;
 
+use App\Modules\Academics\Services\FormTeacherAssignments;
 use App\Modules\Admissions\Models\Student;
 use App\Modules\Admissions\Services\AdmissionPipeline;
 use App\Modules\Core\Models\User;
@@ -20,7 +21,7 @@ class AppNavigation
         if ($user->can('approve_results') || $user->can('view_attendance_alerts') || $user->can('manage_promotions')
             || $user->can('manage_section_subjects') || $user->can('manage_section_teacher_assignments')
             || $user->can('manage_section_levels') || $user->can('manage_section_arms')
-            || $user->can('manage_section_result_settings')) {
+            || $user->can('manage_section_result_settings') || $user->can('manage_exam_sessions')) {
             return 'head';
         }
         if ($user->can('mark_attendance') && $user->can('enter_results')) {
@@ -87,25 +88,36 @@ class AppNavigation
             ['Results', 'results.index', 'view_results_workspace', 'Teaching'],
             ['Result configuration', 'results.configuration', 'manage_result_settings', 'Teaching'],
             ['CBT', 'cbt.staff.index', 'manage_cbt', 'Teaching'],
+            ['CBT results', 'cbt.results.index', 'view_cbt_results', 'Teaching'],
             ['Attendance', 'attendance.index', 'mark_attendance', 'Daily ops'],
             ['Alerts', 'attendance.alerts', 'view_attendance_alerts', 'Daily ops'],
             ['Assignments', 'assignments.index', 'mark_assignments', 'Daily ops'],
             ['E-Notes', 'enotes.index', 'upload_enotes', 'Daily ops'],
-            ['Admissions', 'admissions.index', 'manage_admissions', 'Daily ops'],
+            ['Admissions', 'admissions.applications.index', 'manage_admissions', 'Daily ops', [
+                ['Applications', 'admissions.applications.index', 'manage_admissions'],
+                ['Exam sessions', 'admissions.sessions.index', 'manage_exam_sessions'],
+                ['Admission settings', 'admissions.applications.settings', 'manage_admissions'],
+                ['Candidates', 'admissions.index', 'manage_admissions'],
+                ['Entrance exams', 'cbt.staff.entrance', 'manage_cbt'],
+            ]],
             ['Students', 'students.index', 'view_students', 'Daily ops'],
-            ['Payments', 'payments.index', 'manage_payments', 'Administration'],
-            ['Record payment', 'payments.record.index', 'manage_payments', 'Administration'],
-            ['Awaiting approval', 'payments.approvals.index', 'manage_payments', 'Administration'],
-            ['Fee schedule', 'fees.schedule.index', 'manage_fee_schedule', 'Administration'],
-            ['Generate invoices', 'fees.generate.index', 'manage_fee_schedule', 'Administration'],
-            ['Not invoiced', 'fees.not-invoiced.index', 'manage_fee_schedule', 'Administration'],
-            ['Payment gateway', 'payments.gateway.show', 'manage_payments', 'Administration'],
+            ['Parents', 'parents.index', 'view_parents', 'Daily ops'],
+            ['Payments', 'payments.index', 'manage_payments', 'Administration', [
+                ['Record payment', 'payments.record.index', 'manage_payments'],
+                ['Awaiting approval', 'payments.approvals.index', 'manage_payments'],
+                ['Fee schedule', 'fees.schedule.index', 'manage_fee_schedule'],
+                ['Generate invoices', 'fees.generate.index', 'manage_fee_schedule'],
+                ['Not invoiced', 'fees.not-invoiced.index', 'manage_fee_schedule'],
+                ['Payment gateway', 'payments.gateway.show', 'manage_payment_gateway'],
+            ]],
             ['Staff HR', 'staff.index', 'manage_staff_records', 'Administration'],
-            ['Add staff', 'staff.accounts.create', 'create_staff', 'Administration'],
+            ['Create staff account', 'staff.accounts.create', 'create_staff', 'Administration'],
             ['Staff access', 'staff.access.index', 'manage_staff_access', 'Administration'],
             ['Sign-in rules', 'sign-in-rules.show', 'view_sign_in_rules', 'Administration'],
+            ['Activity log', 'activity-log.index', 'view_activity_log', 'Administration'],
             ['Registration numbers', 'registration-numbers.edit', 'manage_registration_numbers', 'Administration'],
             ['School Profile', 'school-profile.edit', 'manage_school_profile', 'Administration'],
+            ['Website settings', 'website-settings.edit', 'manage_school_profile', 'Administration'],
         ]);
     }
 
@@ -119,9 +131,16 @@ class AppNavigation
             ['Bulk subjects', 'academics.bulk-subjects.index', 'manage_section_subjects', 'Academics'],
             ['Teacher assignments', 'academics.teacher-assignments.index', 'manage_section_teacher_assignments', 'Academics'],
             ['Promotion', 'academics.promotion.index', 'manage_promotions', 'Academics'],
-            ['Staff', 'staff.index', 'manage_staff_records', 'Academics'],
+            ['Staff', 'head.staff.index', 'view_section_staff', 'People'],
+            ['Parents', 'parents.index', 'view_parents', 'People'],
+            ['Admissions', 'admissions.applications.index', 'manage_exam_sessions', 'People', [
+                ['Applications', 'admissions.applications.index', 'manage_exam_sessions'],
+                ['Exam sessions', 'admissions.sessions.index', 'manage_exam_sessions'],
+            ]],
             ['Results', 'results.index', 'view_results_workspace', 'Teaching'],
             ['Result configuration', 'results.configuration', 'manage_section_result_settings', 'Teaching'],
+            ['CBT', 'cbt.staff.index', 'manage_cbt', 'Teaching'],
+            ['CBT results', 'cbt.results.index', 'view_cbt_results', 'Teaching'],
             ['Attendance', 'attendance.index', 'manage_attendance', 'Teaching'],
             ['Alerts', 'attendance.alerts', 'view_attendance_alerts', 'Teaching'],
         ]);
@@ -138,18 +157,26 @@ class AppNavigation
             ['Generate invoices', 'fees.generate.index', 'manage_fee_schedule', null],
             ['Not invoiced', 'fees.not-invoiced.index', 'manage_fee_schedule', null],
             ['Payment gateway', 'payments.gateway.show', 'manage_payments', null],
+            ['Parents', 'parents.index', 'view_parents', null],
         ]);
     }
 
     private function teacherItems(User $user): array
     {
-        return $this->allowed($user, [
+        $definitions = [
             ['Dashboard', 'dashboard', 'view_dashboard', null],
-            ['Attendance', 'attendance.index', 'mark_attendance', null],
             ['Results', 'results.index', 'view_results_workspace', null],
+            ['CBT results', 'cbt.results.index', 'view_cbt_results', null],
             ['Assignments', 'assignments.index', 'mark_assignments', null],
             ['E-Notes', 'enotes.index', 'upload_enotes', null],
-        ]);
+        ];
+        if ($user->can('manage_attendance') || app(FormTeacherAssignments::class)->dashboardArms($user)->isNotEmpty()) {
+            array_splice($definitions, 1, 0, [[
+                'Attendance', 'attendance.index', 'mark_attendance', null,
+            ]]);
+        }
+
+        return $this->allowed($user, $definitions);
     }
 
     private function generalItems(User $user): array
@@ -176,6 +203,7 @@ class AppNavigation
                 $items[] = $this->item('Attendance', 'attendance.mine');
             }
             $items[] = $this->item('Receipts', 'payments.mine.index');
+            $items[] = $this->item('Account', 'account.show');
 
             return $items;
         }
@@ -188,6 +216,7 @@ class AppNavigation
             $this->item('Attendance', 'attendance.mine'),
             $this->item('Fees', 'payments.mine.index'),
             $this->item('E-Notes', 'enotes.mine'),
+            $this->item('Account', 'account.show'),
         ];
     }
 
@@ -203,27 +232,34 @@ class AppNavigation
             $routes = [['Dashboard', 'dashboard'], ['Results', 'results.mine.index'], ['Attendance', 'attendance.mine'], ['Fees', 'payments.mine.index'], ['Assignments', 'assignments.parent']];
         }
 
-        return collect($routes)->map(fn (array $definition): array => [
+        $items = collect($routes)->map(fn (array $definition): array => [
             'label' => $definition[0],
             'url' => $portal->url($definition[1], context: $context),
             'group' => null,
         ])->all();
+        $items[] = $this->item('My details', 'account.show');
+
+        return $items;
     }
 
     private function allowed(User $user, array $definitions): array
     {
         $items = [];
-        foreach ($definitions as [$label, $route, $permission, $group]) {
+        foreach ($definitions as $definition) {
+            [$label, $route, $permission, $group] = $definition;
             if (Route::has($route) && $user->can($permission)) {
-                $items[] = $this->item($label, $route, $group);
+                $children = collect($definition[4] ?? [])->filter(
+                    fn (array $child): bool => Route::has($child[1]) && $user->can($child[2]),
+                )->map(fn (array $child): array => $this->item($child[0], $child[1]))->values()->all();
+                $items[] = $this->item($label, $route, $group, $children);
             }
         }
 
         return $items;
     }
 
-    private function item(string $label, string $route, ?string $group = null): array
+    private function item(string $label, string $route, ?string $group = null, array $children = []): array
     {
-        return ['label' => $label, 'url' => route($route), 'group' => $group];
+        return ['label' => $label, 'url' => route($route), 'group' => $group, 'children' => $children];
     }
 }

@@ -11,9 +11,9 @@ use Illuminate\Validation\ValidationException;
 
 class FormTeacherAssignments
 {
-    public function dashboardArm(User $actor): ?ClassArm
+    public function dashboardArms(User $actor)
     {
-        return ClassArm::with('schoolClass')->where('form_teacher_user_id', $actor->id)->orderBy('id')->first();
+        return ClassArm::with('schoolClass')->where('form_teacher_user_id', $actor->id)->orderBy('id')->get();
     }
 
     public function assign(int $armId, int $userId, User $actor): ClassArm

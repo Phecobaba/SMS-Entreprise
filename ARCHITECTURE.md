@@ -201,6 +201,11 @@ the frontend UI:
 - Livewire components should scope their queries tightly (e.g. a teacher's
   attendance component only ever queries their assigned class, not the
   whole school).
+- Whole-roster workflows (attendance roll, assignment marking, broadsheet,
+  score CSV and Teacher Results summary) are expected to serve at most 100
+  pupils per Arm. This is an operational review threshold, not an enrolment
+  limit: nothing blocks a pupil from being placed in an Arm. Review these
+  workflows if any Arm approaches 100 pupils.
 - Avoid heavy client-side JS; keep pages light for parents/teachers on
   inconsistent mobile connections.
 
@@ -309,16 +314,17 @@ permissioned and independently audit-trailed, even though today one person
 splits "Principal" into a separate real login, no schema change is
 needed — just a different permission assignment.
 
-**Comment default behavior:** confirmed as **supporting both**,
-school's choice per term, not a fixed default baked into the system.
-Mechanism (already reflected in `docs/schema.md`):
+**Comment default behavior:** confirmed as **supporting personalized text plus
+one Section-selected automatic mode per comment type**. Mechanism (already
+reflected in `docs/schema.md`):
 
 1. `term_default_comments` holds an optional standard remark per term, per
    comment type (Principal, Proprietor).
-2. At result-card compile time, if no personalized comment has been
-   entered for a student, the term default is used.
+2. Each Section independently selects `single` (the term default) or `range`
+   (a reusable average-range comment) for Principal and Proprietor comments.
+   Average matching uses approved subjects, rounded half-up to a whole number;
+   gaps and pupils with no approved Results produce no range comment.
 3. Admin can override any individual student's comment at any time,
    personalized text takes precedence over the default for that student.
-4. This means a school can run entirely generic ("Keep up the good work
-   this term.") for every student, entirely personalized, or a mix —
-   without needing a system-level setting to pick one mode in advance.
+4. This means a school can run a term-wide generic comment, automatic
+   Section/type average ranges, entirely personalized comments, or a mix.

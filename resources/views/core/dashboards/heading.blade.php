@@ -17,6 +17,7 @@
         'student' => 'Student',
         default => auth()->user()->roles->sortBy('name')->first()?->name ?? 'Member',
     };
+    $bellCount = request()->attributes->get('oakShell', [])['oakBellCount'] ?? 0;
 @endphp
 <div class="oak-dashboard-heading">
     <div>
@@ -31,7 +32,7 @@
         @endif
     </div>
     <div class="oak-heading-tools">
-        <a class="oak-bell" href="{{ route('notifications.index', $overview['kind'] === 'parent' ? ['student' => $overview['selected']['id']] : []) }}" wire:navigate aria-label="Notifications{{ $notifications->count() ? ', '.$notifications->count().' unread' : '' }}"><x-icon name="bell" />@if($notifications->count())<b aria-hidden="true">{{ $notifications->count() }}</b>@endif</a>
+        <a class="oak-bell" href="{{ route('notifications.index', $overview['kind'] === 'parent' ? ['student' => $overview['selected']['id']] : []) }}" wire:navigate aria-label="Items waiting{{ $bellCount ? ', '.$bellCount : '' }}"><x-icon name="bell" />@if($bellCount)<b aria-hidden="true">{{ $bellCount > 99 ? '99+' : $bellCount }}</b>@endif</a>
         <span class="oak-role-pill">{{ $roleLabel }}</span>
     </div>
 </div>

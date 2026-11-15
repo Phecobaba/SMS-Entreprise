@@ -4,6 +4,7 @@
     extract($oakShell);
     $oakMobileItems = collect($oakMobileItems ?? []);
     $oakMoreItems = collect($oakNavItems)->reject(fn ($item) => $oakMobileItems->contains('url', $item['url']))->values();
+    $oakMoreGroups = $oakMoreItems->groupBy(fn ($item) => $item['group'] ?: 'Other');
 @endphp
     </div>
 </div>
@@ -12,8 +13,20 @@
     <div class="oak-sheet">
         <h2 id="oak-more-title">More</h2>
         <p class="oak-sheet-sub">{{ auth()->user()->name }}@if($oakHeaderContext) · {{ $oakHeaderContext }}@endif</p>
-        @foreach($oakMoreItems as $item)
-            <a class="oak-list-row oak-more-row" href="{{ $item['url'] }}" wire:navigate><span><span class="oak-more-icon">@include('core._nav-icon', ['label' => $item['label']])</span>{{ $item['label'] }}</span><x-icon name="chevron-right" /></a>
+        <div data-more-root>
+        @foreach($oakMoreGroups as $group => $items)
+            <button class="oak-list-row oak-more-row" type="button" data-more-group="{{ Str::slug($group) }}"><span>{{ $group }}</span><x-icon name="chevron-right" /></button>
+        @endforeach
+        </div>
+        @foreach($oakMoreGroups as $group => $items)
+            <div data-more-panel="{{ Str::slug($group) }}" hidden>
+                <button class="oak-list-row oak-more-row oak-more-back" type="button" data-more-back><span><x-icon name="chevron-left" />Back</span></button>
+                <h3>{{ $group }}</h3>
+                @foreach($items as $item)
+                    <a class="oak-list-row oak-more-row" href="{{ $item['url'] }}" wire:navigate><span><span class="oak-more-icon">@include('core._nav-icon', ['label' => $item['label']])</span>{{ $item['label'] }}</span><x-icon name="chevron-right" /></a>
+                    @foreach($item['children'] ?? [] as $child)<a class="oak-list-row oak-more-row oak-more-child" href="{{ $child['url'] }}" wire:navigate><span>{{ $child['label'] }}</span><x-icon name="chevron-right" /></a>@endforeach
+                @endforeach
+            </div>
         @endforeach
         @if($oakIsStudent || $oakIsParent)
             <a class="oak-list-row oak-more-row" href="{{ route('notifications.index', $oakIsParent && $oakStudentQuery ? ['student' => $oakStudentQuery] : []) }}" wire:navigate><span><span class="oak-more-icon"><x-icon name="bell" /></span>Notifications</span><span class="oak-more-tail">@if($oakUnread)<span class="oak-status-pill oak-status-new">{{ $oakUnread }} new</span>@endif<x-icon name="chevron-right" /></span></a>

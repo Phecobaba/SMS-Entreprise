@@ -11,7 +11,12 @@ class AcademicLevel extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['section_id', 'name', 'registration_prefix'];
+    protected $fillable = ['section_id', 'name', 'registration_prefix', 'registration_code', 'assessed_in_person'];
+
+    protected function casts(): array
+    {
+        return ['assessed_in_person' => 'boolean'];
+    }
 
     public function section(): BelongsTo
     {

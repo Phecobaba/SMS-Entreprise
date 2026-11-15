@@ -2,6 +2,7 @@
 
 namespace App\Modules\Portals\Services;
 
+use App\Modules\Academics\Services\LearnerTerminology;
 use App\Modules\Admissions\Models\Student;
 use App\Modules\Admissions\Services\StudentDirectory;
 use App\Modules\Assignments\Services\ParentAccountDirectory;
@@ -79,6 +80,8 @@ class PortalContext
             'registration_number' => $student->registration_number,
             'class' => $class ? trim($class->name.' '.($student->classArm?->name ?? '')) : 'Class not assigned',
             'section' => $class?->level?->section?->name,
+            'learner' => app(LearnerTerminology::class)->word($student),
+            'learners' => app(LearnerTerminology::class)->word($student, true),
             'fees_due' => $feesDue,
             'status' => $student->status,
             'restricted' => $student->status !== Student::STATUS_ACTIVE,

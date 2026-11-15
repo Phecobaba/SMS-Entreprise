@@ -3,6 +3,7 @@
 namespace App\Modules\Admissions\Models;
 
 use App\Modules\Academics\Models\AcademicLevel;
+use App\Modules\CBT\Models\ExamSubmission;
 use App\Modules\Core\Models\Concerns\BelongsToTenant;
 use App\Modules\Core\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -14,7 +15,7 @@ class Candidate extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['user_id', 'applied_level_id', 'name', 'phone', 'status'];
+    protected $fillable = ['user_id', 'application_id', 'applied_level_id', 'name', 'phone', 'status'];
 
     public function user(): BelongsTo
     {
@@ -44,5 +45,15 @@ class Candidate extends Model
     public function student(): HasOne
     {
         return $this->hasOne(Student::class);
+    }
+
+    public function application(): BelongsTo
+    {
+        return $this->belongsTo(Application::class);
+    }
+
+    public function examSubmissions(): HasMany
+    {
+        return $this->hasMany(ExamSubmission::class);
     }
 }

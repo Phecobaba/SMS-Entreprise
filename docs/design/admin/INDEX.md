@@ -57,26 +57,26 @@ for the batch named in the row.** If a screen is needed and not Ready, stop and 
 | 34 | **Subjects (Admin)**: Section tag and filter, Add (Section chosen once), edit, delete rules | `screens/academic-subjects.html` | `specs/academic-setup.md` | **Academic setup revision (2026-10-23): ready** |
 | 35 | **Subjects (head, own section)** | `screens/head-subjects.html` | `specs/academic-setup.md` | **Academic setup revision (2026-10-23): ready** |
 | 36 | Sessions & terms (Admin only) | `screens/academic-sessions.html` | `specs/academic-setup.md` | Ready (built; not previously listed here) |
-| 16 | **Add staff**: role (never above the creator's own), **section assignment field**, one-time credentials with Print | `screens/staff-add.html` | `specs/staff-add.md` | **Batch 6: ready** (proposals flagged in the spec) |
+| 16 | **Create staff account**: role (never above the creator's own), **section assignment field**, one-time credentials with Print | `screens/staff-add.html` | `specs/staff-add.md` | **Batch 6A: built**; employment is added separately in Staff HR |
 | 16b | **Staff sign-in and access**: Admin password reset, role and Section change | `screens/staff-access.html` | `specs/staff-access.md` | **Batch 6: ready** |
 | 17 | **First-login "Set your password"** (every role; also after an Admin reset) | `student/screens/set-password.html` | `student/specs/set-password.md` | **Batch 6: ready** |
 | 17b | **Login re-issued**: username hint, forgot-credentials wording | `student/screens/login.html` | `student/specs/login.md` (Batch 6 update) | **Batch 6: ready** (three text lines changed) |
 | 18 | **Staff Account page** (change password): Admin and Head | `screens/account.html`, `screens/head-account.html` | `specs/account.md` | **Batch 6: ready** |
 | 19 | **Head: Staff list and detail** (section-scoped, no salary column, record-discipline form) | `screens/head-staff.html`, `screens/head-staff-detail.html` | `specs/head-staff.md` | **Batch 6: ready** (open questions in the spec) |
 | 20 | Admin staff form: section assignment field | included in row 16 | `specs/staff-add.md` | **Batch 6: ready** (see row 16) |
-| 37 | **Students list**: Import and Add buttons, registration number, Sign-in and number link | `screens/students.html` | `specs/students.md` | **Batch 6: proposal** (today's page not seen: Codex compares first) |
-| 38 | **Add a student** (automatic or typed number, parent new or existing, one-time credentials) | `screens/student-add.html` | `specs/student-add.md` | **Batch 6: ready** |
+| 37 | **Students list**: Add button, registration number, combined Student record link | `screens/students.html` | `specs/students.md` | **Batch 6B: built**; Import remains Batch 6C |
+| 38 | **Add a student** (automatic or typed number, parent new or existing, one-time credentials) | `screens/student-add.html` | `specs/student-add.md` | **Batch 6B: built** |
 | 39 | **Import students** wizard: upload, check, review, report; a bad file creates nothing | `screens/students-import.html` | `specs/students-import.md` | **Batch 6: ready** |
-| 40 | **Student sign-in and registration number**: change number, reset student and parent passwords | `screens/student-access.html` | `specs/student-access.md` | **Batch 6: ready** |
-| 41 | **Registration numbers** (school settings, per-Section prefix, where numbers are used) | `screens/registration-numbers.html` | `specs/registration-numbers.md` | **Batch 6: ready** (settings are NEW) |
+| 40 | **Combined Student record, sign-in and registration number**: identity edit, change number, reset student and parent passwords | `screens/student-access.html` | `specs/student-access.md` | **Batch 6B: built** |
+| 41 | **Registration numbers** (school, Section and Level prefix settings, counters and history) | `screens/registration-numbers.html` | `specs/registration-numbers.md` | **Batch 6B: built** |
 | 42 | **Sign-in rules** (username rules on screen, checker) | `screens/sign-in-rules.html` | `specs/sign-in-rules.md` | **Batch 6: ready** (rules marked Proposal are proposals) |
 | 43 | **Activity log** (read-only, tabs by module, own permission) | `screens/activity-log.html` | `specs/activity-log.md` | **Batch 6: ready** |
 | 44 | **Ticker events** on every role | spec only | `specs/ticker-events.md` | **Batch 6: spec only**, needs the owner to confirm `notifications.url` |
-| 45 | **"Admission requirements"** wording | n/a | `specs/admission-requirements.md` | **Not designed**: screen not seen |
+| 45 | **Admission requirements** wording and logged D15 override reason | `screens/admission-requirements.html` | `specs/admission-requirements.md` | **Built; Batch 6 follow-up aligned** |
 | 46 | CBT CSV upload and guarded delete | n/a | n/a | **Not in Batch 6** (in the handoff plan; depends on the CBT question model, not seen) |
 | 21 | Matrix with 20+ subjects (frozen class column, horizontal scroll) | `screens/teacher-assignments.html` (state "Many subjects (22)") | `specs/teacher-assignments.md` | **Batch 4: ready** (designed early) |
 
-**Do not build rows 37 (until compared with today's page), 44, 45 or 46.** Pages in the sidebar for rows that are not Ready appear only once they are Ready and built.
+**Do not build rows 44 or 46.** Pages in the sidebar for rows that are not Ready appear only once they are Ready and built.
 
 ## Folder map
 
@@ -158,3 +158,25 @@ The earlier index rows above remain authoritative. Batch 6B is built: Students l
 | [Registration movement preview](screens/registration-movement-preview.html) | Design reference | Placement and Incoming preview; backend verification before implementation |
 
 Results configuration v2 and reusable help pattern v2 are explicitly excluded pending the owner's notes.
+
+## Teacher Results — My classes and subjects (design addition, 2026-11-03)
+
+The earlier index rows and decisions above are retained unchanged. These **new** Teacher-facing designs replace the flat Teacher Results workspace presentation only; they do not replace Admin/Head Results or introduce new permissions.
+
+| Reference | Status | Design intent |
+|---|---|---|
+| [Teacher Results landing](screens/teacher-results.html) · [spec](specs/teacher-results.md) | New design; implementation pending | Assigned subject/class cards across Sections, term counts, conditional form-teacher My class, empty states |
+| [Subject/class pair](screens/teacher-results-pair.html) · [spec](specs/teacher-results-pair.md) | New design; implementation pending | All-arm pupil roster, score statuses, pair-scoped CSV template proposal |
+| [Score entry](screens/teacher-score-entry.html) · [spec](specs/teacher-score-entry.md) | New design; implementation pending | Configured component fields, draft/submitted/approved states |
+
+The existing Results configuration v2 and reusable help-pattern v2 remain outside this change.
+
+**Amendment 2026-11-03 (owner decision):** the Teacher-facing pair label is just `<Subject> · <Class>` (e.g. "Mathematics · JSS 2"). Class names are unique school-wide and the class already identifies its Level and Section, so Level and Section are not shown anywhere on the three Teacher Results screens. Specs and the Codex handoff above are updated to match.
+
+## Registration number format (design addition, 2026-11-03)
+
+| Reference | Status | Design intent |
+|---|---|---|
+| [Registration number format](screens/registration-number-format.html) · [spec](specs/registration-number-format.md) | New design; implementation pending | Compose the number from School, Section, Level and Year (any combination) plus the number; separator, length 3 to 6, Year style, codes per Section and Level, live preview, next number, movement policy with examples |
+
+It supersedes the "Number format" and "Prefixes by Section and Level" cards of `registration-numbers.html`; its movement-policy and history cards continue, and the policy card is repeated in the new screen with examples that follow the chosen format.

@@ -11,6 +11,7 @@ use App\Modules\Academics\Services\ClassOrderingService;
 use App\Modules\Academics\Services\SectionAccess;
 use App\Modules\Academics\Services\SectionAdministration;
 use App\Modules\Core\Models\User;
+use App\Modules\Core\Services\SchoolUserDirectory;
 use App\Modules\Core\TenantContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,10 +32,10 @@ class AcademicStructureController extends Controller
                 'section',
                 'classes' => fn ($query) => $query->withCount('activeStudents'),
             ])->withCount('classes')->orderBy('name')->limit(100)->get(),
-            'headOptions' => User::where('status', 'active')
+            'headOptions' => app(SchoolUserDirectory::class)->scopeStaffAccounts(User::where('status', 'active'))
                 ->whereHas('roles.permissions', fn ($query) => $query->where('permissions.name', 'approve_results'))
                 ->whereDoesntHave('roles.permissions', fn ($query) => $query->where('permissions.name', 'view_all_sections'))
-                ->orderBy('name')->get(['id', 'name', 'email']),
+                ->orderBy('name')->limit(200)->get(['id', 'name', 'email']),
         ]);
     }
 
@@ -43,11 +44,12 @@ class AcademicStructureController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100', Rule::unique('sections')->where('school_id', $context->id())],
             'head_title' => ['required', 'string', 'max:100'],
+            'learner_term' => ['required', Rule::in(['Pupil', 'Student'])],
             'head_user_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where('school_id', $context->id())],
         ]);
         $head = isset($data['head_user_id']) ? User::findOrFail($data['head_user_id']) : null;
         DB::transaction(function () use ($administration, $data, $head, $request): void {
-            $section = $administration->createSection($data['name'], $data['head_title'], $request->user());
+            $section = $administration->createSection($data['name'], $data['head_title'], $request->user(), $data['learner_term']);
             $administration->assignHead($section, $head, $request->user());
         });
 
@@ -60,12 +62,13 @@ class AcademicStructureController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:100', Rule::unique('sections')->where('school_id', $context->id())->ignore($section->id)],
             'head_title' => ['required', 'string', 'max:100'],
+            'learner_term' => ['required', Rule::in(['Pupil', 'Student'])],
             'head_user_id' => ['nullable', 'integer', Rule::exists('users', 'id')->where('school_id', $context->id())],
         ]);
         $head = isset($data['head_user_id']) ? User::findOrFail($data['head_user_id']) : null;
         DB::transaction(function () use ($administration, $data, $head, $request, $section): void {
             $administration->assignHead($section, $head, $request->user());
-            $section->update(['name' => trim($data['name']), 'head_title' => trim($data['head_title'])]);
+            $section->update(['name' => trim($data['name']), 'head_title' => trim($data['head_title']), 'learner_term' => $data['learner_term']]);
         });
 
         return redirect()->route('academics.index')->with('status', 'Section updated.');

@@ -15,7 +15,7 @@
         <span class="oak-role-pill">{{ $canViewAll ? 'Admin' : ($actorSection?->head_title ?? 'Head') }}</span>
     </div>
 
-    <nav class="ad-tabs" aria-label="Promotion areas"><a href="{{ route('academics.promotion.index') }}" aria-current="page">Promote classes</a>@if($showIncomingTab)<a href="{{ route('academics.promotion.incoming.index', ['section' => $incomingSectionId]) }}">Incoming from Primary</a>@endif</nav>
+    <nav class="ad-tabs" aria-label="Promotion areas"><a href="{{ route('academics.promotion.index') }}" aria-current="page">Promote classes</a>@if($showIncomingTab)<a href="{{ route('academics.promotion.incoming.index', ['section' => $incomingSectionId]) }}">Incoming from {{ $incomingSourceName ?? 'previous section' }}</a>@endif</nav>
 
     @if(session('status'))<div class="oak-notice oak-notice-success" role="status"><x-icon name="circle-check" /><div>{{ session('status') }}</div></div>@endif
     @if($errors->any())<div class="oak-notice oak-notice-danger" role="alert"><div><b>We couldn't review this promotion.</b><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div></div>@endif
@@ -44,7 +44,7 @@
 
         @if($report)
             <section class="oak-notice oak-notice-success pr-report" role="status">
-                <x-icon name="circle-check" /><div><b>Promotion applied.</b><p>{{ $report['moved'] }} moved, {{ $report['stayed'] }} stayed, {{ $report['skipped'] }} skipped because their placement had changed.</p>@if($report['final_status'])<p>Final status: {{ $report['final_status'] }}.</p>@endif</div>
+                <x-icon name="circle-check" /><div><b>Promotion applied.</b><p>{{ $report['moved'] }} moved, {{ $report['stayed'] }} stayed, {{ $report['skipped'] }} skipped because their placement had changed.</p>@if($report['final_status'])<p>Final status: {{ $report['final_status'] }}.</p>@endif @foreach($report['registration_changes'] ?? [] as $change)<p><b>{{ $change['name'] }}:</b> {{ $change['old'] }} → {{ $change['new'] }}@if($change['adjusted']) <span class="ad-tag">Adjusted — number already used</span>@endif</p>@endforeach</div>
             </section>
         @endif
 
@@ -66,7 +66,7 @@
             <section class="ad-card pr-review">
                 <div class="ad-card-head"><div><h2>Review promotion</h2><p>Will move {{ $plan['moved'] }}, will stay {{ $plan['stayed'] }}@if($plan['skipped']), will skip {{ $plan['skipped'] }}@endif.</p></div><span class="ad-tag">{{ $plan['rows']->count() }} selected</span></div>
                 <div class="oak-notice oak-notice-danger"><x-icon name="info-circle" /><div><b>This can't be undone.</b> Check every destination before applying.</div></div>
-                <div class="pr-review-list">@foreach($plan['rows'] as $row)<div class="pr-review-row"><div><b>{{ $row['student']->user?->name }}</b><small>{{ $source->name }} · {{ $row['student']->classArm?->name }}</small></div><span>{{ $row['destination'] }}</span></div>@endforeach</div>
+                <div class="pr-review-list">@foreach($plan['rows'] as $row)<div class="pr-review-row"><div><b>{{ $row['student']->user?->name }}</b><small>{{ $source->name }} · {{ $row['student']->classArm?->name }}</small>@if($row['registration']['old_number'])<small>Registration: {{ $row['registration']['old_number'] }} → {{ $row['registration']['new_number'] }}@if($row['registration']['adjusted']) · Adjusted because that number is already used @endif</small>@endif</div><span>{{ $row['destination'] }}</span></div>@endforeach</div>
                 <form method="post" action="{{ route('academics.promotion.apply') }}" class="ad-bar">@csrf
                     <input type="hidden" name="section_id" value="{{ $selectedSection }}"><input type="hidden" name="source_class_id" value="{{ $source->id }}"><input type="hidden" name="source_arm_id" value="{{ request()->integer('arm') ?: '' }}">
                     @foreach($submittedPlacements as $studentId => $choice)

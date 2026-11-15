@@ -10,24 +10,22 @@
 @include('core._shell-start')
 <main class="ad-page st-page">
     <header class="ad-page-head"><div><p class="ad-eyebrow">Student created</p><h1>Give these sign-in details to the family</h1><p>This is the only time the temporary passwords are shown.</p></div></header>
-    <section class="ad-cred" id="credential-panel">
-        <h2>Student</h2>
-        <dl class="ac-credentials">
-            <div><dt>Name</dt><dd>{{ $student_user->name }}</dd></div>
-            @if($student->registration_number)<div><dt>Registration number</dt><dd>{{ $student->registration_number }}</dd></div>@endif
-            <div><dt>Username</dt><dd>{{ $student_user->username }}</dd></div>
-            <div><dt>Temporary password</dt><dd><code data-secret>{{ $student_password }}</code></dd></div>
-        </dl>
-        @if($parent_user)
-            <h2>Parent</h2>
-            <dl class="ac-credentials">
-                <div><dt>Name</dt><dd>{{ $parent_user->name }}</dd></div>
-                <div><dt>Username</dt><dd>{{ $parent_user->username }}</dd></div>
-                <div><dt>Temporary password</dt><dd><code data-secret>{{ $parent_password }}</code></dd></div>
-            </dl>
-        @endif
-        <button class="oak-btn oak-btn-quiet ac-no-print" type="button" onclick="window.print()">Print slip</button>
-    </section>
+    @php
+        $profile = app(\App\Modules\Core\Services\CurrentSchoolProfile::class)->landingPage();
+        $credentialSlips = collect([[
+            'type' => 'student', 'learner_term' => app(\App\Modules\Academics\Services\LearnerTerminology::class)->word($student), 'school_name' => $profile['name'] ?? 'School', 'name' => $student_user->name,
+            'class' => $student->classArm->schoolClass->name, 'arm' => $student->classArm->name,
+            'registration_number' => $student->registration_number, 'username' => $student_user->username,
+            'temporary_password' => $student_password, 'sign_in_address' => route('login'),
+        ]]);
+        if ($parent_user && $parent_password) $credentialSlips->push([
+            'type' => 'parent', 'school_name' => $profile['name'] ?? 'School', 'name' => $parent_user->name,
+            'children' => [$student_user->name], 'username' => $parent_user->username,
+            'temporary_password' => $parent_password, 'sign_in_address' => route('login'),
+        ]);
+    @endphp
+    <div class="ad-actions ac-no-print"><button class="oak-btn oak-btn-quiet" type="button" data-copy-credentials>Copy credentials</button><span role="status" aria-live="polite" data-copy-status></span><button class="oak-btn oak-btn-quiet" type="button" onclick="window.print()">Print / Save as PDF</button></div>
+    @include('components.credential-slips', ['credentialSlips' => $credentialSlips])
     <label class="ac-noted ac-no-print"><input type="checkbox" data-noted> I have noted or printed these details</label>
     <a class="oak-btn oak-btn-primary ac-no-print is-disabled" data-done aria-disabled="true" href="{{ route('students.show',$student) }}">Done</a>
 </main>

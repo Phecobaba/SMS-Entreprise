@@ -142,7 +142,7 @@ A head assigned to more than one Section; a wrong-Section Level or Subject that 
 
 ## Batch 6: accounts, people and sign-in (design delivered)
 
-Screens and specs: INDEX rows 16, 16b, 17, 17b, 18, 19, 38 to 43 (row 37 is a proposal: compare with today's Students page; rows 44 to 46 are spec only, not designed, or deferred). Build in this order: **(1)** the account foundations (`must_change_password`, the shared username validator, the role ranking, the one-time credential handling) because every later screen uses them; **(2)** Set your password and the login lines; **(3)** Add staff, staff access and Account; **(4)** registration-number settings, number history and Add student; **(5)** the import wizard; **(6)** Head Staff; **(7)** Activity log. Specs: `staff-add`, `staff-access`, `sign-in-rules`, `account`, `students`, `student-add`, `students-import`, `student-access`, `registration-numbers`, `head-staff`, `activity-log`, `ticker-events`, `student/specs/set-password`.
+Screens and specs: INDEX rows 16, 16b, 17, 17b, 18, 19 and 37 to 43. Batch 6A and 6B are built; rows 44 and 46 remain spec-only or deferred. Build the remaining work in the order recorded in `PROGRESS.md`. Specs: `staff-add`, `staff-access`, `sign-in-rules`, `account`, `students`, `student-add`, `students-import`, `student-access`, `registration-numbers`, `head-staff`, `activity-log`, `ticker-events`, `student/specs/set-password`.
 
 ### Rules that apply everywhere
 - **Credentials are shown once.** A temporary password is made on the server, stored **only as a hash**, shown only in the response to the request that made it, with `Cache-Control: no-store`. It is **never** logged, written to `audit_logs`, the session or flash, a queue payload, a notification, an email or a file. Print slip is the browser printing the on-screen panel.
@@ -179,3 +179,28 @@ Today's Staff HR and Students pages and forms; whether `students` has a registra
 ## Batch 6 follow-up reissue — additive implementation guidance
 
 Keep all earlier instructions and Ready/Pending rows above. Batch 6B is **already built**: Students list, Add student, combined Student record/sign-in/number and Registration numbers settings. Do not rebuild those from scratch. Verify current Laravel behavior first; apply only design corrections. The Student record is ONE page with identity edit, username, password reset and number history. Registration numbers belongs under Administration. Admission requirements (built heading) uses D15 Admin override: require a reason BEFORE confirmation; save it in the audit entry; checklist items stay unticked and the UI says conversion was approved by override. Employment status is changed through Exit record, never through generic employment edit. Reset-link email expires in 60 minutes. Preserve original full specs and append Follow-up changes; never replace with a summary. Do not implement Results configuration redesign or reusable help pattern without v2 notes.
+
+## Teacher Results — implementation handoff (design addition, 2026-11-03)
+
+**Scope:** Teacher Results landing → subject/class pair → score entry. Verify the current Laravel routes, result templates, subject/class assignments, form-teacher arm ownership and CSV import service before changing code. Keep all earlier CODEX_BRIEF instructions and Ready/Pending rows above.
+
+1. Replace only the **Teacher** flat Results workspace UI with one card per assigned `(subject, class)` across all assigned Sections, label `<Subject> · <Class>` (e.g. "Mathematics · JSS 2"; class names are unique and the class already identifies the Section, so Level and Section are not shown). One subject/class pair includes every arm; do not create elective enrollment logic. Show current-Term Draft/Submitted/Approved counts and Enter scores.
+2. A **form teacher** sees an additional My class destination showing class-wide **approved** results and compiled report cards for their assigned **arm only**. Plain subject Teachers cannot see or access this route. A Teacher may have subject assignments in multiple Sections.
+3. Pair page lists only pupils in the pair's class (all arms) with name, arm, registration number, score status, action. All selectors and lookups are scoped server-side. Empty assignments and no-approved states are mandatory.
+4. CSV: design proposes a **server-generated pair-and-Term roster template** keyed by registration number (never pupil name). Verify registration-number availability and the current CSV pipeline with the Backend Agent before implementing; if any pupil lacks a valid number, disable this simplified import with an explanation. Preview and validate all rows before any apply; preserve existing locks and atomic behavior.
+5. Score entry uses the existing **actual configured template/components**, not hardcoded sample CA values. Preserve Draft → Submitted → Approved behavior, authorization, audit and edit locks.
+6. Visual QA at 1280px and 390px; no page horizontal overflow; visible controls ≥44px; all design state buttons switch their content. Preview state toolbar is not shipped to production.
+
+**Trust-sensitive tests:** cross-Section teacher pair allowed when assigned; forged unassigned pair denied; subject Teacher sees all arms in assigned class but cannot access My class; form teacher can access own arm only; another arm denied; no elective per-pupil exclusions; CSV forged/cross-pair/duplicate/approved/stale rows refused; score submission/approval locks preserved. The HTML is illustrative, not a claim that these backend behaviors are built.
+
+## Registration number format — implementation handoff (design addition, 2026-11-03)
+
+**Scope:** replace the single school prefix and the per-Section/per-Level prefix fallback built in 6B with a composable format. Verify the current 6B settings, allocation and every place a number is shown or searched before changing code. Keep all earlier CODEX_BRIEF instructions. Do not change number history, Head/Admin change rights, Awaiting-admission rules or Promotion renumbering (5c).
+
+1. Settings: tick School / Section / Level / Year (fixed order, Number always last), separator, number length 3 to 6 (grows when exhausted), Year style (4 or 2 digits), school code, one code per Section and per Level. Migrate existing prefixes to codes so no issued number changes.
+2. Server rules: every Section/Level needs a code when its part is on; codes unique per group (Level codes unique school-wide when Section is not in the number); school code 2 to 6 letters or numbers; format changes affect new numbers only; the full number stays unique school-wide inside the existing race-safe allocation; next number never below the highest issued; numbers once held are never reused.
+3. Movement policy stays as built (three choices, locks after the first number, school-wide counter for "keep digits"); examples in the UI follow the chosen format; if neither Section nor Level is in the format, the choice has no effect and the page says so.
+4. Confirm that the separator options and 2-digit year are safe everywhere the number is displayed, searched or printed; drop any option that is not.
+5. Visual QA at 1280px and 390px; no horizontal overflow; controls at least 44px; the design State toolbar is not shipped.
+
+**Trust-sensitive tests:** server refuses a part with missing codes; duplicate codes refused; format change leaves issued numbers unchanged; concurrent allocation stays unique; policy locked after the first number; next number cannot be lowered; only the permitted role can save.

@@ -48,6 +48,7 @@ class GradeScale
 
         $valid = true;
         $uncovered = [];
+        $firstUncoveredStart = null;
         $cursor = 0;
         foreach ($bands as $band) {
             $min = (float) $band->min_score;
@@ -61,6 +62,7 @@ class GradeScale
             $max = (int) $max;
             if ($min > $cursor) {
                 $uncovered[] = $this->rangeLabel($cursor, $min - 1);
+                $firstUncoveredStart ??= $cursor;
             }
             if ($min < $cursor) {
                 $valid = false;
@@ -69,6 +71,7 @@ class GradeScale
         }
         if ($cursor <= 100) {
             $uncovered[] = $this->rangeLabel($cursor, 100);
+            $firstUncoveredStart ??= $cursor;
         }
 
         $lowest = $bands->min(fn (GradeBand $band): float => (float) $band->min_score);
@@ -80,7 +83,7 @@ class GradeScale
             'covered' => $this->displayNumber($lowest).' to '.$this->displayNumber($highest),
             'uncovered' => $uncovered,
             'uncovered_text' => $uncovered === [] ? 'none' : implode(' and ', $uncovered),
-            'next_start' => (int) floor($highest) + 1,
+            'next_start' => $firstUncoveredStart ?? (int) floor($highest) + 1,
         ];
     }
 
@@ -99,7 +102,7 @@ class GradeScale
         ]);
     }
 
-    public function assertValidBands(array $bands, string $field, ?float $requiredMin = null, ?float $requiredMax = null): void
+    public function assertValidBands(array $bands, string $field): void
     {
         usort($bands, fn (array $a, array $b): int => (float) $a['min_score'] <=> (float) $b['min_score']);
         foreach ($bands as $index => $band) {
@@ -118,14 +121,7 @@ class GradeScale
                 if ($min <= $previousMax) {
                     throw ValidationException::withMessages([$field => 'This grade band overlaps an existing band.']);
                 }
-                if ($min !== $previousMax + 1) {
-                    throw ValidationException::withMessages([$field => 'Grade bands must not leave a gap in the scale.']);
-                }
             }
-        }
-        if ($bands !== [] && (($requiredMin !== null && (float) $bands[0]['min_score'] !== $requiredMin)
-            || ($requiredMax !== null && (float) $bands[array_key_last($bands)]['max_score'] !== $requiredMax))) {
-            throw ValidationException::withMessages([$field => 'Grade bands must not leave a gap in the scale.']);
         }
     }
 

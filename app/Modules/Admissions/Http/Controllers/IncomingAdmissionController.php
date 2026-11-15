@@ -43,6 +43,12 @@ class IncomingAdmissionController extends Controller
             ->with('incoming_report', [
                 'intent' => 'accept', 'affected' => $plan['accepted'],
                 'unchanged' => $plan['unchanged'], 'remaining' => $plan['remaining'],
+                'registration_changes' => $plan['rows']->filter(fn ($row) => $row['registration']['changed'] ?? false)
+                    ->map(fn ($row) => [
+                        'name' => $row['student']->user?->name,
+                        'old' => $row['registration']['old_number'], 'new' => $row['registration']['new_number'],
+                        'adjusted' => $row['registration']['adjusted'],
+                    ])->values()->all(),
             ]);
     }
 

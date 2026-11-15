@@ -7,7 +7,7 @@ States: Answers + explanations · Answers only · Score only · No score shown �
 The payload has `score`/`maximum` (null unless `show_score`) and an `answers` list with only `question`, `correct` (if `show_correct_answers`) and `explanation` (if `show_explanations`).
 
 ## Changes
-1. **Replace the 403 with the "not released" states.** Render the page with a waiting state: `result_release_type = Scheduled` → "opens on {result_release_at}"; Manual or `requires_approval` without approval → "your teacher hasn't released this yet". Still 403 for someone else's attempt (`assertOwner`).
+1. **Replace the 403 with the "not released" states.** Render the page with a waiting state: `result_release_type = Scheduled` → "opens on {result_release_at}"; Manual → "your teacher hasn't released this yet". Still 403 for someone else's attempt (`assertOwner`). The 2026-11-04 owner decision removed the optional CBT release-approval step.
 2. **Add the student's own answer** to each `answers` row (`selected` text and `was_correct`), only when `show_correct_answers` is on. Add `position` so rows keep exam order. Today the page cannot show what the student chose.
 3. Hero shows score and percentage only when `show_score`. No pass/fail for internal exams (they have no pass mark).
 4. "Not correct" filter chip works without a reload (client-side). Paginate the review at 10 per page for long exams.

@@ -8,13 +8,21 @@ use Illuminate\Database\Eloquent\Model;
 
 class AuditRecorder
 {
-    public function record(User $actor, string $action, ?Model $subject = null, array $metadata = []): AuditLog
-    {
+    public function record(
+        User $actor,
+        string $action,
+        ?Model $subject = null,
+        array $metadata = [],
+        ?string $module = null,
+        ?string $description = null,
+    ): AuditLog {
         return AuditLog::create([
             'user_id' => $actor->id,
             'actor_name' => $actor->name,
             'actor_role' => $actor->roles()->orderBy('roles.name')->pluck('roles.name')->join(', '),
+            'module' => $module,
             'action' => $action,
+            'description' => $description,
             'subject_type' => $subject ? $subject::class : null,
             'subject_id' => $subject?->getKey(),
             'metadata' => $metadata ?: null,

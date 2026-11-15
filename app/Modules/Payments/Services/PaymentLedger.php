@@ -10,19 +10,29 @@ use App\Modules\Admissions\Services\BillingRecipients;
 use App\Modules\Admissions\Services\StudentDirectory;
 use App\Modules\Assignments\Services\ParentAccountDirectory;
 use App\Modules\Core\Models\User;
+use App\Modules\Core\Services\AuditRecorder;
 use App\Modules\Core\TenantContext;
 use App\Modules\Notifications\Services\InAppNotifications;
 use App\Modules\Payments\Models\Invoice;
 use App\Modules\Payments\Models\ManualPaymentSubmission;
 use App\Modules\Payments\Models\Payment;
 use App\Modules\Payments\Models\PaymentAttempt;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class PaymentLedger
 {
+    public const PAYSTACK_PAID = 'Paid';
+
+    public const PAYSTACK_FAILED = 'Failed';
+
+    public const PAYSTACK_CONFIRMING = 'Still confirming';
+
     public function invoiceCountForStudents(array $studentIds): int
     {
         return $studentIds === [] ? 0 : Invoice::whereIn('student_id', $studentIds)->count();
@@ -149,6 +159,30 @@ class PaymentLedger
         return $this->termFeeOutstandingKoboByStudentIds([$studentId])[$studentId] ?? 0;
     }
 
+    /** @return array<int, array{status: string, outstanding_kobo: int}> */
+    public function termFeeStatusByStudentIds(array $studentIds): array
+    {
+        $studentIds = array_values(array_unique(array_map('intval', $studentIds)));
+        $statuses = array_fill_keys($studentIds, ['status' => 'No invoice', 'outstanding_kobo' => 0]);
+        if ($studentIds === []) {
+            return $statuses;
+        }
+
+        $invoices = Invoice::with(['payment', 'partPayments.payment'])->whereIn('student_id', $studentIds)
+            ->where('kind', Invoice::KIND_TERM_FEE)->where('status', '!=', 'Voided')->get();
+        $lifecycle = app(InvoiceLifecycle::class);
+        foreach ($invoices->groupBy('student_id') as $studentId => $rows) {
+            $outstanding = (int) $rows->sum(fn (Invoice $invoice): int => $lifecycle->balanceKobo($invoice));
+            $paid = (int) $rows->sum(fn (Invoice $invoice): int => $lifecycle->paidKobo($invoice));
+            $statuses[(int) $studentId] = [
+                'status' => $outstanding === 0 ? 'Paid' : ($paid > 0 ? 'Part-paid' : 'Owing'),
+                'outstanding_kobo' => $outstanding,
+            ];
+        }
+
+        return $statuses;
+    }
+
     /** @return array<int, int> */
     private function termFeeOutstandingKoboByStudentIds(array $studentIds): array
     {
@@ -250,53 +284,161 @@ class PaymentLedger
             'status' => 'Pending',
         ]);
         try {
-            $response = Http::withToken($secret)->acceptJson()->timeout(15)
+            $httpResponse = Http::withToken($secret)->acceptJson()->connectTimeout(5)->timeout(15)
                 ->post(rtrim(config('services.paystack.base_url'), '/').'/transaction/initialize', [
                     'email' => $email, 'amount' => $payableKobo,
                     'currency' => 'NGN', 'reference' => $reference,
                     'callback_url' => route('payments.verify'),
-                ])->throw()->json();
+                ]);
+        } catch (ConnectionException $exception) {
+            $this->failPaystackInitialisation($attempt, 'network_error', exception: $exception);
         } catch (\Throwable $exception) {
-            $attempt->update(['status' => 'Failed']);
-            throw ValidationException::withMessages(['payment' => 'Paystack could not start this payment. Please try again.']);
+            $this->failPaystackInitialisation($attempt, 'unexpected_error', exception: $exception);
         }
+        if (! $httpResponse->successful()) {
+            $this->failPaystackInitialisation(
+                $attempt,
+                $httpResponse->status() === 401 ? 'credentials_rejected' : 'http_error',
+                $httpResponse->status(),
+                $httpResponse->json('message'),
+            );
+        }
+        $response = $httpResponse->json();
         if (($response['status'] ?? false) !== true || ! is_string($response['data']['authorization_url'] ?? null)) {
-            $attempt->update(['status' => 'Failed']);
-            throw ValidationException::withMessages(['payment' => 'Paystack did not return a payment link.']);
+            $this->failPaystackInitialisation($attempt, 'invalid_response', $httpResponse->status(), $response['message'] ?? null);
         }
         $attempt->update(['authorization_url' => $response['data']['authorization_url']]);
 
         return $attempt;
     }
 
+    private function failPaystackInitialisation(
+        PaymentAttempt $attempt,
+        string $category,
+        ?int $httpStatus = null,
+        mixed $paystackMessage = null,
+        ?\Throwable $exception = null,
+    ): never {
+        $attempt->update(['status' => 'Failed']);
+        Log::warning('Paystack payment initialisation failed.', [
+            'category' => $category,
+            'http_status' => $httpStatus,
+            'paystack_message' => is_string($paystackMessage) ? $paystackMessage : null,
+            'exception_class' => $exception ? $exception::class : null,
+            'exception_message' => $exception ? $this->safeExternalMessage($exception->getMessage()) : null,
+        ]);
+
+        throw ValidationException::withMessages([
+            'payment' => 'We could not start the payment. Please try again, or contact the school office.',
+        ]);
+    }
+
     public function verifyPaystack(string $reference): ?Payment
+    {
+        return $this->verifyPaystackResult($reference)['payment'];
+    }
+
+    /** @return array{status: string, payment: ?Payment} */
+    public function verifyPaystackResult(string $reference): array
     {
         $secret = app(PaystackCredentials::class)->secretKeyOrFail();
         $attempt = PaymentAttempt::where('reference', $reference)->firstOrFail();
-        $response = Http::withToken($secret)->acceptJson()->timeout(15)
-            ->get(rtrim(config('services.paystack.base_url'), '/').'/transaction/verify/'.rawurlencode($reference))
-            ->throw()->json();
+        $existing = Payment::where('invoice_id', $attempt->invoice_id)->first();
+        if ($existing) {
+            $attempt->update(['status' => 'Verified']);
+
+            return ['status' => self::PAYSTACK_PAID, 'payment' => $existing];
+        }
+        if ($attempt->status === 'Failed') {
+            return ['status' => self::PAYSTACK_FAILED, 'payment' => null];
+        }
+        try {
+            $response = Http::withToken($secret)->acceptJson()->connectTimeout(5)->timeout(15)
+                ->get(rtrim(config('services.paystack.base_url'), '/').'/transaction/verify/'.rawurlencode($reference))
+                ->throw()->json();
+        } catch (ConnectionException $exception) {
+            Log::warning('Paystack payment verification could not reach the provider.', [
+                'category' => 'network_error',
+                'exception_class' => $exception::class,
+                'exception_message' => $this->safeExternalMessage($exception->getMessage()),
+            ]);
+
+            return ['status' => self::PAYSTACK_CONFIRMING, 'payment' => null];
+        } catch (RequestException $exception) {
+            Log::warning('Paystack payment verification was not accepted by the provider.', [
+                'category' => 'http_error',
+                'http_status' => $exception->response->status(),
+                'paystack_message' => is_string($exception->response->json('message')) ? $exception->response->json('message') : null,
+                'exception_class' => $exception::class,
+                'exception_message' => $this->safeExternalMessage($exception->getMessage()),
+            ]);
+
+            return ['status' => self::PAYSTACK_CONFIRMING, 'payment' => null];
+        }
         $data = $response['data'] ?? [];
         if (($response['status'] ?? false) !== true || ($data['status'] ?? null) !== 'success') {
             if (($response['status'] ?? false) === true && ($data['status'] ?? null) === 'failed'
                 && ($data['reference'] ?? null) === $reference) {
                 $attempt->update(['status' => 'Failed']);
+
+                return ['status' => self::PAYSTACK_FAILED, 'payment' => null];
             }
 
-            return null;
+            return ['status' => self::PAYSTACK_CONFIRMING, 'payment' => null];
         }
         if (($data['reference'] ?? null) !== $reference || ($data['currency'] ?? null) !== 'NGN'
             || ! is_numeric($data['amount'] ?? null) || (int) $data['amount'] !== (int) $attempt->amount_kobo) {
             throw ValidationException::withMessages(['payment' => 'Verified transaction does not match this invoice.']);
         }
 
-        return $this->settle(
+        $payment = $this->settle(
             $attempt->invoice()->firstOrFail(),
             (int) $attempt->amount_kobo,
             'Online',
             $reference,
             User::findOrFail($attempt->initiated_by),
         );
+
+        return ['status' => self::PAYSTACK_PAID, 'payment' => $payment];
+    }
+
+    public function checkPaystackAgain(PaymentAttempt $attempt, User $actor): string
+    {
+        $attempt->loadMissing('invoice');
+        $invoice = $attempt->invoice;
+        $staff = $actor->can('manage_payments');
+        if (! $staff && ! app(BillingRecipients::class)->owns($invoice->candidate_id, $invoice->student_id, $actor)) {
+            abort(403);
+        }
+
+        DB::transaction(function () use ($attempt): void {
+            $locked = PaymentAttempt::whereKey($attempt->id)->lockForUpdate()->firstOrFail();
+            if ($locked->last_checked_at?->gt(now()->subSeconds(30))) {
+                throw ValidationException::withMessages(['payment' => 'Please wait 30 seconds before checking this payment again.']);
+            }
+            $locked->update(['last_checked_at' => now()]);
+        });
+
+        $result = $this->verifyPaystackResult($attempt->reference);
+        if ($staff) {
+            app(AuditRecorder::class)->record(
+                $actor,
+                'paystack_check_again',
+                $attempt,
+                ['reference' => $attempt->reference, 'result' => $result['status']],
+                'Payments',
+                'Checked a pending Paystack payment.',
+            );
+        }
+
+        return $result['status'];
+    }
+
+    private function safeExternalMessage(string $message): string
+    {
+        $message = preg_replace('/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i', '[email redacted]', $message) ?? '';
+
+        return Str::limit($message, 500, '...');
     }
 
     private function settle(Invoice $invoice, int $amountKobo, string $method, ?string $reference, User $actor): Payment

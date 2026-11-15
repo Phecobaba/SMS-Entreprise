@@ -9,6 +9,7 @@ use App\Modules\Academics\Services\ResultTeachingAssignments;
 use App\Modules\Academics\Services\SectionAccess;
 use App\Modules\Admissions\Services\StudentDirectory;
 use App\Modules\Core\Models\User;
+use App\Modules\Core\Services\AuditRecorder;
 use App\Modules\Notifications\Services\InAppNotifications;
 use App\Modules\Results\Models\AssessmentComponent;
 use App\Modules\Results\Models\Result;
@@ -62,7 +63,7 @@ class ResultWorkflow
             throw ValidationException::withMessages(['score' => 'Converted CBT score is outside this component’s maximum.']);
         }
 
-        return $this->saveDraft($studentId, $subjectId, $termId, [$componentId => $score], $actor);
+        return $this->persistDraft($studentId, $subjectId, $termId, [$componentId => $score], $actor, true);
     }
 
     public function templateForStudent(int $studentId): ?ResultTemplate
@@ -76,18 +77,26 @@ class ResultWorkflow
     {
         Gate::forUser($actor)->authorize('enter_results');
 
-        return DB::transaction(function () use ($studentId, $subjectId, $termId, $scores, $actor): Result {
+        return $this->persistDraft($studentId, $subjectId, $termId, $scores, $actor, false);
+    }
+
+    private function persistDraft(int $studentId, int $subjectId, int $termId, array $scores, User $actor, bool $systemAction): Result
+    {
+
+        return DB::transaction(function () use ($studentId, $subjectId, $termId, $scores, $actor, $systemAction): Result {
             $result = Result::where('student_id', $studentId)->where('subject_id', $subjectId)->where('term_id', $termId)->lockForUpdate()->first();
             if ($result && in_array($result->status, ['Submitted', 'Approved'], true)) {
                 throw ValidationException::withMessages(['result' => 'A submitted or approved result cannot be edited. Ask an approver to reject a submitted result first.']);
             }
 
             $armId = $result?->class_arm_id ?? app(StudentDirectory::class)->classArmId($studentId);
-            if (Gate::forUser($actor)->allows('manage_result_settings')) {
+            if ($systemAction) {
                 app(SectionAccess::class)->assertClassArm($actor, $armId);
             }
             $academic = app(ResultAcademicCatalog::class)->resultContext($armId, $subjectId, $termId);
-            app(ResultTeachingAssignments::class)->assertMayEnter($actor, $academic['class_id'], $subjectId);
+            if (! $systemAction) {
+                app(ResultTeachingAssignments::class)->assertMayEnter($actor, $academic['class_id'], $subjectId);
+            }
             $template = $result
                 ? app(ResultTemplateResolver::class)->storedFor($result)
                 : app(ResultTemplateResolver::class)->forClassArm($armId);
@@ -156,6 +165,15 @@ class ResultWorkflow
         });
     }
 
+    public function saveAndSubmit(int $studentId, int $subjectId, int $termId, array $scores, User $actor): Result
+    {
+        return DB::transaction(function () use ($studentId, $subjectId, $termId, $scores, $actor): Result {
+            $result = $this->saveDraft($studentId, $subjectId, $termId, $scores, $actor);
+
+            return $this->submit($result, $actor);
+        });
+    }
+
     public function approve(Result $result, User $actor): Result
     {
         Gate::forUser($actor)->authorize('approve_results');
@@ -168,6 +186,7 @@ class ResultWorkflow
             }
             $result->update(['status' => 'Approved', 'approved_by' => $actor->id, 'locked_at' => now()]);
             $this->audit($result, 'Approve', $actor, 'Approved and locked');
+            app(AuditRecorder::class)->record($actor, 'result_approved', $result, ['status' => 'Approved'], 'Results', 'Result approved and locked.');
             app(ResultCards::class)->compile($result);
             app(InAppNotifications::class)->sendForStudent(
                 $result->student_id,
@@ -196,6 +215,7 @@ class ResultWorkflow
             }
             $result->update(['status' => 'Rejected', 'approved_by' => null, 'rejection_reason' => trim($reason)]);
             $this->audit($result, 'Reject', $actor, trim($reason));
+            app(AuditRecorder::class)->record($actor, 'result_rejected', $result, ['reason' => trim($reason), 'status' => 'Rejected'], 'Results', 'Result returned to the assigned teacher for correction.');
 
             return $result;
         });

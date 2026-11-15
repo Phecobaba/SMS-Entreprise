@@ -10,6 +10,7 @@ use App\Modules\Academics\Models\ClassSubject;
 use App\Modules\Academics\Models\SchoolClass;
 use App\Modules\Academics\Models\Section;
 use App\Modules\Academics\Models\Subject;
+use App\Modules\Academics\Models\TeacherSubjectAssignment;
 use App\Modules\Admissions\Models\Student;
 use App\Modules\Core\Models\AuditLog;
 use App\Modules\Core\Models\Permission;
@@ -54,7 +55,7 @@ class ResultTemplateScopeTest extends TestCase
             $f['subject']->id,
             $f['term']->id,
             [$f['component']->id => 80],
-            $f['admin'],
+            $f['teacher'],
         );
 
         $warning = $configuration->broaderCurrentTermWarning($f['secondary']->id, $f['levelOne']->id, null);
@@ -126,7 +127,7 @@ class ResultTemplateScopeTest extends TestCase
             'class_arm_id' => $f['primaryArm']->id,
             'admission_date' => '2026-09-01',
         ]);
-        $this->get(route('results.new', $studentWithoutTemplate))->assertOk()
+        $this->actingAs($f['teacher'])->get(route('results.teacher.entry', [$f['primaryClass'], $f['primarySubject'], $studentWithoutTemplate]))->assertOk()
             ->assertSee('No result template applies to Primary 1. Ask your head or the school office to set one up.')
             ->assertDontSee('Save draft');
     }
@@ -228,7 +229,7 @@ class ResultTemplateScopeTest extends TestCase
             $f['subject']->id,
             $f['term']->id,
             [$f['component']->id => 70],
-            $f['admin'],
+            $f['teacher'],
         );
         $this->assertSame($replacement->id, $newResult->result_template_id);
         $this->assertSame($template->id, $result->fresh()->result_template_id);
@@ -250,16 +251,22 @@ class ResultTemplateScopeTest extends TestCase
 
         $admin = User::create(['name' => 'Admin', 'email' => 'template-admin@example.test', 'password' => 'long-password-here', 'status' => 'active']);
         $head = User::create(['name' => 'Primary Head', 'email' => 'template-head@example.test', 'password' => 'long-password-here', 'status' => 'active']);
+        $teacher = User::create(['name' => 'Teacher', 'email' => 'template-teacher@example.test', 'password' => 'long-password-here', 'status' => 'active']);
         $adminRole = Role::create(['name' => 'School Admin']);
         $headRole = Role::create(['name' => 'Principal']);
+        $teacherRole = Role::create(['name' => 'Teacher']);
         foreach (['manage_result_settings', 'view_all_sections', 'view_results_workspace', 'enter_results'] as $permission) {
             $adminRole->permissions()->attach(Permission::firstOrCreate(['name' => $permission]));
         }
         foreach (['manage_section_result_settings', 'view_results_workspace'] as $permission) {
             $headRole->permissions()->attach(Permission::firstOrCreate(['name' => $permission]));
         }
+        foreach (['view_results_workspace', 'enter_results'] as $permission) {
+            $teacherRole->permissions()->attach(Permission::firstOrCreate(['name' => $permission]));
+        }
         $admin->roles()->attach($adminRole);
         $head->roles()->attach($headRole);
+        $teacher->roles()->attach($teacherRole);
 
         $primary = Section::create(['name' => 'Primary', 'head_title' => 'Head Teacher']);
         $secondary = Section::create(['name' => 'Secondary', 'head_title' => 'Principal']);
@@ -282,6 +289,8 @@ class ResultTemplateScopeTest extends TestCase
         foreach ([$classGold, $classSilver, $classJssTwo] as $class) {
             ClassSubject::create(['class_id' => $class->id, 'subject_id' => $subject->id]);
         }
+        TeacherSubjectAssignment::create(['user_id' => $teacher->id, 'class_id' => $classGold->id, 'subject_id' => $subject->id]);
+        TeacherSubjectAssignment::create(['user_id' => $teacher->id, 'class_id' => $primaryClass->id, 'subject_id' => $primarySubject->id]);
         $studentUser = User::create(['name' => 'Learner', 'email' => 'template-student@example.test', 'password' => 'long-password-here', 'status' => 'active']);
         $student = Student::create(['user_id' => $studentUser->id, 'class_arm_id' => $armGold->id, 'admission_date' => '2026-09-01']);
         $session = AcademicSession::create(['name' => 'Current Session', 'start_date' => today('Africa/Lagos')->subYear(), 'end_date' => today('Africa/Lagos')->addYear()]);
@@ -293,9 +302,9 @@ class ResultTemplateScopeTest extends TestCase
         $component = $configuration->addComponent($secondary->id, 'Exam', 100);
 
         return compact(
-            'school', 'admin', 'head', 'primary', 'secondary', 'primaryLevel', 'levelOne', 'levelTwo',
+            'school', 'admin', 'head', 'teacher', 'primary', 'secondary', 'primaryLevel', 'levelOne', 'levelTwo',
             'primaryClass', 'classGold', 'classSilver', 'classJssTwo', 'primaryArm', 'armGold', 'armSilver',
-            'armJssTwo', 'subject', 'student', 'session', 'term', 'scheme', 'component',
+            'armJssTwo', 'subject', 'primarySubject', 'student', 'session', 'term', 'scheme', 'component',
         );
     }
 }

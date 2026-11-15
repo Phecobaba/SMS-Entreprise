@@ -29,6 +29,7 @@ use App\Modules\Results\Services\ResultCards;
 use App\Modules\Results\Services\ResultConfiguration;
 use App\Modules\Results\Services\ResultWorkflow;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 
@@ -95,7 +96,7 @@ class ResultConfigurationLockTest extends TestCase
         ])->count());
     }
 
-    public function test_whole_number_bands_are_adjacent_and_decimal_overlap_and_gap_are_refused(): void
+    public function test_incomplete_scale_can_be_built_one_band_at_a_time_while_overlap_and_decimals_are_refused(): void
     {
         $f = $this->fixture();
         $scheme = GradingScheme::create(['section_id' => $f['section']->id, 'name' => 'Whole number scale']);
@@ -106,11 +107,18 @@ class ResultConfigurationLockTest extends TestCase
         $this->post(route('results.bands.store'), [
             'grading_scheme_id' => $scheme->id, 'min_score' => 21, 'max_score' => 30, 'grade' => 'C',
         ])->assertSessionHasNoErrors();
+        $this->tenant($f);
+        $middle = GradeBand::where('grading_scheme_id', $scheme->id)->where('min_score', 21)->firstOrFail();
+        $this->post(route('results.bands.store'), [
+            'grading_scheme_id' => $scheme->id, 'min_score' => 40, 'max_score' => 50, 'grade' => 'B',
+        ])->assertSessionHasNoErrors();
+        $this->tenant($f);
+        $last = GradeBand::where('grading_scheme_id', $scheme->id)->where('min_score', 40)->firstOrFail();
+        $this->put(route('results.bands.update', $last), [
+            'min_score' => 60, 'max_score' => 70, 'grade' => 'B', 'remark' => 'Gap remains allowed',
+        ])->assertSessionHasNoErrors();
         $this->post(route('results.bands.store'), [
             'grading_scheme_id' => $scheme->id, 'min_score' => 20, 'max_score' => 25, 'grade' => 'Overlap',
-        ])->assertSessionHasErrors('min_score');
-        $this->post(route('results.bands.store'), [
-            'grading_scheme_id' => $scheme->id, 'min_score' => 22, 'max_score' => 30, 'grade' => 'Gap',
         ])->assertSessionHasErrors('min_score');
         $this->post(route('results.bands.store'), [
             'grading_scheme_id' => $scheme->id, 'min_score' => 31.5, 'max_score' => 40, 'grade' => 'Decimal',
@@ -118,15 +126,31 @@ class ResultConfigurationLockTest extends TestCase
         $this->post(route('results.bands.store'), [
             'grading_scheme_id' => $scheme->id, 'min_score' => 31, 'max_score' => 60.5, 'grade' => 'Decimal',
         ])->assertSessionHasErrors(['max_score' => 'Grade band bounds must be whole numbers from 0 to 100.']);
+        $this->delete(route('results.bands.destroy', $middle))
+            ->assertRedirect(route('results.configuration'))
+            ->assertSessionHas('status', 'Grade band deleted.');
+        $this->get(route('results.configuration'))->assertOk()
+            ->assertSee('Incomplete:')
+            ->assertSee('uncovered 0 to 9 and 21 to 59 and 71 to 100');
 
         $this->tenant($f);
         $roundTrip = GradingScheme::create(['section_id' => $f['section']->id, 'name' => 'Decimal storage scale']);
         GradeBand::create(['grading_scheme_id' => $roundTrip->id, 'min_score' => 0, 'max_score' => 59, 'grade' => 'B']);
-        $whole = GradeBand::create(['grading_scheme_id' => $roundTrip->id, 'min_score' => '60.00', 'max_score' => '100.00', 'grade' => 'A']);
-        $this->put(route('results.bands.update', $whole), [
-            'min_score' => '60.00', 'max_score' => '100.00', 'grade' => 'A', 'remark' => 'Whole',
+        $decimalId = DB::table('grade_bands')->insertGetId([
+            'school_id' => $f['school']->id,
+            'grading_scheme_id' => $roundTrip->id,
+            'min_score' => 60.5,
+            'max_score' => 100,
+            'grade' => 'A',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $decimal = GradeBand::findOrFail($decimalId);
+        $this->put(route('results.bands.update', $decimal), [
+            'min_score' => 60, 'max_score' => 100, 'grade' => 'A', 'remark' => 'Corrected legacy decimal',
         ])->assertRedirect(route('results.configuration'))->assertSessionHas('status', 'Grade band saved.');
-        $this->assertSame(60, $whole->fresh()->min_score);
+        $this->tenant($f);
+        $this->assertEquals(60, DB::table('grade_bands')->where('id', $decimalId)->value('min_score'));
         $this->get(route('results.configuration'))->assertOk()
             ->assertSee('60–100%')->assertDontSee('60.00–100.00%');
     }
@@ -171,7 +195,7 @@ class ResultConfigurationLockTest extends TestCase
         $this->assertSame('Rounded up', $detail['subjectRemarks'][$rounded->id]);
     }
 
-    public function test_band_changes_cannot_create_a_gap_or_overlap_and_referenced_component_cannot_be_deleted(): void
+    public function test_band_changes_allow_gaps_but_not_overlap_and_referenced_component_cannot_be_deleted(): void
     {
         $f = $this->fixture();
         $scheme = GradingScheme::create(['section_id' => $f['section']->id, 'name' => 'Three bands']);
@@ -186,12 +210,14 @@ class ResultConfigurationLockTest extends TestCase
         ])->assertSessionHasErrors('min_score');
         $this->put(route('results.bands.update', $middle), [
             'min_score' => 45, 'max_score' => 69, 'grade' => 'B', 'remark' => 'Gap',
-        ])->assertSessionHasErrors('min_score');
-        $this->delete(route('results.bands.destroy', $middle))->assertSessionHasErrors('band');
+        ])->assertSessionHasNoErrors();
+        $this->delete(route('results.bands.destroy', $middle))
+            ->assertRedirect(route('results.configuration'))
+            ->assertSessionHas('status', 'Grade band deleted.');
         $this->delete(route('results.components.destroy', $referenced))->assertSessionHasErrors('component');
 
         $this->tenant($f);
-        $this->assertDatabaseHas('grade_bands', ['id' => $middle->id, 'min_score' => 40]);
+        $this->assertDatabaseMissing('grade_bands', ['id' => $middle->id]);
         $this->assertDatabaseHas('assessment_components', ['id' => $referenced->id]);
         $this->assertDatabaseHas('result_templates', ['id' => $template->id]);
         $this->assertDatabaseHas('grade_bands', ['id' => $first->id]);

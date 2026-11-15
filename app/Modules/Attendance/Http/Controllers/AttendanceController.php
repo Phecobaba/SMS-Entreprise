@@ -44,11 +44,12 @@ class AttendanceController extends Controller
             'session' => ['nullable', 'in:Morning,Afternoon'],
         ]);
         $date = $data['date'] ?? today('Africa/Lagos')->toDateString();
-        $session = $data['session'] ?? (now('Africa/Lagos')->hour < 12 ? 'Morning' : 'Afternoon');
+        $session = $data['session'] ?? $attendance->defaultSession();
 
         return view('attendance.day', [
             ...$attendance->day($arm, $date, $session, $request->user()),
             'editable' => $date === today('Africa/Lagos')->toDateString(),
+            'afternoonUnavailable' => $attendance->afternoonIsUnavailable($date, $request->user()),
         ]);
     }
 

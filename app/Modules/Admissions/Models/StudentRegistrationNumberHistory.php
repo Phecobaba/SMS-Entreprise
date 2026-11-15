@@ -15,11 +15,14 @@ class StudentRegistrationNumberHistory extends Model
 
     public $timestamps = false;
 
-    protected $fillable = ['student_id', 'old_number', 'new_number', 'sequence_value', 'changed_by', 'changed_at'];
+    protected $fillable = [
+        'student_id', 'old_number', 'new_number', 'sequence_value', 'issued_year',
+        'section_code', 'level_code', 'changed_by', 'changed_at',
+    ];
 
     protected function casts(): array
     {
-        return ['changed_at' => 'datetime'];
+        return ['changed_at' => 'datetime', 'sequence_value' => 'integer', 'issued_year' => 'integer'];
     }
 
     public function changedBy(): BelongsTo

@@ -9,8 +9,10 @@ use App\Modules\Academics\Models\ClassArm;
 use App\Modules\Academics\Models\SchoolClass;
 use App\Modules\Academics\Models\Section;
 use App\Modules\Admissions\Models\Student;
+use App\Modules\Admissions\Models\StudentRegistrationNumberHistory;
 use App\Modules\Admissions\Services\IncomingAdmissionService;
 use App\Modules\Admissions\Services\PromotionService;
+use App\Modules\Admissions\Services\RegistrationNumbers;
 use App\Modules\Admissions\Services\StudentDirectory;
 use App\Modules\Attendance\Models\AttendanceRecord;
 use App\Modules\Core\Models\AuditLog;
@@ -72,6 +74,8 @@ class PromotionTest extends TestCase
     {
         $f = $this->fixture();
         $student = $this->student('Primary leaver', $f['primaryTwoArm']);
+        app(RegistrationNumbers::class)->assignAutomatic($student, $f['admin']);
+        $number = $student->fresh()->registration_number;
         [$card, $attendance, $invoice] = $this->history($f, $student, $f['primaryTwoArm']);
 
         $service = app(PromotionService::class);
@@ -84,6 +88,7 @@ class PromotionTest extends TestCase
         $this->assertSame(Student::STATUS_AWAITING, $student->fresh()->status);
         $this->assertSame($f['primaryTwoArm']->id, $student->fresh()->awaiting_from_class_arm_id);
         $this->assertNotNull($student->fresh()->awaiting_admission_at);
+        $this->assertSame($number, $student->fresh()->registration_number);
         $this->assertSame(0, app(StudentDirectory::class)->countForArm($f['primaryTwoArm']->id));
         $this->assertCount(0, app(StudentDirectory::class)->rosterForArm($f['primaryTwoArm']->id));
         $this->assertSame(0, app(StudentDirectory::class)->count($f['admin']));
@@ -94,18 +99,21 @@ class PromotionTest extends TestCase
         $rerun = $service->apply($f['head'], $f['primaryTwo']->id, null, $placements);
         $this->assertSame(0, $rerun['moved']);
         $this->assertSame(1, $rerun['skipped']);
-        $this->assertDatabaseCount('audit_logs', 1);
+        $this->assertSame(1, AuditLog::where('action', 'student_promoted')->count());
     }
 
     public function test_final_school_class_graduates_and_past_report_card_and_receipt_remain_available(): void
     {
         $f = $this->fixture();
         $student = $this->student('Graduate', $f['secondaryFinalArm']);
+        app(RegistrationNumbers::class)->assignAutomatic($student, $f['admin']);
+        $number = $student->fresh()->registration_number;
         [$card, $attendance, $invoice] = $this->history($f, $student, $f['secondaryFinalArm']);
 
         app(PromotionService::class)->apply($f['admin'], $f['secondaryFinal']->id, null, [$student->id => []]);
 
         $this->assertSame(Student::STATUS_GRADUATED, $student->fresh()->status);
+        $this->assertSame($number, $student->fresh()->registration_number);
         $this->assertSame(0, app(StudentDirectory::class)->countForArm($f['secondaryFinalArm']->id));
         $this->assertSame($f['secondaryFinalArm']->id, $card->fresh()->class_arm_id);
         $this->assertSame($f['secondaryFinalArm']->id, $attendance->fresh()->class_arm_id);
@@ -194,6 +202,55 @@ class PromotionTest extends TestCase
         $this->assertSame(1, AuditLog::where('action', 'student_incoming_accepted')->count());
     }
 
+    public function test_three_sections_use_scoped_heads_dynamic_incoming_labels_and_registration_codes(): void
+    {
+        $f = $this->fixture();
+        $earlyHead = User::create(['name' => 'Early Years Head', 'email' => 'early-head@example.test', 'password' => 'long-password-here']);
+        $earlyHead->roles()->attach(Role::where('name', 'Principal')->firstOrFail());
+        $early = Section::create([
+            'name' => 'Early Years', 'head_title' => 'Early Years Lead', 'learner_term' => 'Pupil',
+            'registration_code' => 'EYS', 'classes_arranged_by' => $f['admin']->id, 'classes_arranged_at' => now(),
+        ]);
+        $early->heads()->attach($earlyHead, ['school_id' => $f['school']->id]);
+        $earlyLevel = AcademicLevel::create(['section_id' => $early->id, 'name' => 'Reception', 'registration_code' => 'REC']);
+        $earlyClass = SchoolClass::create(['academic_level_id' => $earlyLevel->id, 'name' => 'Reception', 'position' => 0]);
+        $earlyArm = ClassArm::create(['class_id' => $earlyClass->id, 'name' => 'Sun']);
+        $f['primary']->update(['registration_code' => 'PRI']);
+        $f['primaryLevel']->update(['registration_code' => 'P1']);
+        app(RegistrationNumbers::class)->settings()->update([
+            'registration_include_school' => false,
+            'registration_include_section' => true,
+            'registration_include_level' => false,
+            'registration_include_year' => false,
+            'registration_separator' => '-',
+            'registration_move_policy' => RegistrationNumbers::KEEP_DIGITS_CHANGE_PREFIX,
+        ]);
+        $student = $this->student('Early Years pupil', $earlyArm);
+        app(RegistrationNumbers::class)->assignAutomatic($student, $f['admin']);
+        $this->assertStringStartsWith('EYS-', $student->fresh()->registration_number);
+
+        $this->actingAs($earlyHead)->get(route('academics.promotion.index'))
+            ->assertOk()->assertSee('Early Years')->assertDontSee('Primary 5');
+        app(TenantContext::class)->set($f['school']->id);
+        app(PromotionService::class)->apply($earlyHead, $earlyClass->id, null, [$student->id => []]);
+        $this->assertSame(Student::STATUS_AWAITING, $student->fresh()->status);
+
+        $this->actingAs($f['head'])->get(route('academics.promotion.incoming.index'))
+            ->assertOk()
+            ->assertSee('Incoming from Early Years')
+            ->assertSee('Early Years pupil');
+        app(TenantContext::class)->set($f['school']->id);
+        app(IncomingAdmissionService::class)->accept($f['head'], $f['primary']->id, [
+            $student->id => ['class_id' => $f['primaryOne']->id, 'arm_id' => $f['primaryOneArm']->id],
+        ]);
+
+        $this->assertSame(Student::STATUS_ACTIVE, $student->fresh()->status);
+        $this->assertSame($f['primaryOneArm']->id, $student->fresh()->class_arm_id);
+        $this->assertStringStartsWith('PRI-', $student->fresh()->registration_number);
+        $this->assertSame('Pupil', $early->fresh()->learner_term);
+        $this->assertSame('Early Years Lead', $early->fresh()->head_title);
+    }
+
     public function test_mark_all_remaining_changes_only_pupils_still_waiting_for_that_section(): void
     {
         $f = $this->fixture();
@@ -242,6 +299,160 @@ class PromotionTest extends TestCase
         $this->actingAs($notContinuing->user)->get(route('results.mine.show', $graduateCard))->assertOk();
         $this->get(route('attendance.mine'))->assertOk()->assertSee('Present');
         $this->get(route('payments.mine.index'))->assertOk()->assertSee($graduateInvoice->payment->receipt_number);
+    }
+
+    public function test_all_movement_policies_and_same_scope_rule_use_stored_allocation(): void
+    {
+        $f = $this->fixture();
+        $newLevel = AcademicLevel::create([
+            'section_id' => $f['primary']->id, 'name' => 'Primary next', 'registration_code' => 'P2',
+        ]);
+        $f['primaryLevel']->update(['registration_code' => 'P1']);
+        $f['primary']->update(['registration_code' => 'PRI']);
+        $f['primaryTwo']->update(['academic_level_id' => $newLevel->id]);
+        $settings = app(RegistrationNumbers::class)->settings();
+        $settings->update([
+            'registration_include_school' => false, 'registration_include_section' => false,
+            'registration_include_level' => true, 'registration_separator' => '-',
+            'registration_number_length' => 4, 'registration_move_policy' => RegistrationNumbers::KEEP_DIGITS_CHANGE_PREFIX,
+        ]);
+
+        $keepDigits = $this->student('Odd number text', $f['primaryOneArm']);
+        StudentRegistrationNumberHistory::create([
+            'student_id' => $keepDigits->id, 'old_number' => null, 'new_number' => 'NOT-A-PARSED-SEQUENCE',
+            'sequence_value' => 37, 'issued_year' => 2024, 'section_code' => 'PRI', 'level_code' => 'P1',
+            'changed_by' => $f['admin']->id, 'changed_at' => now(),
+        ]);
+        $keepDigits->update(['registration_number' => 'NOT-A-PARSED-SEQUENCE']);
+        app(PromotionService::class)->moveOne($f['admin'], $keepDigits->id, $f['primaryTwo']->id, $f['primaryTwoArm']->id);
+        $this->assertSame('P2-0037', $keepDigits->fresh()->registration_number);
+
+        $keepWhole = $this->student('Keep whole', $f['primaryOneArm']);
+        $settings->update(['registration_move_policy' => RegistrationNumbers::KEEP_DIGITS_CHANGE_PREFIX]);
+        app(RegistrationNumbers::class)->assignAutomatic($keepWhole, $f['admin']);
+        $whole = $keepWhole->fresh()->registration_number;
+        $settings->update(['registration_move_policy' => RegistrationNumbers::KEEP_WHOLE_NUMBER]);
+        app(PromotionService::class)->moveOne($f['admin'], $keepWhole->id, $f['primaryTwo']->id, $f['primaryTwoArm']->id);
+        $this->assertSame($whole, $keepWhole->fresh()->registration_number);
+
+        $newSequence = $this->student('New sequence', $f['primaryOneArm']);
+        $settings->update(['registration_move_policy' => RegistrationNumbers::KEEP_DIGITS_CHANGE_PREFIX]);
+        app(RegistrationNumbers::class)->assignAutomatic($newSequence, $f['admin']);
+        $before = $newSequence->fresh()->registration_number;
+        $settings->update(['registration_move_policy' => RegistrationNumbers::NEW_PREFIX_SEQUENCE]);
+        app(PromotionService::class)->moveOne($f['admin'], $newSequence->id, $f['primaryTwo']->id, $f['primaryTwoArm']->id);
+        $this->assertNotSame($before, $newSequence->fresh()->registration_number);
+        $this->assertStringStartsWith('P2-', $newSequence->fresh()->registration_number);
+
+        $sameScope = $this->student('Same level', $f['primaryOneArm']);
+        $settings->update(['registration_move_policy' => RegistrationNumbers::KEEP_DIGITS_CHANGE_PREFIX]);
+        app(RegistrationNumbers::class)->assignAutomatic($sameScope, $f['admin']);
+        $same = $sameScope->fresh()->registration_number;
+        $parallel = SchoolClass::create([
+            'academic_level_id' => $f['primaryLevel']->id, 'name' => 'Primary 5 B', 'position' => 1,
+        ]);
+        $parallelArm = ClassArm::create(['class_id' => $parallel->id, 'name' => 'A']);
+        app(PromotionService::class)->moveOne($f['admin'], $sameScope->id, $parallel->id, $parallelArm->id);
+        $this->assertSame($same, $sameScope->fresh()->registration_number);
+    }
+
+    public function test_preview_matches_apply_and_clash_adjustment_is_visible_and_audited(): void
+    {
+        $f = $this->fixture();
+        $newLevel = AcademicLevel::create(['section_id' => $f['primary']->id, 'name' => 'Primary 2', 'registration_code' => 'P2']);
+        $f['primaryLevel']->update(['registration_code' => 'P1']);
+        $f['primaryTwo']->update(['academic_level_id' => $newLevel->id]);
+        $numbers = app(RegistrationNumbers::class);
+        $numbers->settings()->update([
+            'registration_include_school' => false, 'registration_include_level' => true,
+            'registration_include_section' => false, 'registration_move_policy' => RegistrationNumbers::KEEP_DIGITS_CHANGE_PREFIX,
+        ]);
+        $student = $this->student('Clash pupil', $f['primaryOneArm']);
+        $numbers->assignAutomatic($student, $f['admin']);
+        StudentRegistrationNumberHistory::create([
+            'student_id' => $student->id, 'old_number' => 'RESERVED', 'new_number' => 'P2-0001',
+            'sequence_value' => 999, 'issued_year' => 2024, 'level_code' => 'P2',
+            'changed_by' => $f['admin']->id, 'changed_at' => now()->subDay(),
+        ]);
+        $placements = [$student->id => ['class_id' => $f['primaryTwo']->id, 'arm_id' => $f['primaryTwoArm']->id]];
+
+        $preview = app(PromotionService::class)->preview($f['admin'], $f['primaryOne']->id, null, $placements);
+        $expected = $preview['rows']->first()['registration'];
+        $this->assertTrue($expected['adjusted']);
+        $applied = app(PromotionService::class)->apply($f['admin'], $f['primaryOne']->id, null, $placements);
+        $this->assertSame($expected['new_number'], $applied['rows']->first()['registration']['new_number']);
+        $this->assertSame($expected['new_number'], $student->fresh()->registration_number);
+        $this->assertDatabaseHas('audit_logs', [
+            'action' => 'student_registration_number_changed', 'subject_id' => $student->id,
+        ]);
+        $this->assertSame(
+            'movement_policy_clash_adjustment',
+            AuditLog::where('action', 'student_registration_number_changed')->latest('id')->firstOrFail()->metadata['reason']
+        );
+    }
+
+    public function test_incoming_acceptance_numbers_atomically_and_missing_code_refuses_cleanly(): void
+    {
+        $f = $this->fixture();
+        $f['secondary']->update(['registration_code' => 'SEC']);
+        $f['secondaryLevel']->update(['registration_code' => 'S3']);
+        app(RegistrationNumbers::class)->settings()->update([
+            'registration_include_school' => false, 'registration_include_section' => true,
+            'registration_include_level' => true, 'registration_include_year' => true,
+            'registration_year_digits' => 4, 'registration_move_policy' => RegistrationNumbers::NEW_PREFIX_SEQUENCE,
+        ]);
+        $student = $this->waitingStudent('New incoming', $f['primaryTwoArm']);
+        $placements = [$student->id => ['class_id' => $f['secondaryFinal']->id, 'arm_id' => $f['secondaryFinalArm']->id]];
+        $preview = app(IncomingAdmissionService::class)->previewAccept($f['secondaryHead'], $f['secondary']->id, $placements);
+        $expected = $preview['rows']->first()['registration']['new_number'];
+        app(IncomingAdmissionService::class)->accept($f['secondaryHead'], $f['secondary']->id, $placements);
+        $this->assertSame($expected, $student->fresh()->registration_number);
+        $this->assertMatchesRegularExpression('/^SEC-S3-'.now('Africa/Lagos')->format('Y').'-\d+$/', $student->fresh()->registration_number);
+
+        $missing = $this->waitingStudent('Missing code', $f['primaryTwoArm']);
+        $f['secondaryLevel']->update(['registration_code' => null]);
+        try {
+            app(IncomingAdmissionService::class)->accept($f['secondaryHead'], $f['secondary']->id, [
+                $missing->id => ['class_id' => $f['secondaryFinal']->id, 'arm_id' => $f['secondaryFinalArm']->id],
+            ]);
+            $this->fail('A required missing Level code must refuse acceptance.');
+        } catch (ValidationException $exception) {
+            $this->assertStringContainsString('Level code is missing', collect($exception->errors())->flatten()->first());
+        }
+        $this->assertSame(Student::STATUS_AWAITING, $missing->fresh()->status);
+        $this->assertNull($missing->fresh()->registration_number);
+    }
+
+    public function test_numbering_failure_rolls_back_every_movement_and_number_in_the_batch(): void
+    {
+        $f = $this->fixture();
+        $nextLevel = AcademicLevel::create(['section_id' => $f['primary']->id, 'name' => 'Next', 'registration_code' => 'NXT']);
+        $f['primaryLevel']->update(['registration_code' => 'CUR']);
+        $f['primaryTwo']->update(['academic_level_id' => $nextLevel->id]);
+        app(RegistrationNumbers::class)->settings()->update([
+            'registration_include_school' => false, 'registration_include_level' => true,
+            'registration_move_policy' => RegistrationNumbers::KEEP_DIGITS_CHANGE_PREFIX,
+        ]);
+        $first = $this->student('Rollback first', $f['primaryOneArm']);
+        app(RegistrationNumbers::class)->assignAutomatic($first, $f['admin']);
+        $firstNumber = $first->fresh()->registration_number;
+        $second = $this->student('Rollback second', $f['primaryOneArm']);
+        $second->update(['registration_number' => 'MANUAL-WITHOUT-ALLOCATION']);
+        $placements = [
+            $first->id => ['class_id' => $f['primaryTwo']->id, 'arm_id' => $f['primaryTwoArm']->id],
+            $second->id => ['class_id' => $f['primaryTwo']->id, 'arm_id' => $f['primaryTwoArm']->id],
+        ];
+
+        try {
+            app(PromotionService::class)->apply($f['admin'], $f['primaryOne']->id, null, $placements);
+            $this->fail('A missing stored sequence must roll back the batch.');
+        } catch (ValidationException $exception) {
+            $this->assertArrayHasKey('registration_number', $exception->errors());
+        }
+        $this->assertSame($f['primaryOneArm']->id, $first->fresh()->class_arm_id);
+        $this->assertSame($f['primaryOneArm']->id, $second->fresh()->class_arm_id);
+        $this->assertSame($firstNumber, $first->fresh()->registration_number);
+        $this->assertSame('MANUAL-WITHOUT-ALLOCATION', $second->fresh()->registration_number);
     }
 
     private function fixture(): array

@@ -3,10 +3,10 @@
 Batch 6. States: Normal · No number permission · Change number · Number already used · Reset student: confirm · Reset student: shown once · Reset parent: confirm · Reset parent: shown once · Awaiting admission · Graduated · No permission.
 
 ## Who can open
-Admin. The **registration-number change** is a separate section-scoped permission (decided 2026-10-17, name for Codex): the Admin, or the head of the Section the pupil is currently in. This is a sub-page of the student record; I have not seen today's record page, so Codex places these cards there.
+Admin opens the combined Student record. The **registration-number change** is a separate section-scoped permission: Admin for any pupil, or the Head of the pupil's current Section; Awaiting-admission changes are Admin-only.
 
-## Stated current behaviour (Codex: confirm first)
-Whether `students` has a registration number column today (my plan assumes **no**: NEW), where it is printed or searched (receipts, report cards, invoices, login), and how parents are linked.
+## Built behaviour (Batch 6B)
+The combined page edits identity, shows current and historical registration numbers, and resets Student or linked Parent credentials. Current numbers appear on report cards, receipts, invoice detail and one-time sign-in slips; payment search matches current and historical numbers within the school.
 
 ## Design
 - **Registration number:** current number, **earlier numbers** (kept, searchable), **Change number** (sheet: current read-only, new number, unique across the school, every change logged: old, new, who, when). Wording reuses the existing Incoming sheet.
@@ -24,9 +24,9 @@ Reset: new hash, `must_change_password`, all sessions and remember tokens revoke
 - Resetting a parent signs out that parent on every device and keeps all links.
 - Credentials never logged or stored in plain text.
 
-## Open questions
-- **Who edits a registration number while a pupil is Awaiting admission.** The 2026-10-17 note proposes only the Secondary head and the Admin (the Primary head cannot know the Secondary sequence). Not decided; the screen shows it as a proposal.
-- Whether a number kept in history blocks reuse.
+## Resolved boundaries
+- While Awaiting admission, only Admin changes a registration number.
+- A current or historical number blocks reuse.
 
 
 ## Follow-up changes — Batch 6 reissue (2026-10-31)

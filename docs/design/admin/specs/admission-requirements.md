@@ -1,6 +1,6 @@
-# Spec: "Admission requirements" wording — **not designed**
+# Spec: Admission requirements and D15 override
 
-The handoff lists an "Admission requirements" relabel. **I have not seen the screen or the current label**, so I cannot show the lines to change. Please send the file (or the page's current label and where it appears) and I will add it to this batch as a one-line change per screen. Nothing was invented.
+The Admissions list and candidate page use **Admission requirements**. An incomplete conversion may proceed only through the Admin D15 override with a written reason; the requirements remain unticked.
 
 
 ## Follow-up changes — Batch 6 reissue (2026-10-31)

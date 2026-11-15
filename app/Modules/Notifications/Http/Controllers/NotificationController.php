@@ -5,6 +5,7 @@ namespace App\Modules\Notifications\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Notifications\Services\InAppNotifications;
 use App\Modules\Portals\Services\PortalContext;
+use App\Modules\Results\Services\ResultAttention;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -13,9 +14,14 @@ class NotificationController extends Controller
 {
     public function index(Request $request, InAppNotifications $notifications): View
     {
+        $attention = app(ResultAttention::class)->for($request->user());
+        $unreadCount = $notifications->unreadCount($request->user());
+
         return view('notifications.index', [
             'notifications' => $notifications->inbox($request->user()),
-            'unreadCount' => $notifications->unreadCount($request->user()),
+            'unreadCount' => $unreadCount,
+            'attention' => $attention,
+            'waitingCount' => $unreadCount + ($attention['count'] ?? 0),
             'context' => app(PortalContext::class)->for($request),
         ]);
     }

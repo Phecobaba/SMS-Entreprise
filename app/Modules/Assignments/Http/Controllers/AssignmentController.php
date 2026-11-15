@@ -3,14 +3,15 @@
 namespace App\Modules\Assignments\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Academics\Services\ClassArmDirectory;
-use App\Modules\Academics\Services\ResultAcademicCatalog;
+use App\Modules\Academics\Models\ClassArm;
+use App\Modules\Academics\Services\ResultTeachingAssignments;
 use App\Modules\Admissions\Services\StudentDirectory;
 use App\Modules\Assignments\Services\AssignmentService;
 use App\Modules\Core\Services\SchoolUserDirectory;
 use App\Modules\Core\Services\UsernameRules;
 use App\Modules\Core\TenantContext;
 use App\Modules\Portals\Services\PortalContext;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -20,23 +21,37 @@ use Illuminate\View\View;
 
 class AssignmentController extends Controller
 {
-    public function index(Request $request, AssignmentService $service, ClassArmDirectory $arms, ResultAcademicCatalog $catalog, SchoolUserDirectory $users, StudentDirectory $students): View
+    public function index(Request $request, AssignmentService $service, ResultTeachingAssignments $teaching, SchoolUserDirectory $users, StudentDirectory $students): View
     {
+        $pairs = $teaching->pairOptionsFor($request->user(), 'manage_assignments');
+
         return view('assignments.index', [
             'assignments' => $service->staffList($request->user()),
-            'arms' => $arms->all(), 'subjects' => $catalog->options()['subjects'],
-            'users' => Gate::allows('manage_assignments') ? $users->activeOptions() : collect(),
+            'pairs' => $pairs,
+            'arms' => ClassArm::with('schoolClass')->whereIn('class_id', $pairs->pluck('class_id'))->orderBy('class_id')->orderBy('name')->get(),
             'students' => Gate::allows('manage_assignments') ? $students->roster(null, $request->user()) : null,
         ]);
+    }
+
+    public function searchParents(Request $request, SchoolUserDirectory $users): JsonResponse
+    {
+        Gate::authorize('manage_assignments');
+        $term = (string) $request->query('q', '');
+        if (mb_strlen(trim($term)) < 2) {
+            return response()->json(['message' => 'Enter at least 2 characters.', 'results' => []]);
+        }
+
+        return response()->json(['results' => $users->searchParents($term)]);
     }
 
     public function store(Request $request, AssignmentService $service): RedirectResponse
     {
         $data = $request->validate([
-            'class_arm_id' => ['required', 'integer'], 'subject_id' => ['required', 'integer'],
+            'class_arm_id' => ['required', 'integer'], 'pair' => ['required', 'regex:/^\d+:\d+$/'],
             'title' => ['required', 'string', 'max:255'], 'description' => ['nullable', 'string', 'max:5000'],
             'due_date' => ['required', 'date'],
         ]);
+        [$data['class_id'], $data['subject_id']] = array_map('intval', explode(':', $data['pair'], 2));
         $assignment = $service->create($data, $request->user());
 
         return redirect()->route('assignments.show', $assignment->id)->with('status', 'Assignment created for the full class.');
@@ -55,10 +70,11 @@ class AssignmentController extends Controller
         return redirect()->route('assignments.show', $assignment)->with('status', 'Tick saved.');
     }
 
-    public function linkWard(Request $request, AssignmentService $service): RedirectResponse
+    public function linkWard(Request $request, AssignmentService $service, SchoolUserDirectory $users): RedirectResponse
     {
         Gate::authorize('manage_assignments');
         $data = $request->validate(['parent_user_id' => ['required', 'integer'], 'student_id' => ['required', 'integer']]);
+        $users->parentAccount((int) $data['parent_user_id']);
         $service->linkWard((int) $data['parent_user_id'], (int) $data['student_id']);
 
         return redirect()->route('assignments.index')->with('status', 'Parent linked to student.');

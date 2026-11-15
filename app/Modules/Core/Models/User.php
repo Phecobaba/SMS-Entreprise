@@ -2,21 +2,28 @@
 
 namespace App\Modules\Core\Models;
 
+use App\Modules\Academics\Models\ClassArm;
 use App\Modules\Academics\Models\Section;
+use App\Modules\Academics\Models\TeacherSubjectAssignment;
 use App\Modules\Core\Models\Concerns\BelongsToTenant;
 use App\Modules\Core\TenantContext;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_DISABLED = 'disabled';
+
     /** @use HasFactory<UserFactory> */
     use BelongsToTenant, HasFactory, Notifiable;
 
-    protected $fillable = ['name', 'username', 'email', 'password', 'must_change_password', 'last_signed_in_at', 'status'];
+    protected $fillable = ['name', 'username', 'email', 'email_verified_at', 'password', 'must_change_password', 'last_signed_in_at', 'status'];
 
     protected $hidden = ['password', 'remember_token'];
 
@@ -49,6 +56,16 @@ class User extends Authenticatable
             ->withPivot('school_id')
             ->wherePivot('school_id', app(TenantContext::class)->id())
             ->withTimestamps();
+    }
+
+    public function teacherSubjectAssignments(): HasMany
+    {
+        return $this->hasMany(TeacherSubjectAssignment::class);
+    }
+
+    public function formTeacherArms(): HasMany
+    {
+        return $this->hasMany(ClassArm::class, 'form_teacher_user_id');
     }
 
     public function hasPermission(string $permission): bool

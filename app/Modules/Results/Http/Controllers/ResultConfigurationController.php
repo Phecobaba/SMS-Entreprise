@@ -9,13 +9,16 @@ use App\Modules\Academics\Services\AcademicCalendar;
 use App\Modules\Academics\Services\ResultAcademicCatalog;
 use App\Modules\Academics\Services\ResultTeachingAssignments;
 use App\Modules\Academics\Services\SectionAccess;
+use App\Modules\Core\Models\SchoolSetting;
 use App\Modules\Core\TenantContext;
 use App\Modules\Results\Models\AssessmentComponent;
+use App\Modules\Results\Models\CommentRange;
 use App\Modules\Results\Models\GradeBand;
 use App\Modules\Results\Models\GradingScheme;
 use App\Modules\Results\Models\Result;
 use App\Modules\Results\Models\ResultTemplate;
 use App\Modules\Results\Services\GradeScale;
+use App\Modules\Results\Services\ResultCards;
 use App\Modules\Results\Services\ResultConfiguration;
 use App\Modules\Results\Services\ResultConfigurationAccess;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -80,6 +83,8 @@ class ResultConfigurationController extends Controller
             'selectedSection' => $selectedSectionId ? Section::find($selectedSectionId) : null,
             'isAdmin' => $isAdmin,
             'locked' => $locked,
+            'commentRanges' => $selectedSectionId ? CommentRange::where('section_id', $selectedSectionId)->orderBy('comment_type')->orderBy('min_average')->get() : collect(),
+            'proprietorCommentTitle' => SchoolSetting::query()->value('proprietor_comment_title') ?: "Proprietor's comment",
             ...$catalog->options($actor, $selectedSectionId),
         ]);
     }
@@ -191,7 +196,11 @@ class ResultConfigurationController extends Controller
         }
         $classId = isset($data['class_id']) ? (int) $data['class_id'] : null;
         $warning = $configuration->broaderCurrentTermWarning($sectionId, $levelId, $classId);
-        $configuration->addTemplate($data['name'], $sectionId, $levelId, $classId, (int) $data['grading_scheme_id'], $data['components'], (bool) ($data['show_subject_remarks'] ?? true));
+        $configuration->addTemplate(
+            $data['name'], $sectionId, $levelId, $classId, (int) $data['grading_scheme_id'], $data['components'],
+            (bool) ($data['show_subject_remarks'] ?? true), (bool) ($data['show_overall_total'] ?? true),
+            (bool) ($data['show_average'] ?? true), (bool) ($data['show_position'] ?? true),
+        );
 
         $redirect = redirect()->route('results.configuration')->with('status', 'Result template saved.');
         if ($warning) {
@@ -237,10 +246,64 @@ class ResultConfigurationController extends Controller
     public function subjectRemarks(ResultTemplate $template, Request $request, ResultConfiguration $configuration, ResultConfigurationAccess $access): RedirectResponse
     {
         $access->assertTemplate($request->user(), $template);
-        $data = $request->validate(['show_subject_remarks' => ['required', 'boolean']]);
-        $configuration->setSubjectRemarks($template->id, (bool) $data['show_subject_remarks']);
+        $data = $request->validate([
+            'show_subject_remarks' => ['sometimes', 'boolean'],
+            'show_overall_total' => ['sometimes', 'boolean'],
+            'show_average' => ['sometimes', 'boolean'],
+            'show_position' => ['sometimes', 'boolean'],
+        ]);
+        $configuration->setDisplayOptions($template->id, $data);
 
-        return redirect()->route('results.configuration')->with('status', 'Subject remarks setting saved.');
+        return redirect()->route('results.configuration')->with('status', 'Report-card display settings saved.');
+    }
+
+    public function commentMode(Request $request, ResultCards $cards, ResultConfigurationAccess $access): RedirectResponse
+    {
+        $data = $request->validate(['section_id' => ['required', 'integer'], 'comment_type' => ['required', 'in:Principal,Proprietor'], 'mode' => ['required', 'in:single,range']]);
+        $sectionId = (int) $data['section_id'];
+        $access->assertSection($request->user(), $sectionId);
+        $cards->setCommentMode(Section::findOrFail($sectionId), $data['comment_type'], $data['mode'], $request->user());
+
+        return redirect()->route('results.configuration', ['section' => $sectionId])->with('status', 'Comment mode saved.');
+    }
+
+    public function commentRange(Request $request, ResultCards $cards, ResultConfigurationAccess $access): RedirectResponse
+    {
+        $data = $this->commentRangeData($request);
+        $sectionId = (int) $data['section_id'];
+        $access->assertSection($request->user(), $sectionId);
+        $cards->saveCommentRange(Section::findOrFail($sectionId), $data['comment_type'], (int) $data['min_average'], (int) $data['max_average'], $data['comment_text'], $request->user());
+
+        return redirect()->route('results.configuration', ['section' => $sectionId])->with('status', 'Comment range saved.');
+    }
+
+    public function updateCommentRange(CommentRange $commentRange, Request $request, ResultCards $cards): RedirectResponse
+    {
+        $data = $request->validate([
+            'min_average' => ['required', 'integer', 'between:0,100'],
+            'max_average' => ['required', 'integer', 'between:0,100', 'gte:min_average'],
+            'comment_text' => ['required', 'string', 'max:320'],
+        ]);
+        $section = Section::findOrFail($commentRange->section_id);
+        $cards->saveCommentRange($section, $commentRange->comment_type, (int) $data['min_average'], (int) $data['max_average'], $data['comment_text'], $request->user(), $commentRange);
+
+        return redirect()->route('results.configuration', ['section' => $section->id])->with('status', 'Comment range saved.');
+    }
+
+    public function destroyCommentRange(CommentRange $commentRange, Request $request, ResultCards $cards): RedirectResponse
+    {
+        $sectionId = (int) $commentRange->section_id;
+        $cards->deleteCommentRange($commentRange, $request->user());
+
+        return redirect()->route('results.configuration', ['section' => $sectionId])->with('status', 'Comment range deleted.');
+    }
+
+    public function proprietorTitle(Request $request, ResultCards $cards): RedirectResponse
+    {
+        $data = $request->validate(['proprietor_comment_title' => ['required', 'string', 'max:100']]);
+        $cards->setProprietorTitle($data['proprietor_comment_title'], $request->user());
+
+        return redirect()->route('results.configuration')->with('status', 'Proprietor comment title saved.');
     }
 
     private function bandData(Request $request, bool $creating = true): array
@@ -277,6 +340,20 @@ class ResultConfigurationController extends Controller
             'components' => ['required', 'array', 'min:1'],
             'components.*' => ['required', 'integer'],
             'show_subject_remarks' => ['sometimes', 'boolean'],
+            'show_overall_total' => ['sometimes', 'boolean'],
+            'show_average' => ['sometimes', 'boolean'],
+            'show_position' => ['sometimes', 'boolean'],
+        ]);
+    }
+
+    private function commentRangeData(Request $request): array
+    {
+        return $request->validate([
+            'section_id' => ['required', 'integer'],
+            'comment_type' => ['required', 'in:Principal,Proprietor'],
+            'min_average' => ['required', 'integer', 'between:0,100'],
+            'max_average' => ['required', 'integer', 'between:0,100', 'gte:min_average'],
+            'comment_text' => ['required', 'string', 'max:320'],
         ]);
     }
 

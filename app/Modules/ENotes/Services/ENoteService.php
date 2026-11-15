@@ -46,7 +46,7 @@ class ENoteService
     public function listing(User $actor, ?int $classId, ?int $subjectId)
     {
         Gate::forUser($actor)->authorize('upload_enotes');
-        $query = ENote::orderByDesc('id');
+        $query = ENote::with(['schoolClass', 'subject'])->orderByDesc('id');
         if ($classId) {
             $query->where('class_id', $classId);
         }

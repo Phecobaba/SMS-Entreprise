@@ -33,8 +33,9 @@ exactly what state the codebase is in.
 - **Schema design resolved**: table-per-role (not unified `users` table);
   `students.candidate_id` nullable by design — see `ARCHITECTURE.md` §9.
 - **Result card comments resolved**: Proprietor = School Admin (no new
-  role); Principal's/Proprietor's comments support both personalized and
-  standard-default text per term — see `ARCHITECTURE.md` §12.
+  role); Principal/Proprietor comments support personalized text plus either
+  a Section/Term single default or reusable Section/type average ranges.
+  Personalized text always wins — see the 2026-11-03 Decisions Log.
 - **Timeline**: originally 12 weeks, **still not reconfirmed** against
   expanded scope — see `PHASES.md` "Timeline Status."
 - **Code status as of this document**: Phases 0–3 are complete, with live-host
@@ -53,15 +54,467 @@ Phase 4 is complete, Admin foundations A is built, and the 2026-10-17 Phase 5
 exit-gap closure is recorded below. Phase 5 is **not formally complete**;
 only the owner may mark it complete.
 
-Local SQLite has seven separate demo accounts (Admin, Teacher, Principal,
-Student, Parent, Candidate, Bursar) for hands-on review. `DemoDataSeeder`
+`DemoDataSeeder` defines seven separate demo accounts (Admin, Teacher,
+Principal, Student, Parent, Candidate, Bursar) for hands-on review. It
 rebuilds them idempotently only in the local environment, using password
 values from ignored `.env` keys. The demo Principal is assigned to Secondary
 through `section_user`, the demo Teacher has a class/subject assignment, and
-the demo Parent is linked to the demo Student. Passwords are never stored in
-this repository.
+the demo Parent is linked to the demo Student. On 2026-11-04 the owner-authorised
+unnumbered pupil and its login/dependent demo rows were removed from the
+persistent development database; no pupil there now lacks a registration
+number. Passwords are never stored in this repository.
+
+## In Progress
+
+- No task is currently in progress.
 
 ## Completed
+
+- **Landing build — approved public Home, Apply, Status and Privacy design
+  (completed 2026-11-15).** Replaced the plain public pages with the approved
+  `docs/design/landing` v2 design through one shared shell, responsive generated
+  WebP images, settings-backed optional contact/privacy/admissions copy, Home-only
+  motion, absolute `APP_URL` SEO/share metadata, favicon and robots rules, plus
+  module-safe Apache compression and caching. Builds 1, 1.1 and 2 behavior was
+  retained. The PHP 8.2 suite passed 298 tests / 3,688 assertions; Pint, Vite and
+  diff checks passed. Guarded QA at 1280px and 390px passed with no horizontal
+  overflow, a one-line phone header, reduced-motion and no-JavaScript fallbacks,
+  and about 382 KB above-fold / 600 KB full-scroll transfer. QA data and helpers
+  were removed and the persistent development database fingerprint was unchanged.
+  Definition of Done met; there was no migration.
+
+- **Public admissions Build 2 — exam-day accounts, per-Level entrance exams,
+  assessment outcomes and conversion (completed 2026-11-14).** Added Admin-only
+  transactional Candidate account creation/reset with in-memory A4 credential
+  PDFs, per-Level entrance-exam visibility, in-person Level settings,
+  Section-scoped assessment outcomes, Candidates and Entrance exams navigation,
+  Application-aware Student/Parent conversion, Website settings, and stale
+  Application-payment replacement with late-reference reconciliation. The PHP
+  8.2 suite passed 295 tests / 3,626 assertions; Pint, Vite and diff checks passed.
+  Guarded browser QA passed at 1280px and 390px with no horizontal overflow or
+  target below 44px; the generated PDF was raster-inspected and corrected so no
+  field is clipped. QA data and helpers were removed, and the persistent
+  development database fingerprint remained unchanged. Definition of Done met.
+
+- **Public admissions Build 1.1 — submit recovery, Admissions navigation and
+  exam sessions (completed 2026-11-14).** Added guarded same-child application
+  recovery, the grouped Admissions navigation, counted Applications tabs,
+  Section-scoped exam-session management and assignment, deferred session
+  emails, and public session details. The owner confirmed that their demo Admin
+  sign-in during the QA window caused the one observed persistent `users` row
+  timestamp change; no Build 1.1 process touched tenant data there. The final
+  PHP formatter and `git diff --check` pass, including the late 44px Edit-target
+  correction. Definition of Done met.
+
+- **Public admissions Build 1 — application, optional fee, status and Admin
+  handling (completed 2026-11-14).** Added the public `/apply` flow, optional
+  pre-account Paystack application fee, two-hour hashed-token status access and
+  signed email link, privacy/consent, username reservation, seven-day expiry,
+  idempotent payment finalisation, Admin settings and Applications management,
+  and read-only Bursar fee rows. The retired `/admissions/register` route now
+  redirects without creating a User or Candidate. The PHP 8.2 suite passed 281
+  tests / 3,468 assertions in 301.77 seconds. Guarded browser QA passed at
+  1280px and 390px with no horizontal overflow or tap target below 44px; the
+  throwaway database and helpers were removed, and the persistent development
+  database fingerprint remained unchanged. Definition of Done met.
+
+- **Batch 6A — phone-header school name and admissions readiness report
+  (completed 2026-11-13).** The authenticated phone header now shows the full
+  school name in at most two compact lines without ellipsis. Guarded QA passed
+  with long and short names at 320, 360, 390 and 768px; the required 320/390px
+  checks had no horizontal overflow or target below 44px, and More plus the
+  notification bell worked. The current public, Candidate, Admissions,
+  payment-reuse and in-person-assessment paths were audited without building
+  any Part B feature. The PHP 8.2 suite passed 273 tests / 3,367 assertions in
+  797.28 seconds; Vite built successfully. Throwaway QA data, scripts and the
+  browser profile were removed, and the development database fingerprint was
+  unchanged. Definition of Done met.
+
+- **Batch 5 small fixes — live-results bell attention, sidebar brand/icons,
+  CBT bulk-upload format and Head permission checks (completed 2026-11-13).**
+  The desktop sidebar no longer duplicates live Results attention; the bell
+  combines live Results attention with stored unread notifications and the
+  notification page lists both. The desktop brand shows the full school name,
+  and Bulk subjects, Teacher assignments and Promotion have distinct icons.
+  CBT question CSV uses the compact Question/Options A–F/Correct Answer
+  layout, supports configured single-answer marks, explicit overrides and
+  marked multiple answers, retains both earlier layouts without allowing them
+  to be mixed, and provides three delete-marked examples plus Admin/Head help.
+  The existing Principal `view_parents` default and dynamic Section dashboard
+  tabs were confirmed and required no change. The full PHP 8.2 suite passed
+  272 tests / 3,363 assertions in 739.85 seconds; the production Vite build and
+  guarded 1280px/390px QA passed with no horizontal overflow or target below
+  44px. All throwaway QA data, scripts, screenshots and browser profiles were
+  deleted. The persistent development database SHA-256, size and modified time
+  were unchanged. Definition of Done met.
+
+- **Batch 4b — Parents directory, scoped read access, account actions and
+  recovery-copy cleanup (completed 2026-11-11).** Admin now has a searchable,
+  20-per-page Parents directory and detail with linked-child context and
+  bulk-computed term-fee status; Admin-only reset/email/link/unlink actions
+  reuse the one-time credential, session-revocation, assignment-link and audit
+  paths. Heads are read-only within their Sections, Bursars are school-wide
+  read-only, and every other default role is refused. `view_parents` and
+  `manage_parent_accounts` are provisioned through the default-role catalog
+  and additive migration. Signed-out recovery copy is non-enumerating. The
+  full PHP 8.2 suite passed 269 tests / 3,313 assertions; final focused,
+  catalog and Blade compilation coverage passed 9 tests / 121 assertions. Guarded QA at
+  1280px and 390px passed page-two, three-child, reset/copy, email, link,
+  unlink, Head, Bursar and recovery flows with no page overflow or target below
+  44px. All QA artifacts were deleted and the persistent development database
+  fingerprint was unchanged. The separate `view_all_parents` grant keeps
+  school-wide Bursar access from widening a Head who also holds a payment
+  permission. Definition of Done met.
+
+- **Batch 4a — live result notifications, pending-Paystack safety, sign-in
+  cleanup and multi-Section verification (completed 2026-11-10).** Teacher,
+  Admin and Head result-attention links now use live role-scoped counts; recent
+  and stale Pending Paystack attempts have the approved staff warnings; Sign in
+  is concise; dashboard definitions use accessible tooltips; and incoming,
+  promotion and Section terminology work with an Early Years → Primary →
+  Secondary fixture. The PHP 8.2 suite passed 263 tests / 3,233 assertions,
+  production assets built, and guarded desktop/phone QA passed without overflow
+  or targets below 44px. The throwaway database, scripts and browser profiles
+  were removed, and the persistent development database fingerprint was
+  unchanged.
+
+- **Batch 3b — Parent email confirmation and Paystack pending-attempt recovery
+  (completed 2026-11-09).** Parent navigation now opens **My details**; changing
+  email requires the current password and sends a signed, single-use 60-minute
+  confirmation link. The address is immediately available for Paystack receipt
+  delivery, while password recovery remains unavailable until confirmation.
+  Existing addresses are backfilled as confirmed and school-provisioned
+  addresses are confirmed on creation. An email-less Parent is prompted inside
+  Pay online and continues without leaving the invoice flow. Payers can recheck
+  only their own pending attempt; Payments staff can check any and create an
+  audit entry. The 30-second per-attempt limit and one shared idempotent verifier
+  cover callback, webhook, manual and five-minute scheduled checks. The
+  scheduler processes at most 50 tenant-scoped attempts from 2 minutes through
+  48 hours old and logs aggregate counts only. Refund/reversal/dispute handling
+  remains unchanged and was report-only. The full PHP 8.2 suite passes at
+  **258 tests / 3,182 assertions**; focused Pint and the production build pass.
+  Guarded QA at 1280px and 390px passed My details, receipt-email prompting,
+  payer/staff Check again, overflow and 44px targets. QA files/scripts/profile
+  were removed, and the persistent development database fingerprint was
+  unchanged.
+
+- **Batch 3a: results authority, Section learner wording and Active-only Add
+  student (completed 2026-11-09).** Only the Teacher assigned to the exact
+  Subject/Class pair can enter, save or submit scores; Admin and Section-scoped
+  Heads review Submitted Results read-only, approve or reject with a required
+  reason, and the assigned Teacher sees that reason before editing and
+  resubmitting. CBT conversion remains an explicit system write. Sections now
+  choose Pupil or Student through `sections.learner_term`; existing
+  Nursery/Primary names backfill to Pupil and other/new Sections use Student.
+  One shared helper supplies contextual singular/plural wording, with Students
+  retained for mixed or Admin-wide scope. Add student no longer offers Status
+  and a forged status is ignored; direct creation is always Active. Guarded QA
+  covered the results review/rejection flow and key Primary/Secondary wording
+  at 1280px and 390px with no horizontal overflow; raw radio inputs were below
+  44px but their enclosing labels are the 44px interaction targets. QA data,
+  scripts, server and browser profile were removed, and the persistent
+  development database fingerprint was unchanged. The full PHP 8.2 suite
+  passes at **251 tests / 3,127 assertions**.
+
+- **Bug fixes batch 1 (completed 2026-11-08).** Teacher score entry now
+  preserves the current-Term and assigned-pair rules while every refusal is
+  visible; the pair page has clear template, upload/preview, Apply and Cancel
+  actions. Teachers without a form Arm no longer see Attendance actions or
+  navigation, while attendance managers retain them. One-time credential
+  controls copy labelled username/password lines with transient accessible
+  feedback and a select-text fallback. Production-safe 403/404/419/429/500/503
+  pages are in place; GET logout is harmless and GET requests to POST-only
+  routes render 404. Email recovery now accepts every active role with an email
+  and remains generic, deferred and non-queued. Staff-account selectors are
+  permissioned, bounded and exclude Student, Parent and Candidate roles,
+  including mixed-role portal accounts. No migration was required. Pint and
+  the production build pass; the full PHP 8.2 suite passes at **245 tests /
+  3,057 assertions**. Guarded QA at 1280px/390px passed the score, CSV,
+  attendance-visibility, credential-copy and error states with no horizontal
+  overflow or phone target below 44px. All QA data/scripts/profiles were
+  deleted and the persistent development database fingerprint was unchanged.
+
+- **CBT bulk question upload and guarded QA proof (completed 2026-11-08).**
+  Scoped Admin/Heads can download the fixed BOM CSV, preview row/column errors
+  without writes, and append an all-valid staged upload once to a Draft exam
+  with no attempts; shared question validation, the 200-question cap, private
+  expiry/cleanup, Section scope and one summary audit remain server-enforced.
+  The QA launcher now starts `php -S` with an explicit absolute SQLite path and
+  trusts it only after a stateless, non-production proof registered outside the
+  `web` middleware group returns that exact path. The proof created no session
+  and changed neither the QA hash nor session count; a deliberate path mismatch
+  returned HTTP 409/`FAIL`, exited 1 and stopped its child. Browser checks at
+  1280px and 390px passed template headings, row/column errors, clean preview,
+  append/publish, pupil multiple-answer selection, cross-Section Head 404 and
+  Teacher 403, with no overflow or target below 44px. QA data, staged files,
+  scripts and the browser profile were deleted. The full PHP 8.2 suite passes
+  at **240 tests / 2,953 assertions**; the persistent development database
+  SHA-256, size and modified time were identical before and after.
+
+- **Dev database hygiene after the QA isolation incident (completed
+  2026-11-07).** The exact Demo Student chain recreated during the incident was
+  removed from the persistent development database after a verified ignored
+  SQLite backup was taken. Its audit entry, issued-number history and next
+  registration counter were retained. Demo and Oakfield branding seeders are
+  now create-only and leave existing school, branding, arrangement, account,
+  role, pupil, candidate, fee and invoice values unchanged; the Demo Student
+  chain is created only when the school has no pupils. QA and browser setup now
+  goes through `qa:prepare`, which accepts only an absolute project
+  `database/qa.sqlite` path, refuses production and the persistent development
+  database, prints and verifies the resolved connection before migration or
+  seeding, and can serve the same isolated process. Launcher verification
+  returned HTTP 200 and logged the exact QA path; the throwaway file was
+  deleted and the development database size/timestamp did not change. Focused
+  checks pass at **4 tests / 31 assertions**; Pint and the full PHP 8.2 suite
+  pass at **233 tests / 2,837 assertions**.
+
+- **Phase 5 pagination and performance fixes (completed 2026-11-06; Phase 5
+  remains owner-sign-off only).** Staff-account and Parent-account pickers now
+  use permissioned, role-filtered searches requiring two characters and
+  returning at most 20 rows. Fee items and schedule lines paginate independently
+  at 20 rows. CBT live progress derives counts/status in SQL, paginates 25,
+  fetches only current-page attempt/grant detail, and refreshes every 10 seconds
+  while visible and not editing. Dashboard attendance dates use indexable ranges,
+  the duplicate Student CBT question count was removed, and CBT creation now
+  chooses the class before showing only its `class_subjects`. A 1,500-pupil,
+  120-staff QA fixture measured Admin 39, Head 51, Bursar 15, Teacher 25,
+  Student 60 and Parent 59 dashboard queries with no row-driven N+1; CBT live
+  progress improved from 63.06 ms to 23.78 ms total database time and an
+  attendance date lookup from 1,532.76 ms to 5.39 ms. The full suite passes at
+  **224 tests / 2,765 assertions** and the production build passes. Headless
+  1280px/390px checks passed Staff HR, Assignments, both Fee paginators, CBT's
+  assigned/no-subject states and live-progress refresh/pause with no horizontal
+  overflow or visible target below 44px. All QA files, scripts and profiles were
+  deleted.
+
+- **Promotion 5c — registration-number movement and Incoming allocation
+  (completed 2026-11-05).** Promotion preview now shows each old → new number
+  and calls out a clash adjustment. Promotion, single-pupil movement and
+  Incoming acceptance use one policy-aware allocation path with stored
+  sequence/year/code metadata, transaction-locked school/prefix counters,
+  permanent history and actor-snapshotted audit entries. Placement and number
+  changes commit atomically; missing destination codes refuse Incoming
+  acceptance without partial state. Keep-whole, keep-digits, new-prefix,
+  same-scope retention, rollback, idempotency and graduate/leaver retention are
+  covered. Issued invoices retain their registration-number snapshot. The full
+  PHP 8.2 suite passes at **207 tests / 2,614 assertions**; focused post-format
+  checks pass at **27 tests / 197 assertions**. Isolated 1280px/390px browser
+  checks passed promotion clash preview/apply and Incoming preview/acceptance
+  with no horizontal overflow; phone controls had no target below 44px. The
+  throwaway QA database and helper scripts were deleted.
+
+- **Phase 6D-2 — Section-scoped Head Staff (completed 2026-11-04).** Heads
+  now have a permission-gated Staff list and detail for the union of their
+  assigned Sections. One reusable scope includes current staff through direct
+  `section_user`, class/subject teaching assignments or form-teacher arms,
+  while excluding Admin/broad-section accounts and every Head Staff permission
+  holder. Lists are searchable and paginated 25 per page; guessed or otherwise
+  out-of-scope ids return 404. The detail payload is an explicit allow-list of
+  profile, Section, teaching and discipline data and never loads salary,
+  private documents, exits or editable employment details. Heads can append
+  Query, Warning and Commendation entries in scope; views write the sensitive-
+  access audit and records force the signed-in Head as issuer plus a general
+  audit snapshot. `view_section_staff` and `record_section_discipline` are
+  Principal defaults delivered additively to existing roles. Focused checks
+  pass at **6 tests / 52 assertions**; the full PHP 8.2 suite passes at
+  **193 tests / 2,454 assertions**. Browser QA at 1280px and 390px confirmed
+  list, search, detail, discipline form and out-of-scope 404 with no horizontal
+  overflow or sub-44px target; the throwaway database, server, scripts and
+  browser profile were removed. Pint and the production Vite build pass.
+
+- **Phase 6D-1 — staff sign-in shutdown and Admin Activity log (completed
+  2026-11-04).** Admins can disable or re-enable staff sign-in from Staff
+  access; self-disable and disabling or exiting the last active School Admin
+  are refused. Disable and immediate Staff HR exit revoke database sessions
+  and remember tokens, while re-enable restores sign-in without changing the
+  employment record. Exit dates are limited to today or earlier. The new
+  Admin-only Activity log is newest-first, paginated 25 per page, rendered in
+  Africa/Lagos time, and filterable by date, module and person; legacy entries
+  without actor snapshots display “Unknown user”, and audit metadata is not
+  exposed. The additive role catalog/migration grants `view_activity_log` only
+  to School Admin. Focused and related trust checks pass; the full PHP 8.2
+  suite passes at **187 tests / 2,393 assertions**. QA at 1280px and 390px
+  confirmed the Staff access list and confirmation flows, Staff HR exit
+  warning, and Activity filters have no horizontal overflow or sub-44px
+  targets; the throwaway database, server, scripts and browser profile were
+  removed. Pint and the production Vite build pass.
+
+- **Composer advisory fixes (completed 2026-11-04).** Livewire was minimally
+  updated from 4.4.7 to 4.4.8 and Symfony Mime from 7.4.19 to 7.4.22; no other
+  dependency moved, the PHP platform remains pinned to 8.2.0, and no published
+  Livewire assets required refreshing. `composer audit` is clean. Pint and the
+  production build pass; the full PHP 8.2 suite passes: **182 tests / 2,317
+  assertions**.
+
+- **Teacher pair-scoped score CSV (completed 2026-11-04).** Each authenticated
+  Teacher assignment now provides a BOM UTF-8 roster template bound by a plain
+  Subject/Class/Term comment, with current registration numbers, reference-only
+  names and the resolved assessment components. Existing Draft/Rejected scores
+  are prefilled; blank score rows are skipped. Uploads receive a plain,
+  all-or-nothing preview and a 30-minute single-use staged file bound to the
+  same user, pair and Term. Apply revalidates current registration, active
+  Class membership, template maxima and Result locks, then saves through
+  `ResultWorkflow` in one transaction and writes one bulk audit entry. The
+  legacy raw-ID import remains refused to Teachers. The sole unnumbered Demo
+  Student and its explicitly demo finance/dependent chain were removed from
+  the development database under the owner's deletion authority. Isolated
+  browser QA covered the upload/error state at 1280px and 390px with no
+  horizontal overflow or sub-44px controls; the QA database, staged uploads
+  and browser process were removed. Pint and the production build pass; the
+  full PHP 8.2 suite passes: **178 tests / 2,298 assertions**.
+
+- **Teacher Results workspace (completed 2026-11-03).** Teachers now land on
+  current-Term **Subject · Class** assignment cards with active-pupil and
+  Draft/Submitted/Approved counts, then a paginated all-arm roster and a
+  route-bound score-entry screen using the resolved template's real components.
+  Form teachers additionally receive an exact-arm **My class** view of approved
+  compiled cards; ordinary subject teachers and other-arm form teachers are
+  refused server-side. Admin and Head Results workspaces are unchanged. The
+  legacy raw-ID CSV import was hidden and refused to Teachers because it had no
+  registration-number roster/preview contract; the pair-scoped workflow in the
+  entry above supersedes that earlier gap. Isolated browser QA passed the landing, pair,
+  score-entry and My class pages at 1280px and 390px with no horizontal overflow
+  or sub-44px controls; all QA data and browser profiles were deleted. Focused
+  Pint and the production build pass; the full PHP 8.2 suite passes:
+  **174 tests / 2,250 assertions**.
+
+- **Fixes batch A (completed 2026-11-03).** Today's Afternoon attendance now
+  opens for form teachers at the shared 12:00 Africa/Lagos boundary, with the
+  direct write and the roll UI enforcing the same rule while
+  `manage_attendance` retains its existing bypass. Class create/rename and the
+  app's demo-seeding path enforce trimmed, case-insensitive school-wide names.
+  Failed Paystack initialisation returns the payer to the invoice page with a
+  plain error, leaves the invoice unpaid and marks its attempt Failed; gateway
+  connection checks distinguish missing keys, rejected credentials and network
+  failure without exposing keys. Isolated browser QA at 1280px and 390px on
+  the Attendance roll and Student invoice page passed with no horizontal
+  overflow or sub-44px controls; QA data was deleted. Pint, the production
+  build and the full PHP 8.2 suite pass: **168 tests / 2,177 assertions**.
+
+- **Teacher access part 1 (completed 2026-11-03).** Compiled report-card
+  show/PDF access and the embedded broadsheet now allow only the exact arm's
+  form teacher or existing Admin/Head permissions within Section scope; a
+  class-level subject assignment no longer grants access or card-list
+  visibility. Results, E-Notes and Assignments share the **Subject · Class**
+  label. Teacher E-Note upload/filter and Assignment creation expose only
+  assigned pairs, with forged pairs still refused server-side. The Teacher
+  dashboard lists every form arm and assigned pair instead of silently using
+  the first. Isolated browser QA at 1280px and 390px passed on Dashboard,
+  Results, E-Notes and Assignments with no horizontal overflow or sub-44px
+  controls; QA data was deleted. Pint, the production build and the full PHP
+  8.2 suite pass: **165 tests / 2,133 assertions**.
+
+- **Recovery outcome logging (completed 2026-11-03).** Every valid
+  forgot-password request now writes exactly one account-neutral outcome line:
+  `queued_for_send`, `sent`, `send_failed`, `no_matching_account`,
+  `account_has_no_email`, `not_eligible`, or `throttled`. Transport failures
+  retain only the scrubbed exception class/message, while identifiers, email
+  addresses, usernames, tokens and reset links never enter the line. Every
+  branch returns the same generic redirect and browser message. Deployment
+  guidance now explains how to read the outcome before testing mail delivery.
+  Focused recovery tests pass (11 tests / 161 assertions); Pint and the full
+  PHP 8.2 suite pass: **163 tests / 2,086 assertions**.
+
+- **Batch 6C hand-testing corrections (completed 2026-11-03).** Student
+  import now separates the staff-facing Class and Arm columns, derives
+  Section/Level, accepts a blank Arm only for a one-Arm Class, and reports
+  every Section / Level / Class path when a repeated Class name is ambiguous.
+  The school-scoped Class/Arm table with Copy controls replaces the text
+  download. Import, Add student, Student/Parent reset and Staff credentials
+  share an A4 two-by-four slip layout with dashed cut lines and transient
+  Print / Save as PDF only; the credential spreadsheet was removed. The
+  import print-visibility fault was the old CSS selecting only
+  `#credential-panel`. A 50-pupil isolated-QA run rendered all 50 slips and a
+  seven-page PDF at 1280px/390px without overflow; Add student and Staff slips
+  also passed, and QA data was deleted. Guest recovery eligibility, tenant
+  resolution, throttling and deferred sending passed; the configured SMTP
+  attempt reached the deferred callback but this tool environment blocked the
+  outbound socket, while the array transport delivered. Production assets,
+  Pint, Blade compilation and the full PHP 8.2 suite pass: **163 tests / 2,049
+  assertions**.
+
+- **Batch 6C duplicate/cap/cleanup follow-up (completed 2026-11-02).** A
+  confirmed CSV hash is refused within its school while unconfirmed, failed
+  and other-school files remain reusable. Same-normalized-name/class matches
+  now identify the existing pupil and require a server-enforced **Create
+  anyway** acknowledgement; exact duplicates alone remain skipped. Added the
+  original canonical class-list download (replaced on 2026-11-03 by the
+  embedded Class/Arm table), a real class in the template sample, and the
+  runtime effective-cap formula driven by web `max_execution_time` and the
+  host-measured `STUDENT_IMPORT_SECONDS_PER_ROW`. Expired source uploads are
+  removed hourly through the registered Laravel scheduler. PHPunit uses cost
+  4 for temporary credentials except one cost-10/12-character production
+  guard; full-suite time fell from 293.50 to 240.77 seconds. Application
+  E-Note/portal/Staff downloads now prove permission and tenant refusal;
+  Livewire previews and Laravel local private storage prove signed bearer URL
+  enforcement. Browser QA at 1280px/390px covered the hash refusal, warning
+  and acknowledgement, the then-current class-list download and cap line with no overflow and
+  no sub-44px phone target; QA data was deleted. Pint, production build, and
+  the full PHP 8.2 suite pass: **159 tests / 2,013 assertions**.
+
+- **Batch 6C: synchronous all-or-nothing Student import (completed
+  2026-11-01; column contract superseded 2026-11-03).** Admins with
+  `create_students` can download the fixed UTF-8 CSV template, check the whole file without creating accounts,
+  review every row/column error, and confirm through the existing Add student
+  service in one transaction. Confirmation revalidates, is idempotent, rolls
+  back users, pupils, invoices and registration counters together, numbers in
+  file order, shares Parents only by the approved username/email rules, skips
+  exact duplicates only, and deletes the private source file after Confirm or
+  24 hours. The retained tenant/owner-scoped report stores no passwords;
+  credentials exist only in the first no-store response and browser-built
+  print/download. The measured 50-row run completed in 13.00 seconds on PHP
+  8.2; the 1 MB file limit and configurable 50-row cap are displayed and
+  enforced. Browser QA at 1280px and 390px covered upload, errors, review,
+  confirm, report, download, return and cap states with no horizontal overflow
+  and no sub-44px phone controls; all QA files were deleted. Pint and the
+  production build pass; full suite: **152 tests / 1,968 assertions**.
+
+- **Account-recovery hardening mini-task (completed 2026-11-01).** Recovery
+  email now uses Laravel's in-process deferred callback after the response,
+  never a queued job. Forgot/reset pages send `no-referrer` and `no-store`;
+  failed transport diagnostics retain only the exception class and scrubbed
+  message while the browser keeps the generic response. Added the credential-
+  safe `oakfield:mail-test` command and deployment checklist step. Parameterized
+  named-route smoke coverage now uses real Payment, Result, Staff, Admission,
+  Assignment, Student, Attendance and CBT records. Token-absence checks cover
+  audit rows, notifications, session/flash, jobs and logs. Pint and the
+  production build pass; full PHP 8.2 suite: **146 tests / 1,895 assertions**.
+
+- **Payments approvals regression guards and Batch 6 account recovery
+  (completed 2026-11-01).** Fixed the invalid two-statement inline Blade
+  directive on the manual-payment approval queue. Added a database-free
+  compiler/PHP parser check for every Blade view, a six-role smoke check for
+  every named parameter-free GET route, and pending-payment rendering coverage
+  for approvals, record payment and Invoice detail. Added non-enumerating,
+  IP/identifier-throttled Admin email recovery with tenant-scoped hash-only
+  single-use 60-minute tokens, synchronous non-log mail, shared password rules,
+  session/remember-token revocation, audit and other-Admin notices. Student and
+  Parent Account pages now expose only own/linked profile data and reuse the
+  throttled current-password service. The console break-glass command resets
+  only an Admin and prints its must-change temporary password once. Isolated QA
+  verified the approval queue as Admin/Bursar and every recovery/portal state
+  at 1280px/390px with no page overflow and no phone target below 44px; the
+  throwaway database, profiles and screenshots were removed. Pint and Vite
+  pass; full PHP 8.2 suite: **142 tests / 1,835 assertions**.
+
+- **Batch 6 UI follow-up: navigation, Staff HR, Admission requirements
+  override reason and mobile tap targets (completed 2026-11-01).** Admin
+  payment destinations are grouped beneath Payments with permission-filtered
+  children, phone More has nested groups and Back, and the fixed tab sets are
+  unchanged. Staff account/employment labels and links now agree; employment
+  role title, contract type and date are editable and audited while status
+  remains Exit-only; salary uses exact naira-to-integer-kobo conversion. D15
+  requires a 10–500 character reason, retains it in Candidate history and the
+  generic audit, and explains that unticked items remain outstanding. The
+  demo-number command now makes dry-run writes transactional and rolled back;
+  Livewire is pinned to installed major 4 (4.4.7). Reissued Batch 6 design
+  status text was reconciled without changing the two unrelated design briefs.
+  Isolated Admin/Head browser QA at 1280px/390px and sidebar checks at
+  1366×650/720/768 passed with no page overflow and no effective target below
+  44px; brand and Sign out stayed pinned while navigation scrolled. QA data,
+  screenshots and browser profiles were removed. Composer validation, Pint,
+  Blade compilation and Vite pass; full PHP 8.2 suite: **132 tests / 1,420
+  assertions**.
 
 - **Batch 6B follow-up: registration-number visibility and payment search
   (completed 2026-10-31)** — The current number now appears, when present, on
@@ -856,10 +1309,11 @@ this repository.
   `php -d extension=gd vendor/phpunit/phpunit/phpunit`; production PHP must
   also enable GD for PNG logos.
 - **CBT** — tenant-scoped exam types, exams, questions/options,
-  attempts/answers, staff authoring and publish UI, candidate/student
+  attempts/answers, permission- and Section-scoped authoring and publish UI,
+  candidate/student
   sitting UI with a server-enforced timer, automatic marking, 40/50→56/70
   Results component conversion, Immediate/Scheduled/Manual release policies,
-  distinct release approval permission, server-side show-score/answer flags,
+  direct Head/Admin release, server-side show-score/answer flags,
   and verified entrance outcome integration with Admissions are built.
   Scheduled entrance outcomes sync through the existing cron scheduler; the
   Phase 1 manual outcome fallback is rejected when a published entrance CBT
@@ -953,17 +1407,229 @@ this repository.
   status (1 test / 23 assertions). Full suite: 11 tests / 249 assertions;
   Pint and Blade cache pass.
 
-## In Progress
+- **Report-card comment modes and summary controls** — Principal and
+  Proprietor comments support independent Section-level single-default or
+  average-range modes, while typed pupil comments retain precedence. Admin can
+  set the printed Proprietor title; Heads configure Principal ranges only in
+  their assigned Section. Result templates control overall total,
+  average/overall percentage and exact-Arm position on staff web, PDF and
+  portal cards; all three switches default on and remain editable after use.
+  Focused coverage: 3 tests / 33 assertions. Definition of Done: full PHP 8.2
+  suite 171 tests / 2,210 assertions, Pint, production asset build and isolated
+  1280px/390px browser checks passed; both staff and portal PDFs returned 200.
 
-_None._
+- **Registration number format (completed 2026-11-04)** — The Admin page now
+  follows the four-step composition reference with a live preview, fixed
+  School / Section / Level / Year / Number order, retained codes, separator,
+  year style, next-number floor, generated movement examples, issued-number
+  warning and locked policy. One shared builder drives preview/allocation;
+  migration `2026_11_04_000100` maps every old effective prefix to a Level code
+  without rewriting issued numbers and widens full values/sequence keys. All
+  designed separators and two-digit years remain supported across manual/import
+  validation, search, CSV and printed views. Focused coverage passes (14 tests /
+  100 assertions); full PHP 8.2 suite passes (182 tests / 2,317 assertions),
+  targeted Pint and the production build pass. Isolated normal, numbers-issued
+  and missing-code browser states pass at 1280px/390px with no overflow or tap
+  target below 44px; the QA database/profile were deleted.
+
+- **CBT scoping (completed 2026-11-04)** — one reusable scope now protects
+  every CBT management list and id: Admin is school-wide, Heads manage exams
+  linked to classes in any assigned Section, and classless/Entrance CBT remains
+  Admin-only. Draft-only, zero-attempt deletion, edit/question/publish/release/
+  close/attempt routes, and Section-scoped pickers are server-enforced. The
+  release-approval step was retired; CBT remains auto-marked only. New
+  `view_cbt_results` pages give Teachers closed-exam read-only scores and
+  per-question answers for assigned Subject/Class pairs, Heads Section-wide
+  access at any state, and Admin school-wide access. The additive role catalog
+  migration grants Principal management/results and Teacher results without
+  widening Bursar or removing custom permissions. Focused CBT/catalog coverage
+  passes (15 tests / 182 assertions); the full PHP 8.2 suite passes (199 tests /
+  2,537 assertions), Pint and the production build pass. Isolated Head,
+  Teacher and Admin browser checks pass at 1280px/390px with scoped 404s, the
+  deletion refusal, no horizontal overflow and no target below 44px; the QA
+  database/profile were deleted.
+
+- **CBT closing and Results conversion follow-up (completed 2026-11-05)** —
+  every exam now chooses automatic end-time closing or staff-ended closing;
+  one request-time rule protects pupil starts and Teacher result visibility,
+  while an in-progress pupil retains the existing per-attempt timer. Scoped
+  Heads/Admin can end early through a confirmed, audited action. Only School
+  exam scores may be previewed and explicitly converted into the linked Draft
+  Results component: Draft values are replaced, locked/non-Draft Results and
+  pupils without submitted attempts are listed and skipped, and one generic
+  audit retains counts and previous values. Focused CBT coverage passes (17
+  tests / 191 assertions); the full PHP 8.2 suite passes (203 tests / 2,592
+  assertions). Isolated 1280px/390px browser checks pass for the form, End
+  confirmation, conversion summary and Mock state with no overflow or target
+  below 44px; all QA data and profiles were deleted.
+
+- **CBT 2 (completed 2026-11-05)** — automatic-close attempts now end at
+  the earlier of personal duration and exam deadline, while stay-open exams
+  retain the personal timer. One idempotent request-time lifecycle scores saved
+  answers for personal expiry, automatic closing, staff End and pre-conversion;
+  End reports and audits the submitted count. Scoped Heads/Admin have paginated
+  Active-pupil live progress across every Arm, and Teachers are refused. Admin
+  manages active/Feeds Results exam-type settings; conversion no longer depends
+  on the type name, used types cannot be deleted, and type changes are audited.
+  Focused CBT coverage passes (23 tests / 224 assertions); the full PHP 8.2
+  suite passes (213 tests / 2,653 assertions).
+  QA browser checks at 1280px/390px pass for live progress, End count, type
+  list/form and the feeds-off state, with no overflow or target below 44px;
+  `database/qa.sqlite` and temporary QA scripts were deleted.
+
+- **CBT resit (completed 2026-11-06)** — scoped Heads and Admin can grant or
+  withdraw one unused additional attempt for one pupil, with a required reason
+  and Africa/Lagos deadline. Attempts are separate and numbered; grant and
+  withdrawal are audited; used grants cannot be withdrawn; the latest submitted
+  attempt feeds Results while a still-writing resit leaves the earlier submitted
+  score in force. Progress derives Absent for closed exams with no attempt and
+  exposes All, Not started, Writing, Submitted and Absent filters. The focused
+  resit suite passed 7 tests / 66 assertions, the full suite passed 220 tests /
+  2,719 assertions, and Admin/Student checks at 1280px and 390px found no
+  horizontal overflow or tap target below 44px; all QA data and profiles were
+  deleted.
+
+- **CBT multiple-answer scoring (completed 2026-11-07)** — correct options now
+  carry whole-number marks and one answer state owns an atomically replaced set
+  of selected options. Single-answer questions remain radio choices;
+  multi-answer questions allow up to the correct-option count, award partial
+  credit without subtraction, restore saved ticks, and serialize rapid
+  autosaves. Submission, expiry and forced end use the same scorer; staff and
+  pupil reviews show selected/correct options and earned/available marks.
+  Questions lock after any attempt begins. The additive migration preserves
+  legacy weighted questions and copies legacy selections. Focused trust tests
+  pass 5 tests / 41 assertions; the full PHP 8.2 suite passed 229 tests / 2,806
+  assertions. Browser checks at 1280px and 390px passed authoring, validation,
+  selection limit, refresh restore and both reviews with no overflow or target
+  below 44px; the throwaway database, scripts and browser profile were removed.
+
+## In Progress
+- Bug fixes batch 2: implementation and automated verification are complete,
+  including bounded 200-row preview queries, handled Paystack failures,
+  Teacher draft/submit behavior, readable controls and UTF-8 source checks.
+  Guarded QA passed every behavior/layout check, but the unaccelerated Windows
+  CLI server still took **11.267 seconds** for the 200-row preview although the
+  preview service itself measured **0.188 seconds** (27 queries, about 15–18 ms
+  in the database). Keep this open until the owner enables OPcache or uses a
+  concurrent local server and confirms the full request is below two seconds.
+- Grade band editing fix: allow incomplete scales to be built and corrected
+  incrementally while retaining range, overlap, result-lock and submission
+  completeness enforcement.
 
 ## Next Up (see `PHASES.md`)
 
-1. Batch 6C: all-or-nothing synchronous Student/Parent import.
-2. Batch 6D: Head Staff, Activity log, staff ticker events and disable sign-in.
-3. CBT bulk upload and guarded delete.
-4. Promotion 5c: registration-number reassignment and history.
-5. Final full-test pass.
+1. Batch 6D remainder: staff ticker events.
+2. Final full-test pass.
+
+## Landing page and admissions (planned)
+
+### Landing design decisions (2026-11-14)
+
+1. The public pages are built from `docs/design/landing`, with Build 1, 1.1 and 2 behaviour and tests intact.
+2. Anything the school has not supplied comes from Website settings and the school profile; empty values hide their line or block and live pages never show supply/placeholder/confirm markers.
+3. The Leadership section is hidden entirely for now; its Blade partial exists but is not included.
+4. Photos are generated once as responsive WebP files at about 600px and 1200px, with a 1920px hero variant when the original supports it; source JPG files are not served publicly.
+5. `public/.htaccess` adds module-safe compression, long caching for images and built assets, and short caching for pages; no CDN is used.
+6. Public SEO includes title, description, canonical, Open Graph and Twitter metadata built from `APP_URL`, plus a favicon and `robots.txt`.
+7. The design's `home.js` loads on Home only; Apply, Status and Privacy have no animation script.
+8. Application status keeps the Build 1 eight-second refresh bounded at 176 seconds; only its styling changes.
+9. Header and footer use one configured logo path; the 447px reference remains until the SVG arrives.
+10. The admissions hall photo is cropped lower so desks, rather than the ceiling, remain prominent.
+
+1. Registration is one public parent/guardian Application per child, with no
+   document upload. It creates neither a User nor Candidate account in Build 1.
+2. Admin switches admissions open or closed; a closed public page shows only
+   **Admissions are closed** and refuses submission.
+3. Admin switches the application fee on or off and stores its naira amount as
+   integer kobo. Fee-on Applications go to Paystack; fee-off Applications are
+   Registered immediately.
+4. Application statuses are **Awaiting payment**, **Registered** and
+   **Expired**. Registered means the school has the Application and fee; login
+   details are issued later at school on exam day.
+5. The Application is saved before Paystack. The submitting browser receives a
+   two-hour absolute, non-renewing, HttpOnly, SameSite=Lax `/apply` cookie,
+   Secure per configuration, containing only an opaque token whose hash is
+   stored. It is cleared by **Not you? Start a new application**. A signed link
+   valid until unpaid expiry provides status-only access without the cookie.
+6. Status shows only the child's first name and state. Awaiting payment reuses
+   one reference after verifying; Still confirming says not to pay again and
+   offers a 30-second-limited Check again; Registered explains that exam details
+   follow and credentials are handed out at school; Failed is shown only when
+   Paystack reports failure; Expired offers a new Application. Unconfirmed pages
+   refresh every 5–10 seconds for up to three minutes.
+7. Callback, webhook, Check again, scheduled re-check and Admin manual payment
+   use one row-locked idempotent finalizer. It verifies reference, NGN and amount,
+   registers once and sends one confirmation; late older success is retained and
+   flagged for Admin.
+8. The required parent-chosen username uses existing normalization and format,
+   is unique across Users and live Applications, refuses staff/system-like
+   names with a generic rate-limited message, and is released on expiry/delete.
+9. Unpaid Applications expire after seven days. A daily purge deletes those
+   without unresolved or last-48-hour payment activity and logs counts only.
+10. Consent is required and versioned. `/privacy` uses Admin-edited text with a
+    clearly marked default placeholder. The public form has a honeypot and
+    throttle.
+11. Bursar Payments shows read-only Application-fee attempt reference, amount,
+    status and date; it never enters tuition arrears or portal Fees.
+12. Admin has a 20-row paginated searchable/filterable Applications list and a
+    detail with reasoned audited manual payment, email resend and guarded delete.
+13. `/admissions/register` redirects to `/apply`; the existing Candidate
+    pipeline remains untouched for the later account-creation build.
+14. Submit validates and saves the Application, queues its status cookie, then
+    calls Paystack. Application email is deferred until after the response;
+    scrubbed mail failures never change the Application status or response.
+15. A matching unpaid, unexpired Application resumes only when the guardian
+    email also matches case-insensitively: saved details win, no duplicate is
+    created, and status says **You already started this application. Continue.**
+    Different-email, paid and expired matches retain the unavailable-username
+    response.
+16. Admin navigation groups **Applications**, **Exam sessions** and
+    **Admission settings** beneath **Admissions**. Candidates and Entrance
+    exams remain outside this Build 1.1 group pending Build 2.
+17. Applications provides counted **All**, **Paid**, **Unpaid**,
+    **Awaiting date** and **Expired** tabs. Registered is Paid; Awaiting
+    payment/Still confirming are Unpaid; Awaiting date is paid without a
+    session.
+18. Exam sessions have a name, date/time, venue note and in-person flag. Admin
+    may make one school-wide or Section-specific; a Head is limited to their
+    assigned Section and sees its Applications read-only.
+19. Assigning or moving an applicant sends session details once after the
+    response. Editing date/time/venue asks whether to email every assigned
+    applicant (default yes); removing an applicant sends no email.
+20. A paid applicant's cookie or signed status page shows only session name,
+    date, time and venue in addition to the existing first-name/status view;
+    an unassigned applicant retains the existing exam-date message.
+21. Applicants get **no login until exam day**. Admin creates accounts per exam
+    session and prints one-time cut-out credential slips; credentials are never
+    emailed.
+22. A candidate slip shows the school, child, session details, username,
+    one-time readable password, sign-in address and a short instruction. The
+    password has no look-alike characters, is stored only as a hash and appears
+    only in that in-memory PDF.
+23. Candidates are **not** forced to change their password.
+24. Account creation uses the username chosen on the application. A username
+    clash skips that applicant with a reason while the remaining selected
+    applicants continue.
+25. Entrance exams link to one or more Levels. Candidates see exams for their
+    applied Level only on their session date and inside the exam live window;
+    an exam with no linked Level remains visible to all candidates with a clear
+    warning.
+26. Levels may be marked **Assessed in person**. Those applicants still receive
+    sessions but receive no candidate account or online entrance exam.
+27. A Head for the applicant's Section or an Admin records Recommended, Not
+    recommended or Undecided plus an optional note of at most 500 characters;
+    the online score is read-only and Heads cannot manage accounts, payments or
+    deletion.
+28. Conversion keeps the candidate login for the Student and requires one
+    password change. The application guardian is linked to an existing Parent
+    with the same email or receives a new unconfirmed Parent account and a
+    one-time cut-out slip; credentials are never emailed.
+29. An application payment attempt older than the configured 30 minutes is
+    verified once, then released and replaced if still unpaid. A later success
+    for the old reference still finalises exactly once without double credit.
+30. **Website settings** is one plain Admin page for landing-page contact and
+    admissions text. Leadership names and portraits remain part of the later
+    landing-page build.
 
 ## Deferred polish (attendance)
 
@@ -992,10 +1658,6 @@ _None._
 - Duplicate a template as a starting point for a new one.
 - Refine the Head Result configuration screen against the design agent's Head
   variant when that reference is delivered.
-- The Head phone More design includes Staff, but no Section-scoped Head Staff
-  page or permission has been delivered. The navigation definition exposes it
-  only to a Head who independently holds `manage_staff_records`; ordinary
-  Heads do not receive access to the Admin Staff HR page.
 - Session and Term delete sheets remain generic until the server returns the
   relevant blocking counts.
 
@@ -1015,14 +1677,8 @@ _None._
 
 ## Deferred polish (accounts)
 
-- Student and Parent Account pages follow their design in a later Batch 6
-  part; the shared change-own-password service is ready for them.
-- Self-service forgot-password follows the delivered design later. Current
-  recovery remains an Admin-issued one-time temporary password.
-- Staff HR fixes remain for Batch 6D: label the date and file inputs; present
-  salary in naira rather than kobo; correct the salary form/table at 390px;
-  add an edit route for an employment record; remove the duplicate “Add staff”
-  action; and link a newly created account to its Staff HR record.
+- Discipline entries are append-only. A mistaken entry cannot be edited or
+  deleted; its correction is recorded as a new entry.
 
 ## Student Design Batch 2 Verification Gate (2026-10-10)
 
@@ -1202,10 +1858,80 @@ Phase 4 exit criteria are verified below for historical handoff context.
 
 ## Decisions Log
 
+| 2026-11-13 | **Phone and tablet header school name:** show the full school name, wrapping to at most two compact lines or reducing its size as needed; do not truncate it, overflow the viewport or reduce any control below 44px. | Owner decision: Batch 6A Part A |
+
+| 2026-11-11 | **Batch 5 small fixes:** live Results attention no longer occupies the desktop sidebar; dashboard and phone content banners remain. The bell count is the live Results count plus stored unread notifications, is hidden at zero, and its page lists both sources with links. The sidebar brand shows the full school name, while Bulk subjects, Teacher assignments and Promotion use distinct book, checklist and upward-arrow icons. CBT Question CSV now uses `Question`, Options A–F and `Correct Answer`; a lone letter uses the exam's configured single-answer upload mark, a lone `LETTER=mark` overrides it, and multiple letters require a whole-number mark for each. Comma/semicolon, case and spacing variants are accepted; invalid, duplicate or empty-option letters are refused. Both earlier 13-column formats remain readable but cannot be mixed. The template contains three delete-marked examples, preview/apply remains all-or-nothing with the 200-question cap and the Admin/Head page includes a short How to use disclosure. | Replaces the Batch 4a desktop-sidebar placement and the 2026-11-07 fixed-layout CSV decision without adding notification persistence or changing partial scoring. | Owner decisions: Batch 5 small |
+
+| 2026-11-11 | **Parents directory and account actions:** Admin gets a paginated Parents menu page searchable by parent or child, with each linked child's contextual learner word and all-term term-fee status. Admin alone may reset a Parent password, save an immediately confirmed unique email, and link/unlink children; each action is actor-snapshotted in the audit log and unlinking deletes only the pivot. Heads have Section-scoped read-only access with out-of-scope records returning 404; Bursars have school-wide read-only access. `view_parents` is granted to Admin, Principal and Bursar, `view_all_parents` only to Admin and Bursar, and `manage_parent_accounts` only to Admin, through the additive default-role catalog migration. Signed-out recovery pages disclose neither account/email existence nor eligibility and use only the generic confirmation “If an account matches, a reset link has been sent.” | Gives the office one bounded family directory while preserving child ownership, Section boundaries, one-time credentials and recovery privacy. | Owner decisions: Batch 4b |
+
+| 2026-11-10 | **Batch 4a live Results attention:** notifications are derived from current Result rows, store no notification/read state, and stay hidden at zero. Teachers see Rejected Results only for assigned Subject/Class pairs; Admin sees Submitted Results school-wide; Heads see Submitted Results only in assigned Sections. The same bold link appears on dashboards and above navigation on every authenticated page. One item opens the Result; several open the filtered Rejected list; approvers open the existing Submitted list. | Gives each role an immediate, authorised correction/approval queue without another persistence model or redesigning Results. | Owner decisions: Batch 4a |
+| 2026-11-10 | **Batch 4a pending Paystack safety:** recording a manual payment shows a warning while a Paystack attempt less than 48 hours old remains Pending. An attempt still Pending after 48 hours is labelled **Not confirmed** for staff, leaves the invoice unchanged and retains **Check again**; no cancel action is added and the scheduled recheck window is unchanged. Settlement remains one-payment-per-invoice and idempotent. | Makes a possible in-flight payment visible without inventing a provider state or allowing double credit. | Owner decisions: Batch 4a |
+| 2026-11-10 | **Batch 4a sign-in and help:** the two username/account-office hints are removed from Sign in without replacement and authentication remains non-enumerating. Accessible hover/focus/tap tooltips are limited to genuinely unclear Admin/Head dashboard labels and never appear to signed-out visitors. | Keeps public authentication terse while preserving contextual help where staff figures need definition. | Owner decisions: Batch 4a |
+| 2026-11-10 | **Batch 4a Sections:** a school may have any number of Sections and Heads; incoming/promotion labels derive the previous Section rather than naming Primary, Section learner terminology is selected on creation, and each Section retains its configurable Head title. | Keeps the existing global class order, Section scope and registration codes usable for Early Years → Primary → Secondary and later structures. | Owner decisions: Batch 4a |
+
+| 2026-11-09 | A Parent may save an email from My details only after entering the current password. The new address is immediately usable for Paystack receipts, but password recovery stays disabled until the Parent uses the signed, single-use 60-minute confirmation link. | Separates receipt delivery from the stronger recovery trust boundary. | Batch 3b |
+| 2026-11-09 | Existing email addresses are backfilled as confirmed; email addresses set by school staff are confirmed immediately. | Avoids unexpectedly removing recovery access from existing and school-provisioned accounts. | Batch 3b |
+| 2026-11-09 | A payer may recheck only their own pending Paystack attempt; `manage_payments` users may recheck any attempt and every staff check is audit-logged. Manual rechecks are limited to once per attempt every 30 seconds. | Gives payers and finance staff visible recovery from delayed callbacks without exposing another payer's transaction. | Batch 3b |
+| 2026-11-09 | Callback, webhook, manual Check again and the scheduler use one idempotent Paystack verification routine. | Keeps settlement validation and race handling identical across all entry points. | Batch 3b |
+| 2026-11-09 | The scheduler rechecks Pending Paystack attempts from 2 minutes through 48 hours old every five minutes, at most 50 per run, tenant by tenant; logs contain aggregate counts only. | Recovers missed callbacks within cPanel limits without leaking references or producing unbounded provider traffic. | Batch 3b |
+| 2026-11-09 | Paystack refunds, reversals and disputes remain report-only for this batch; no refund state transition is built. | The owner requested visibility analysis without expanding settlement behavior. | Batch 3b |
+
 | Date | Decision | Reason | Source file |
 |------|----------|--------|-------------|
+| 2026-11-09 | **Batch 3a Results authority:** only the Teacher assigned to the exact Subject/Class pair may enter, save or submit scores. Admin and Head are read-only reviewers of Submitted Results (Admin school-wide; Head in assigned Sections), may approve or reject, and rejection requires a short reason that the Teacher sees before editing and resubmitting. CBT-to-Results conversion remains a scoped system action. | Separates human score ownership from approval authority even when an Admin holds every permission, while preserving the existing auditable CBT conversion. | Owner decisions: Batch 3a |
+| 2026-11-09 | **Section learner terminology:** every Section chooses `Pupil` or `Student`; existing Nursery/Primary names backfill to Pupil, all others and new Sections default to Student. One shared helper derives singular/plural and case from a Section, Class, Arm, Student or uniform scope; mixed/no-context and Admin-wide pages use Students. Internal Student roles, permissions, tables, routes and registration-number wording do not change. | Lets school-facing language follow the learner's Section without renaming stable technical identifiers or making mixed-scope pages ambiguous. | Owner decisions: Batch 3a |
+| 2026-11-09 | **New Student status:** Add student has no Status control, ignores a forged posted status and always creates Active. Existing import, admission, promotion and leaving workflows retain their own status transitions. | Prevents account creation from bypassing the established lifecycle while leaving later status changes in their dedicated workflows. | Owner decisions: Batch 3a |
+| 2026-11-08 | **Bug fixes batch 2:** external HTTP calls use about a 5-second connect timeout and 15-second total timeout and fail gracefully; PHP's execution limit is not raised. Teacher **Submit for approval** saves the entered scores and submits them atomically; Save draft remains, saved drafts reload, and buttons retain readable contrast. | Prevents one slow provider request from exhausting a shared-host request or blocking the single-worker development server, while making the Teacher score workflow reliable without redesigning it. | Owner decisions: bug fixes batch 2 |
+| 2026-11-08 | **Bug fixes batch 1:** a refused Teacher score save always explains why; error pages are friendly and never show a stack trace; GET requests to POST-only routes never sign anyone out; password reset by email is available to every active role with an email address; and staff selectors are staff-only, bounded and permissioned. | Restores the seven hand-testing paths without weakening current-Term, assignment, CSRF, tenant or role boundaries. | Owner decisions: bug fixes batch 1 |
+| 2026-11-08 | **Live QA database proof:** a QA server is trusted only after the launcher requests a QA-only, stateless endpoint registered outside the `web` middleware group and proves the exact absolute `database/qa.sqlite` path. The proof has no session, cookies, CSRF, authentication or database write and exists only for a marked non-production QA run. No login, fixture access or browser check starts before it passes; missing or mismatched proof stops the child. Every QA session records and compares the persistent development database SHA-256 hash, size and modified time; any difference is investigated and reported as an incident. | Prevents a child server from silently re-reading `.env` or a proof request itself from starting a database session, while detecting any persistent development-database change. | Owner decisions: finish CBT bulk upload QA isolation |
+| 2026-11-07 | **CBT question CSV upload:** Admin and Heads within their own Section may append up to 200 plain-text questions to a Draft exam with no attempts. The fixed 13-column CSV uses blank marks for wrong options and whole-number marks of at least 1 for correct options; one marked option is single-answer and multiple marked options set the pupil selection limit. Preview is all-or-nothing, stages privately for 30 minutes, applies once, preserves formula-leading characters as text, appends after existing questions and writes one actor-snapshotted audit entry. Teachers remain forbidden. | Gives schools a controlled bulk-authoring path without weakening CBT scope, question validation or attempt locks. | Owner decision: CBT bulk question upload |
+| 2026-11-07 | **Dev/QA isolation hygiene:** delete only the Demo Student dataset recreated by the QA incident while retaining its audit and registration-number reservation; never lower the registration counter. Demo seeding is create-only and creates the pupil/parent/invoice set only when no pupils exist. Browser QA starts through guarded `qa:prepare` with an explicit absolute project `database/qa.sqlite` path; it refuses production and the persistent dev database. Never migrate or seed `database/database.sqlite` for QA. | Preserves owner data and permanently prevents an omitted or unresolved QA database override from falling back to the development database. | Owner decisions: dev hygiene after QA isolation incident |
+| 2026-11-06 | **CBT multiple-answer scoring:** a question has at least two options, at least one correct and one wrong; every correct option has a whole-number mark of at least 1 and wrong options have zero. One-correct questions remain single-answer; multi-correct questions allow up to the number of correct options, award the sum of selected correct-option marks with no penalty, and count as answered after one selection. Question and exam totals are sums of correct-option marks. Autosave replaces the selection set; staff/pupil reviews show selected/correct options and earned/available marks. Questions, options and marks lock after any attempt starts. Existing weighted questions and stored scores are preserved, Results conversion remains percentage-based and Draft/Feeds-Results gated, and Teachers still do not manage CBT. | Adds partial-credit multiple choice without manual marking, negative marking, per-exam settings or weakened lifecycle/scope rules. | Owner decisions: CBT multiple answers |
+| 2026-11-06 | Phase 5 hardening uses bounded account search (minimum two characters, maximum 20), independent 20-row Fee item and schedule-line pagination, SQL-backed CBT live progress with a 10-second polling refresh, index-friendly exact attendance dates, and class-first CBT Subject choices backed by `class_subjects`. Whole-roster pages have an expected review threshold of 100 pupils per Arm but no enforced enrolment cap. | Closes the fresh pagination/performance findings without queues, websockets, packages or a new design. | Owner decisions: Phase 5 fixes |
+| 2026-11-06 | Accepted Phase 5 watch items are repeated Head/Student/Parent scope lookups; Results-configuration dropdowns; CBT question lists and attempt histories (review and enforce the expected 200-question maximum with bulk upload); Teacher CSV and Teacher Results summary for Arms approaching 100 pupils; and Invoice-detail adjustments. | These are bounded or fixed-cost today; review them at the stated scale instead of expanding this fix pass. | Owner decisions: Phase 5 fixes |
+| 2026-11-05 | **CBT additional attempts:** “Give another attempt” is the only resit/special-access mechanism for illness, absence, technical faults or late arrival. A scoped Head/Admin may give one class-exam pupil one future Africa/Lagos deadline with a required reason; Teachers cannot and Entrance/Draft exams are excluded. One unused grant at a time creates one separately numbered attempt and may be repeated over time; unused grants may be withdrawn, while used grants may not. Grants work after closing without reopening the exam, and their attempts end at the earlier of normal duration or the grant deadline in both closing modes. Prior attempts/answers remain immutable; the latest Submitted attempt counts (including Results conversion), while a still-writing resit leaves the prior Submitted score in force. Absent is derived for a closed exam with no attempt. Grant/withdrawal actions retain actor snapshots and reasons. | Provides one auditable exception path without per-exam resit settings, stored attendance states or weakened Teacher/Section scope. | Owner decisions: CBT resit |
+| 2026-11-05 | **Promotion 5c registration movement:** the locked school policy applies automatically with no batch/pupil override. A number changes only when an enabled Section/Level part changes: keep-whole retains it; keep-digits rebuilds from the stored sequence (never parsed text); new-prefix takes the next transaction-locked prefix sequence. A clash takes the next free destination-prefix value and is previewed/audited. Preview shows old → new; apply changes placement and number atomically. Incoming acceptance uses the same builder/counters and refuses missing destination codes atomically. Graduates/leavers retain their number and promotion authority is unchanged. Historical numbers remain reserved/audited; issued invoices retain their number snapshot; old-number search is not expanded by this task. | Makes promotion and Incoming acceptance obey the already locked format while keeping identifiers recoverable and race-safe. | Owner decisions: Promotion 5c; `docs/design/admin/specs/registration-movement-preview.md` |
+| 2026-11-04 | **Superseded in part 2026-11-05:** every exam defaults to “Close automatically at the end time” and may instead stay open until a scoped Head or Admin ends it. Ending is one-way and may happen early in either mode. Effective closing is the explicit Closed state or an elapsed end time in automatic mode, evaluated whenever the exam is read. The statement that an automatic-close attempt keeps its full personal duration was replaced by the deadline-cap decision above. | Makes closing reliable without depending on `schedule:run`; the later decision closes the late-starter gap. | Owner decisions: CBT closing/conversion follow-up; CBT 2 |
+| 2026-11-05 | **CBT timer and finalization:** an automatic-close exam caps each attempt at the earlier of personal duration and exam end; stay-open exams do not. Manual end, automatic deadline and personal expiry submit and score saved answers through one idempotent request-time routine, with no required job and the existing 30-second server grace retained. Scoped Heads/Admin get plain-refresh live progress for Active pupils in all Arms of the exam Class; Teachers remain forbidden. | Ensures late starters cannot write past the exam deadline and saved work is scored even when the pupil never presses Submit. | Owner decisions: CBT 2 |
+| 2026-11-05 | **CBT exam types and Results:** `exam_types.feeds_results`, not a type name, controls conversion. School exam is enabled; all other and legacy types default off. Admin alone creates/edits type name, active state and the setting; referenced types are deactivated instead of deleted. End exam, conversion and type changes retain actor-snapshotted audits. Pupil CBT screens are inventory-only in this task. | Removes fragile name-based behavior while keeping legacy Internal exams out of Results unless Admin explicitly opts in. | Owner decisions: CBT 2 |
+| 2026-11-04 | **Superseded in part 2026-11-05:** conversion remains a scoped, previewed action that replaces Draft component scores, skips Submitted/Approved/non-Draft Results and pupils without submitted attempts, never approves, and writes one actor-snapshotted audit. The exact-name “School exam only” gate was replaced by `exam_types.feeds_results` above. | Preserves the Results workflow while recording the later configurable eligibility rule. | Owner decisions: CBT closing/conversion follow-up; CBT 2 |
+| 2026-11-04 | **CBT management scope:** Teachers never manage CBT. `manage_cbt` gives Heads full create/edit/question/publish/release/close/guarded-delete access only for class-linked exams in their assigned Section(s); `view_all_sections` gives Admin school-wide access. Classless and Entrance CBT remain Admin-only, and a manually granted holder with no Section sees nothing. Default Principal roles gain `manage_cbt` additively; Teacher and Bursar do not. | One reusable server-side scope protects lists, forms and every id-based management action without relying on customisable role names. | Owner decisions: CBT scoping |
+| 2026-11-04 | **CBT lifecycle:** there is no release-approval step and no manual/theory marking. CBT remains auto-marked multiple choice. Heads and Admin publish and release directly. Only a Draft with zero attempts may be deleted; Published or Closed exams and any exam with attempts are retained. | Keeps the current automatic scoring model while making destructive behavior explicit and server-enforced. | Owner decisions: CBT scoping |
+| 2026-11-04 | **CBT result visibility:** `view_cbt_results` is granted by default to School Admin, Principal and Teacher. Teachers see read-only pupil scores and per-question answers only for closed exams in their assigned Subject/Class pairs; Heads see assigned Sections at any state; Admin sees school-wide. Form-teacher class-wide rights do not widen CBT access. | Reuses persistent teaching assignments and Section ownership for a least-privilege results view. | Owner decisions: CBT scoping |
+| 2026-11-04 | Normal Results keep their existing visibility and approval workflow: Teacher score entry is assigned-pair scoped, compiled cards/broadsheets are exact-Arm form-teacher scoped, and Head approval/card queues are Section-scoped; Admin remains school-wide. | Verification found no cross-pair or cross-Section exposure requiring a Results code change. | Owner decision and verification: CBT scoping |
+| 2026-11-04 | **Phase 6D-2:** a Head sees the union of current staff linked to any assigned Section by direct `section_user`, a subject/class teaching assignment, or form-teacher arm. Admins, `view_all_sections` holders and all Head Staff permission holders are excluded. `view_section_staff` permits the allow-listed profile/teaching/discipline pages; `record_section_discipline` permits append-only Query, Warning and Commendation entries in scope. Out-of-scope ids return 404. Heads never receive salary, private documents, exit data or editable employment fields. | Resolves the Head Staff multi-Section and cross-Section rules with one reusable server-side scope while keeping sensitive HR data unavailable. | Owner decisions: Phase 6D-2 |
+| 2026-11-04 | **Phase 6D-1:** an Admin may disable or re-enable staff sign-in without a reason; self-disable and disabling/exiting the last active Admin are refused. Disable and immediate, non-future Staff HR exit revoke all database sessions and remember tokens. Re-enable restores sign-in only. Every action stores the actor name/role snapshot. The Admin-only `view_activity_log` page is newest-first, 25 per page, shows Africa/Lagos time, actor, module and plain description, supports date/module/person filters, renders older missing snapshots as “Unknown user”, and provides no export, retention or deletion. | Makes account shutdown immediate and auditable while preventing school lockout and keeping employment state distinct from sign-in state. | Owner decisions: Phase 6D-1 |
+| 2026-11-04 | Dependency security updates use the smallest version bumps within the current Composer constraints. The platform remains pinned to PHP 8.2.0, and `composer audit` must be clean before go-live. | Removes known advisories without widening the runtime or framework upgrade scope. | Owner decision: Composer advisory fixes |
+| 2026-11-04 | Registration numbers are composed in fixed School / Section / Level / Year / Number order from any selected non-number parts; Number is always last. Separators are hyphen, slash, dot or none; padding is 3–6 and may grow; Year is the 2- or 4-digit Africa/Lagos calendar year at issue. School codes are 2–6 alphanumeric characters and Section/Level codes 1–6, upper-case and required when their part is active. Section codes are unique school-wide; Level codes are unique within Section, or school-wide when Section is absent. Issued and historical numbers never change or become reusable. The three movement policies and their lock remain; a policy has no effect without Section/Level. Next number may not be at or below the highest issued sequence. | Replaces fallback prefixes with one preview/allocation composition rule while preserving the existing school-wide or per-prefix transaction-locked counters and full-number uniqueness. Current consumers safely support every designed separator and the 2-digit year, so no option is dropped. | Owner decisions: Registration number format |
+| 2026-11-04 | The owner-authorised Demo Student without a registration number, its login and only its dependent demo rows are deleted from the development database. No real pupil may exist without a registration number, so no unnumbered-pupil CSV fallback is designed. | Makes current registration number the sole safe pupil identity for Teacher score CSV without introducing name/internal-ID matching. | Owner decisions: Teacher pair-scoped score CSV |
+| 2026-11-04 | Teacher score CSV identity is the current registration number; Subject/Class and current Term come from the route/page. The name column is reference-only. Line one must exactly name the pair and Term without IDs. A mismatch is refused, all validation is all-or-nothing, completely blank score rows are skipped, partial score rows are errors, and pupils omitted from the file remain untouched. | Prevents stale/wrong-context uploads and preserves the existing assignment, component-maximum and Result-lock rules through preview and apply. | Owner decisions: Teacher pair-scoped score CSV |
+| 2026-11-03 | The Teacher Results workspace is current-Term only: every persistent teaching assignment is one **Subject · Class** pair covering all arms and all active pupils in that Class; there is no pupil-level elective filter. A form teacher separately sees approved compiled cards only for each exact arm assigned to them. Admin and Head workspaces retain their existing Section-scoped queues. | Matches the approved Teacher information architecture while keeping every selector and route derived from authenticated assignments. | Owner decisions: Teacher Results screens |
+| 2026-11-03 | The proposed registration-number CSV workflow is not shipped yet. The existing importer accepts raw student/subject/term/component IDs, applies without a preview, and has no pair-bound generated roster; the dev database also has one pupil without a number. Teacher access to that legacy importer is server-refused while individual current-Term entry remains available. | The design explicitly requires the CSV path to be withheld when safe registration-number resolution, preview and complete roster numbering cannot be confirmed. | Owner decisions and backend verification: Teacher Results screens |
+| 2026-11-03 | Principal and Proprietor report-card comments independently use either the existing Section/Term single default or reusable Section/type whole-number average ranges; typed pupil text always wins. Range lookup rounds the approved-subject average half-up, permits gaps and returns no range comment when no range or no approved Result matches. Admin configures Proprietor ranges and a school-wide printed title; Heads configure Principal ranges only in their Section. | Adds controlled automatic wording without changing class-teacher comments or rewriting stored personalized comments. Range edits intentionally affect existing non-personalized cards just as default-comment edits do. | Owner decisions: report-card comment modes and summary switches |
+| 2026-11-03 | Result templates default to showing overall total, average/overall percentage and exact-Arm position; each display switch remains editable after Results use the template and applies consistently to staff web, PDF and portal cards. The embedded broadsheet and its exact-Arm competition ranking are unchanged. | Lets each Section control card summary presentation while preserving historical template selection and the established ranking calculation. | Owner decisions: report-card comment modes and summary switches |
+| 2026-11-03 | Today's Afternoon attendance opens at 12:00 Africa/Lagos for ordinary form-teacher marking; Morning remains open all day. The server enforces the boundary before writing, `manage_attendance` retains its existing bypass, and past/future-date behavior is unchanged. The noon boundary is one named value, not a setting. | Keeps the visible tab state and direct POST trust rule aligned without changing the established attendance date or management rules. | Owner decisions: Fixes batch A |
+| 2026-11-03 | Class names are trimmed and case-insensitively unique across the school on every application create/rename path; existing per-Level validation remains and no schema migration is added. | A Class name alone identifies its Section/Level context in current teacher-facing labels. | Owner decisions: Fixes batch A |
+| 2026-11-03 | Paystack initialisation and connection-test failures always return a plain reason. Initialisation failures leave invoices unpaid, convert the attempt from Pending to Failed and log only category, HTTP status and Paystack's response message; connection checks distinguish missing keys, rejected keys and network failure. Saved keys are trimmed. | Makes payer and Admin failures actionable without weakening secret handling, webhook verification or settlement rules. | Owner decisions: Fixes batch A |
+| 2026-11-03 | Compiled report cards and their embedded broadsheets are visible to the exact arm's form teacher, plus existing Admin/Head permissions within Section scope; a subject assignment alone grants no access. Teacher E-Note and Assignment forms use only assigned class/subject pairs, and teacher-facing pair labels use **Subject · Class** while an arm is appended only where the arm itself matters. Subject teachers cover every arm of their assigned Class. | Closes the class-wide report-card trust leak and gives teachers one consistent, scoped teaching context. | Owner decisions: Teacher access part 1 |
+| 2026-11-03 | **Superseded in part 2026-11-04:** pupil-to-subject enrolment remains deferred and every pupil is treated as taking every subject offered by the Class. The statement that CBT scoping was unchanged/held was superseded by the CBT Section and assigned-pair scoping work above. | Retains the class-wide pupil/subject limitation while recording the later CBT authorization build. | Owner decisions: Teacher access part 1; CBT scoping |
+| 2026-11-03 | Grade bands may be added, edited and deleted while a Grade scale is incomplete; only non-whole/out-of-range bounds, reversed ranges and overlaps are refused per operation. A scale becomes complete only when bands cover every whole mark from 0 through 100. Incomplete scales continue to block Result submission and name every uncovered range. Legacy decimal bands remain editable/deletable for correction, and any Result still locks the scale and its bands. | Allows an Admin to build or repair a scale incrementally without weakening grading completeness or historical locks. | Owner decision: Grade band editing fix |
+| 2026-11-02 | Student import uses nine columns: `full_name`, `class`, `arm`, `registration_number`, `username`, `email`, `parent_name`, `parent_username`, `parent_email`. Section and Level are derived. A unique ordinary Class name resolves directly; a repeated name requires one of the listed Section / Level / Class paths. Arm is separate and may be blank only for a one-Arm class. The upload page embeds a school-scoped Class/Arm table with Copy controls and has no text download. | Matches the terms staff use while making genuine naming ambiguity explicit and server-enforced. | Owner corrections after Batch 6C hand-testing |
+| 2026-11-02 | **Supersedes the credential CSV/download wording below:** all one-time Student, new-Parent and Staff credentials use one transient A4 print layout, eight slips per page, with dashed cut lines and one **Print / Save as PDF** action. Credentials remain only in the first no-store response and are never downloaded as a spreadsheet or stored. | Fixes blank import printing and makes the one-time handoff usable without creating another plaintext credential artifact. | Owner corrections after Batch 6C hand-testing |
+| 2026-11-02 | Student import only creates pupils; corrections happen on the Student page and CSV never updates an existing pupil. A confirmed file's SHA-256 is refused within that school. A non-exact normalized-name/class match warns with the existing identity and requires a server-checked **Create anyway** acknowledgement. | Prevents accidental repeat creation without treating a plausible namesake as an automatic duplicate or introducing an update-by-file workflow. | Owner decisions for Batch 6C follow-up |
+| 2026-11-02 | **Superseded in part 2026-11-02:** the import page provided a canonical class-label text download. The newer Class/Arm table replaces that download. The effective synchronous-cap rule and real template sample remain unchanged. | Preserves the cap decision while recording the hand-tested class-list correction. | Owner decisions for Batch 6C follow-up; newer correction above |
+| 2026-11-02 | Production hashing remains bcrypt with temporary cost 10 and 12-character generated passwords. PHPunit uses minimum bcrypt cost except one explicit real-cost timing guard. | Keeps production credential strength unchanged while avoiding repeated production-cost hashing across the test suite. | Owner decisions for Batch 6C follow-up |
+| 2026-11-01 | Student import is Admin-only under `create_students`, synchronous and all-or-nothing. Check creates no pupil accounts; Confirm revalidates and runs every Add-student operation in one transaction, is safe to repeat, numbers pupils in file order and keeps passwords out of queues and storage. The configurable initial cap is 50 rows and is shown and enforced. | Preserves the audited single-pupil workflow and makes rollback, duplicate-tab behavior and cPanel resource use predictable. | Owner decisions for Batch 6C |
+| 2026-11-01 | **Superseded in part 2026-11-02:** the original Student import CSV had eight columns without a separate Arm. The newer nine-column decision above replaces the column contract. Exact-duplicate and Parent matching rules remain unchanged. | Retains the duplicate/family decisions while recording the corrected Class/Arm contract. | Owner decisions for Batch 6C; newer correction above |
+| 2026-11-01 | **Superseded in part 2026-11-02:** Import credentials are shown only in the first Confirm response. The credential CSV download was removed; the browser now offers only the shared A4 Print / Save as PDF layout. Leaving the page retains the count/error report but permanently removes credential access. | Keeps temporary secrets transient without creating a downloadable plaintext credential spreadsheet. | Owner decisions for Batch 6C; newer correction above |
+| 2026-11-01 | Email-backed accounts support tenant-scoped self-service recovery, initially enabled only for accounts holding the configured Admin-only `view_all_sections` permission. Responses are non-enumerating and throttled by IP and normalized identifier. Reset links are hash-only, single-use, synchronously mailed, invalidate older links and expire after 60 configured minutes; the log mail transport never receives them. | Delivers recovery without leaking account existence or secrets and keeps the rollout controlled by one configuration value. | Owner decisions for Batch 6 account recovery |
+| 2026-11-01 | A self-service reset clears `must_change_password`, revokes sessions and remember tokens, audits the account as actor, confirms by email and notifies the other Admins without a password or token. Student and Parent Account pages use the shared current-password flow and show only own/linked profile data. | Reuses the established password and tenant-ownership services consistently across staff and portals. | Owner decisions for Batch 6 account recovery |
+| 2026-11-01 | `oakfield:reset-admin-password {identifier}` is the console break-glass path: it refuses non-Admins, prints one temporary password once, requires first-login replacement, revokes sessions and writes a Console actor snapshot. | Keeps recovery possible when email is unavailable without retaining or transmitting a plaintext secret. | Owner decisions for Batch 6 account recovery |
+| 2026-11-01 | Admin navigation groups its six payment destinations beneath Payments with permission-filtered children; Students remains in Daily ops and Registration numbers in Administration. Phone More uses nested groups with a Back control and hides unauthorized destinations. | Keeps related payment work together without changing permissions or the fixed phone tabs. | Owner decisions for Batch 6 UI follow-up |
+| 2026-11-01 | “Add staff” is “Create staff account”; Staff HR uses “Add employment record”, and account creation and Staff access link to the preselected employment form. Salary is entered/displayed in naira and stored as integer kobo. Employment role title, contract type and date are editable and audited; status changes only through Exit record. | Separates login creation from employment records, preserves exact money storage and keeps employment exits explicit. | Owner decisions for Batch 6 UI follow-up |
+| 2026-11-01 | An incomplete Admission requirements conversion requires a written 10–500 character Admin reason. The reason and outstanding count are retained in the audit trail, and Candidate history states that outstanding items remain unticked and conversion was approved by override. | Makes the D15 exception attributable and visible instead of silently bypassing incomplete requirements. | Owner decisions for Batch 6 UI follow-up |
+| 2026-11-01 | Every control touched by the Batch 6 UI follow-up has a minimum 44px phone target; Admin payment navigation children are hidden rather than disabled when permission is absent. | Applies the approved mobile-access and permission-disclosure rule consistently. | Owner decisions for Batch 6 UI follow-up |
 | 2026-10-31 | A pupil's current registration number appears on report cards, receipts, invoice detail and one-time sign-in slips. Record payment finds a pupil by the current number or any number in registration history, case-insensitively and within the school. | Keeps the identifier visible at the points where staff and families reconcile identity and preserves lookup after a number change. | Owner decision for the Batch 6B follow-up |
-| 2026-10-31 | Registration-number prefixes may be configured at School, Section and Level and resolve Level → Section → School. Number width is minimum zero-padding only: values grow beyond it without truncation, and format changes affect only future issues. Optional years use the calendar year at creation; a number never encodes Class/Level text and a Graduated pupil keeps the last number. | Defines stable, non-semantic identifiers that do not break when the sequence grows or the pupil moves. | Owner decisions and amendment for Batch 6 part B |
+| 2026-10-31 | **Superseded in part 2026-11-04:** Registration-number prefixes may be configured at School, Section and Level and resolve Level → Section → School. The composable-format decision above replaces that fallback rule. Number width remains minimum zero-padding only, format changes still affect only future issues, the year remains the calendar year at creation, and a Graduated pupil keeps the last number. | Defines stable, non-semantic identifiers that do not break when the sequence grows or the pupil moves. | Owner decisions and amendment for Batch 6 part B |
 | 2026-10-31 | The locked move-prefix choice is: keep digits/change prefix (Oakfield default), issue from the destination prefix's counter, or keep the full number. Choices 1 and 3 share one school counter; choice 2 uses one counter per prefix. Issued and historical numbers are never reused; Admin may advance but not rewind a counter. Prefix application during Promotion remains 5c. | Makes concurrency, movement and historical lookup deterministic without prematurely changing Promotion. | Owner decisions for Batch 6 part B |
 | 2026-10-31 | Admin may change any registration number; a Head may change only a current pupil in their Section; Awaiting-admission changes are Admin-only until Incoming/Promotion 5c. Every change writes registration history and the audit trail. | Keeps the mutable identifier recoverable and Section-scoped while the receiving-Section workflow is not yet available. | Owner decisions for Batch 6 part B |
 | 2026-10-31 | Admin-created and Admin-reset Student/Parent accounts receive one-time credentials and must set a password at first sign-in. Converted Candidates retain their chosen login and are not forced. One Parent family login may link to multiple pupils; linking an existing Parent creates no credentials. | Reuses the account foundation without replacing a Candidate's known secret or multiplying family accounts. | Owner decisions for Batch 6 part B |
@@ -1218,7 +1944,7 @@ Phase 4 exit criteria are verified below for historical handoff context.
 | 2026-10-31 | Import is synchronous and all-or-nothing; temporary passwords are never queued; the browser builds the download and it is never stored. “Skipped” means an exact duplicate only. | Prevents partial enrolment and avoids retaining plaintext credential files on the server. | Owner decisions for Batch 6 |
 | 2026-10-31 | Discipline entries are append-only; a correction is a new entry. A teacher belonging to both Sections is visible to both Heads with every discipline entry. | Preserves HR history while making dual-Section oversight explicit. | Owner decisions for Batch 6 |
 | 2026-10-31 | Students and Parents change their own password through the shared service. Self-service forgot-password is wanted for accounts with an email; accounts without one ask the school office. | Replaces the earlier omission/deferred-recovery wording with the approved recovery boundary. | Owner decisions for Batch 6 |
-| 2026-10-31 | Registration-number prefixes may be set at School, Section and Level; resolution is Level, then Section, then School. The school locks one of three choices for a pupil moving to a Level with a different prefix. Numbers are never reused or class-encoded; Admin may set the next number but never below the highest issued. | Replaces the earlier Secondary-renumbering and Section-prefix-only decisions with one deterministic numbering policy. | Owner decisions for Batch 6 |
+| 2026-10-31 | **Superseded in part 2026-11-04:** Registration-number prefixes may be set at School, Section and Level; resolution is Level, then Section, then School. The composable-format decision above replaces that fallback rule. The three locked movement choices, permanent no-reuse rule and next-number floor remain. | Replaces the earlier Secondary-renumbering and Section-prefix-only decisions with one deterministic numbering policy. | Owner decisions for Batch 6 |
 | 2026-10-27 | Staff role order is School Admin > Principal (Head) > Bursar > Teacher. Only Admin manages staff accounts; a changer cannot grant above their rank, and only Admin may grant unranked custom roles. A Head has exactly one Section, a Teacher one or more, and Admin/Bursar none. New usernames are 3–30 lower-case permitted characters, contain no `@`, and are school-wide case-insensitive; existing accounts are not backfilled. New generic audit rows snapshot actor id/name/role. Temporary passwords use a configurable lower hash cost while self-chosen passwords use the normal cost. | Establishes one reusable, server-enforced account foundation for the remaining Batch 6 work without changing existing email-only accounts. | Owner decisions for Batch 6 part A |
 | 2026-10-26 | A used Result template may be retired only between Terms, remains read-only historical configuration, and releases its scope for one active replacement. New Results ignore retired templates; existing Results retain them for editing, submission and report cards. There is no restore action yet. | Lets a school change configuration over time without rewriting historical Results or creating duplicate active scope choices. | Owner decision: Retire and replace Result templates |
 | 2026-10-26 | A Result template applies Section-wide, to one Level, or to one Class within a Level. Class wins over Level, which wins over Section-wide; at most one **active** template exists per scope. Results retain their stored template, so later or more-specific templates never alter existing Results or report cards. **The original all-time uniqueness wording is superseded by the Retire-and-replace decision above.** | Gives each Section a reusable default with narrow overrides while preserving historical scoring and printing. | Owner decision: Section-wide result templates |
@@ -1334,7 +2060,7 @@ Phase 4 exit criteria are verified below for historical handoff context.
 | 2026-10-03 | Assign score-entry users to a class/subject in Academics; Results settings managers may enter across assignments | Gives teachers server-enforced scope before Results entry is opened beyond school admins while retaining a practical admin correction path |
 | 2026-10-03 | Use `barryvdh/laravel-dompdf` for report cards, without a browser or persistent render process | Compatible with the pinned PHP 8.2/Laravel 12 stack and cPanel shared-hosting constraints; A4 output still needs measured verification |
 | 2026-10-03 | Keep personalized report-card comments nullable and resolve term defaults when compiling/rendering | Allows a later default edit to apply to non-personalized cards without overwriting a student's explicit remark |
-| 2026-10-03 | Treat CBT release as an exam-level policy: Immediate, Scheduled, or Manual, optionally requiring a distinct staff approval; internal exams link to a Results component and entrance exams to Admissions | Makes release checks re-evaluable on every fetch and avoids exposing an unreleased candidate outcome |
+| 2026-10-03 | **Superseded in part 2026-11-04:** CBT release remains an exam-level Immediate, Scheduled or Manual policy; the optional distinct staff-approval step was removed by the later no-approval decision. Internal exams still link to a Results component and entrance exams to Admissions. | Keeps release checks re-evaluable on every fetch while recording the later direct Head/Admin release rule. |
 | 2026-10-03 | Rank report-card positions by mean percentage of approved subjects only, sharing positions on equal averages and showing the approved-subject count | Keeps broadsheets derived from locked scores while making incomplete approvals visible rather than silently treating them as complete |
 | 2026-10-03 | Require PHP GD for deployment after adding PNG school logos to report-card PDFs | Dompdf needs GD to embed PNG files; preflight catches an unsupported host before switching releases |
 | 2026-10-03 | Limit CBT to one attempt per participant/exam, allow 30 seconds of submit grace, and ignore answers received after the deadline | Prevents repeated attempts or extra-time answer changes without requiring a persistent timer process; late blank attempts currently score zero |
@@ -1408,8 +2134,22 @@ silently:
 - Deploy the twice-daily attendance change outside school hours. An arm that
   was already marked as a whole day cannot be split into sessions for that
   day.
-- Configure outgoing email before the later self-service forgot-password flow
-  is enabled.
+- Configure a mailbox on the school's domain and set cPanel `MAIL_*` values in
+  the private production environment before enabling self-service recovery.
+  Run `php artisan oakfield:mail-test <external-address>` and confirm delivery;
+  the command must report a real delivery mailer and must not print credentials.
+  Verify the reset-link, password-changed and other-Admin messages with an
+  external mailbox; never use the `log` mailer for reset links.
+- Record the break-glass command in the operator runbook:
+  `php artisan oakfield:reset-admin-password <email-or-username>`. Its temporary
+  password is shown once and must not be copied into logs or tickets.
+- Measure Student import seconds per row on the production host and set
+  `STUDENT_IMPORT_SECONDS_PER_ROW`; confirm the displayed effective cap leaves
+  half of the web `max_execution_time` available for the rest of the request.
+- Configure cPanel cron to run
+  `php /home/CPANEL_USER/oakfield-sms/current/artisan schedule:run` every
+  minute. This also runs hourly cleanup of expired private Student-import CSVs
+  and the five-minute bounded Paystack pending-attempt recheck.
 
 ## External Gateway Proof Record
 
@@ -1422,6 +2162,6 @@ silently:
 
 ---
 
-_Last updated: 2026-10-31 — Phase 4 is complete; Phase 5 is substantially
-built but not formally complete. Batch 5 parts 1–4 are built; the remaining
-owner-ordered work is listed under Next Up._
+_Last updated: 2026-11-06 — Phase 4 is complete; Phase 5 is substantially
+built but not formally complete. Batch 6C and Phase 6D-1/6D-2 are built; the
+remaining owner-ordered work is listed under Next Up._

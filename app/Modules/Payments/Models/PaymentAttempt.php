@@ -10,11 +10,11 @@ class PaymentAttempt extends Model
 {
     use BelongsToTenant;
 
-    protected $fillable = ['invoice_id', 'reference', 'amount_kobo', 'initiated_by', 'authorization_url', 'status'];
+    protected $fillable = ['invoice_id', 'reference', 'amount_kobo', 'initiated_by', 'authorization_url', 'status', 'last_checked_at'];
 
     protected function casts(): array
     {
-        return ['amount_kobo' => 'integer'];
+        return ['amount_kobo' => 'integer', 'last_checked_at' => 'datetime'];
     }
 
     public function invoice(): BelongsTo

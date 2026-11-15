@@ -131,6 +131,43 @@ class ClassStructureTest extends TestCase
         $this->assertNull($secondary->fresh()->position);
     }
 
+    public function test_class_names_are_unique_across_the_school_after_trimming_case_insensitively(): void
+    {
+        $f = $this->fixture();
+        SchoolClass::create(['academic_level_id' => $f['primaryLevel']->id, 'name' => 'Primary One']);
+        $secondaryClass = SchoolClass::create(['academic_level_id' => $f['secondaryLevel']->id, 'name' => 'JSS One']);
+
+        $this->actingAs($f['admin'])->post(route('academics.classes.store'), [
+            'academic_level_id' => $f['secondaryLevel']->id,
+            'name' => '  primary one  ',
+            'comes_after_id' => null,
+            'placement' => 'new',
+        ])->assertSessionHasErrors(['name' => 'A class with this name already exists (Primary).']);
+
+        $this->put(route('academics.classes.update', $secondaryClass), [
+            'academic_level_id' => $f['secondaryLevel']->id,
+            'name' => ' PRIMARY ONE ',
+            'comes_after_id' => null,
+            'placement' => 'new',
+        ])->assertSessionHasErrors(['name' => 'A class with this name already exists (Primary).']);
+
+        $this->post(route('academics.classes.store'), [
+            'academic_level_id' => $f['secondaryLevel']->id,
+            'name' => '  JSS Two  ',
+            'comes_after_id' => null,
+            'placement' => 'new',
+        ])->assertSessionHasNoErrors();
+        $this->put(route('academics.classes.update', $secondaryClass), [
+            'academic_level_id' => $f['secondaryLevel']->id,
+            'name' => 'JSS Three',
+            'comes_after_id' => null,
+            'placement' => 'new',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('classes', ['academic_level_id' => $f['secondaryLevel']->id, 'name' => 'JSS Two']);
+        $this->assertSame('JSS Three', $secondaryClass->fresh()->name);
+    }
+
     public function test_deletion_is_blocked_by_each_history_type_and_empty_class_is_deleted(): void
     {
         $f = $this->fixture();

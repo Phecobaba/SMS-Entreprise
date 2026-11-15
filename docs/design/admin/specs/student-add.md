@@ -5,8 +5,8 @@ Batch 6. States: Normal (automatic number) · Typed number · Number already use
 ## Who can open
 Admin with the student-create permission (name for Codex). Heads do **not** add students (not in this batch).
 
-## Stated current behaviour (Codex: confirm first)
-I have not seen today's admission or add-student form. Codex lists which student fields exist (date of birth, gender, guardian columns...) and **keeps them**; this screen shows only the fields Batch 6 touches: name, class, registration number, username, email, status, parent. Also confirm: auto-invoicing at enrolment when a fee schedule exists (built per the payments work), and the Not invoiced list for the rest.
+## Built behaviour (Batch 6B)
+The form creates an Active student with name, Class arm, automatic or permitted typed registration number, username, optional email and an optional new or existing Parent. Automatic invoicing uses the existing current/upcoming-term rule; pupils without an applicable schedule remain visible on Not invoiced.
 
 ## Design
 - **Full name**, **Class** (grouped by Section), **Registration number** (Automatic, or Type one), **Username** (suggested, editable), **Student email (optional)**, **Status** shown as Active (a student added directly is Active; **proposal**).
@@ -14,7 +14,7 @@ I have not seen today's admission or add-student form. Codex lists which student
 - **Parent or guardian:** *Add a new parent* (name, username, optional email) or *Link an existing parent* (search). A parent has **one login for all their children** (parent_student pivot): linking an existing parent makes **no new credentials** and the child appears in their switcher.
 - On save: one transaction creates the student, the optional parent and the links; the auto-invoice (if any) follows the existing rule. Credentials appear **once**: the student, and the parent only if newly created. Same rules as `staff-add.md` (hash only, never logged, `no-store`, forced change at first sign-in).
 
-## NEW data
+## Built data
 Registration number column and history (see `student-access.md`), `must_change_password`. The student status set stays Active, Awaiting admission, Graduated.
 
 ## Tests
@@ -25,5 +25,5 @@ Registration number column and history (see `student-access.md`), `must_change_p
 - Credentials never stored in plain text or logged; both accounts are flagged to change password at first sign-in.
 - A student with no email can sign in with the username.
 
-## Open questions
-Who edits a registration number once a pupil is Awaiting admission (see `student-access.md`); whether a typed number may reuse an **old** number kept in history; what a parent with several children signs in with (`sign-in-rules.md`); whether admission candidates who become students receive an account here or through the admission flow (not seen).
+## Resolved boundaries
+Awaiting-admission number changes are Admin-only; historical numbers cannot be reused; one Parent family login may link to several pupils; and converted Candidates keep their existing identity and password through the Admissions conversion path.

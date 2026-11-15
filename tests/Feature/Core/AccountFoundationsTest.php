@@ -96,10 +96,19 @@ class AccountFoundationsTest extends TestCase
             'section_ids' => [$this->primary->id],
         ])->assertOk();
         $this->assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
-        preg_match('/id="temporary-password">([^<]+)</', $response->getContent(), $matches);
+        preg_match('/id="temporary-password"[^>]*>([^<]+)</', $response->getContent(), $matches);
         $temporary = html_entity_decode($matches[1] ?? '');
         $this->assertGreaterThanOrEqual(10, strlen($temporary));
         $this->assertStringNotContainsString('wire:snapshot', $response->getContent());
+        $response->assertSee('data-copy-credentials', false)
+            ->assertSee('data-credential-username', false)
+            ->assertSee('data-credential-password', false)
+            ->assertSee('aria-live="polite"', false);
+        $copyScript = file_get_contents(resource_path('js/app.js'));
+        $this->assertStringContainsString('Username: ${username}', $copyScript);
+        $this->assertStringContainsString('Password: ${password}', $copyScript);
+        $this->assertStringContainsString("confirm('Copied')", $copyScript);
+        $this->assertStringContainsString("status.textContent = '';", $copyScript);
         app(TenantContext::class)->set(1);
         $teacher = User::where('username', 'teacher.tola')->firstOrFail();
         $this->assertTrue(Hash::check($temporary, $teacher->password));
@@ -135,7 +144,7 @@ class AccountFoundationsTest extends TestCase
         DB::table('sessions')->insert(['id' => 'other-device', 'user_id' => $teacher->id, 'payload' => 'safe', 'last_activity' => time()]);
 
         $response = $this->actingAs($this->admin)->post(route('staff.access.reset', $teacher))->assertOk();
-        preg_match('/id="temporary-password">([^<]+)</', $response->getContent(), $matches);
+        preg_match('/id="temporary-password"[^>]*>([^<]+)</', $response->getContent(), $matches);
         $temporary = html_entity_decode($matches[1] ?? '');
         app(TenantContext::class)->set(1);
         $this->assertFalse(Hash::check('long-password-here', $teacher->fresh()->password));

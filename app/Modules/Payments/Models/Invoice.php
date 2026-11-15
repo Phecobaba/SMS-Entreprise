@@ -24,7 +24,7 @@ class Invoice extends Model
 
     public const KIND_OFFER_DEPOSIT = 'offer_deposit';
 
-    protected $fillable = ['parent_invoice_id', 'student_id', 'term_fee_student_id', 'candidate_id', 'term_id', 'purpose', 'kind', 'creation_source', 'notes', 'amount_kobo', 'due_date', 'status', 'created_by', 'voided_at', 'voided_by', 'void_reason'];
+    protected $fillable = ['parent_invoice_id', 'student_id', 'registration_number_snapshot', 'term_fee_student_id', 'candidate_id', 'term_id', 'purpose', 'kind', 'creation_source', 'notes', 'amount_kobo', 'due_date', 'status', 'created_by', 'voided_at', 'voided_by', 'void_reason'];
 
     protected static function booted(): void
     {
@@ -38,6 +38,9 @@ class Invoice extends Model
                 };
             }
             $invoice->creation_source ??= 'legacy';
+            if ($invoice->student_id && $invoice->registration_number_snapshot === null) {
+                $invoice->registration_number_snapshot = Student::whereKey($invoice->student_id)->value('registration_number');
+            }
             if ($invoice->kind === self::KIND_TERM_FEE) {
                 $invoice->term_fee_student_id ??= $invoice->student_id;
             }

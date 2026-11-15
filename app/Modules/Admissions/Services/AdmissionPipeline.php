@@ -11,9 +11,14 @@ use App\Modules\Admissions\Models\Candidate;
 use App\Modules\Admissions\Models\CandidateChecklist;
 use App\Modules\Admissions\Models\CandidateStatusHistory;
 use App\Modules\Admissions\Models\Student;
+use App\Modules\Assignments\Models\ParentProfile;
+use App\Modules\Assignments\Models\ParentStudent;
 use App\Modules\CBT\Services\ExamWorkflow;
 use App\Modules\Core\Models\Role;
 use App\Modules\Core\Models\User;
+use App\Modules\Core\Services\AuditRecorder;
+use App\Modules\Core\Services\TemporaryCredentials;
+use App\Modules\Core\TenantContext;
 use App\Modules\Payments\Models\Invoice;
 use App\Modules\Payments\Services\FeeInvoicingService;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +26,8 @@ use Illuminate\Validation\ValidationException;
 
 class AdmissionPipeline
 {
+    private ?array $parentCredential = null;
+
     public function dashboardPendingOffers(User $actor, ?int $sectionId = null): int
     {
         $candidateIds = app(SectionAccess::class)->scopeCandidates(
@@ -219,21 +226,74 @@ class AdmissionPipeline
                 if (! $actor->can('override_admission_checklist')) {
                     throw ValidationException::withMessages(['override' => 'You do not have permission to override the admission checklist.']);
                 }
-                if (! is_string($reason) || trim($reason) === '') {
-                    throw ValidationException::withMessages(['override_reason' => 'Explain why the incomplete checklist is being overridden.']);
+                if (! is_string($reason) || mb_strlen(trim($reason)) < 10 || mb_strlen(trim($reason)) > 500) {
+                    throw ValidationException::withMessages(['override_reason' => 'Give a reason between 10 and 500 characters.']);
                 }
             } else {
                 $override = false;
             }
             $student = Student::create(['user_id' => $candidate->user_id, 'class_arm_id' => $armId, 'candidate_id' => $candidate->id, 'admission_date' => today()]);
             $role = Role::firstOrCreate(['name' => 'Student']);
-            User::findOrFail($candidate->user_id)->roles()->syncWithoutDetaching([$role->id]);
+            $studentUser = User::findOrFail($candidate->user_id);
+            $studentUser->roles()->syncWithoutDetaching([$role->id => ['school_id' => app(TenantContext::class)->id()]]);
+            if ($candidate->application_id) {
+                $studentUser->forceFill(['must_change_password' => true])->save();
+                $this->linkApplicationGuardian($candidate, $student, $actor);
+            }
             app(RegistrationNumbers::class)->assignAutomatic($student, $actor);
             $this->transition($candidate, 'Offer Accepted', 'Converted to Student', $actor, $override ? trim($reason) : 'Checklist complete', $override);
+            if ($override) {
+                app(AuditRecorder::class)->record($actor, 'admission_checklist_overridden', $candidate, [
+                    'reason' => trim((string) $reason),
+                    'outstanding_requirements' => $itemCount - $completeCount,
+                ]);
+            }
             app(FeeInvoicingService::class)->automaticallyInvoice($student, $actor);
 
             return $student;
         });
+    }
+
+    /** @return array{user:User,temporary_password:string,children:array<int,string>}|null */
+    public function takeParentCredential(): ?array
+    {
+        $credential = $this->parentCredential;
+        $this->parentCredential = null;
+
+        return $credential;
+    }
+
+    private function linkApplicationGuardian(Candidate $candidate, Student $student, User $actor): void
+    {
+        $application = $candidate->application()->firstOrFail();
+        $email = strtolower(trim($application->guardian_email));
+        $existingUser = User::whereRaw('LOWER(email) = ?', [$email])->lockForUpdate()->first();
+        $parent = $existingUser ? ParentProfile::where('user_id', $existingUser->id)->first() : null;
+        if ($existingUser && ! $parent) {
+            throw ValidationException::withMessages(['guardian' => 'That guardian email belongs to another account. Ask the school office to resolve it before conversion.']);
+        }
+        if (! $parent) {
+            $password = app(TemporaryCredentials::class)->generate();
+            $parentUser = new User;
+            $parentUser->fill([
+                'name' => trim($application->guardian_name), 'username' => null, 'email' => $email,
+                'must_change_password' => true, 'status' => User::STATUS_ACTIVE,
+            ]);
+            $parentUser->setRawAttributes(array_merge($parentUser->getAttributes(), [
+                'password' => app(TemporaryCredentials::class)->hash($password), 'email_verified_at' => null,
+            ]));
+            $parentUser->save();
+            $parentRole = Role::firstOrCreate(['name' => 'Parent']);
+            $parentUser->roles()->syncWithoutDetaching([$parentRole->id => ['school_id' => app(TenantContext::class)->id()]]);
+            $parent = ParentProfile::create(['user_id' => $parentUser->id]);
+            $this->parentCredential = [
+                'user' => $parentUser, 'temporary_password' => $password, 'children' => [$candidate->name],
+            ];
+        }
+        ParentStudent::firstOrCreate(['parent_id' => $parent->id, 'student_id' => $student->id]);
+        app(AuditRecorder::class)->record($actor, 'application_guardian_linked', $student, [
+            'parent_created' => $this->parentCredential !== null,
+        ], 'Admissions', 'Application guardian linked to converted student.');
     }
 
     private function locked(Candidate $candidate): Candidate

@@ -70,7 +70,7 @@ class BootstrapSchoolAdmin extends Command
 
                 $user = User::firstOrCreate(
                     ['email' => $email],
-                    ['name' => (string) $this->argument('admin-name'), 'password' => $password, 'status' => 'active'],
+                    ['name' => (string) $this->argument('admin-name'), 'email_verified_at' => now(), 'password' => $password, 'status' => 'active'],
                 );
 
                 if ($user->status !== 'active') {

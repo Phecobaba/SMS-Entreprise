@@ -15,7 +15,7 @@ class OakfieldBrandingSeeder extends Seeder
         School::findOrFail($schoolId);
         app(TenantContext::class)->set($schoolId);
 
-        SchoolSetting::updateOrCreate([], [
+        SchoolSetting::firstOrCreate([], [
             'logo_path' => 'branding/oakfield-logo.jpg',
             'primary_color' => '#2E4F56',
             'secondary_color' => '#F5E58A',

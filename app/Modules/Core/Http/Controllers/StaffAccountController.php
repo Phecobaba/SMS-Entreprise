@@ -9,9 +9,13 @@ use App\Modules\Core\Models\User;
 use App\Modules\Core\Services\AppNavigation;
 use App\Modules\Core\Services\ChangeOwnPassword;
 use App\Modules\Core\Services\RoleAuthority;
+use App\Modules\Core\Services\SchoolUserDirectory;
 use App\Modules\Core\Services\StaffCredentials;
+use App\Modules\Core\Services\StaffSignIn;
 use App\Modules\Core\Services\UsernameRules;
 use App\Modules\Core\TenantContext;
+use App\Modules\Portals\Services\PortalContext;
+use App\Modules\StaffHR\Models\Staff;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -47,10 +51,8 @@ class StaffAccountController extends Controller
 
     public function index(): View
     {
-        $staffRoleNames = ['School Admin', 'Principal', 'Bursar', 'Teacher'];
-
         return view('core.staff-access', [
-            'accounts' => User::with(['roles', 'sections'])->whereHas('roles', fn ($query) => $query->whereIn('roles.name', $staffRoleNames))->orderBy('name')->paginate(20),
+            'accounts' => app(SchoolUserDirectory::class)->scopeStaffAccounts(User::with(['roles', 'sections']))->orderBy('name')->paginate(20),
         ]);
     }
 
@@ -65,6 +67,7 @@ class StaffAccountController extends Controller
             'sections' => Section::orderBy('name')->get(),
             'viewOnly' => ! $roles->mayManage($actor, $user),
             'ownAccount' => $user->is($request->user()),
+            'staffRecord' => Staff::where('user_id', $user->id)->first(),
         ]);
     }
 
@@ -90,9 +93,33 @@ class StaffAccountController extends Controller
         return redirect()->route('staff.access.show', $user)->with('status', 'Role and Section saved.');
     }
 
+    public function disable(User $user, Request $request, StaffSignIn $signIn): RedirectResponse
+    {
+        $signIn->disable($user->loadMissing('roles'), $request->user()->loadMissing('roles'));
+
+        return redirect()->route('staff.access.show', $user)->with('status', 'Sign-in disabled.');
+    }
+
+    public function enable(User $user, Request $request, StaffSignIn $signIn): RedirectResponse
+    {
+        $signIn->enable($user->loadMissing('roles'), $request->user()->loadMissing('roles'));
+
+        return redirect()->route('staff.access.show', $user)->with('status', 'Sign-in enabled.');
+    }
+
     public function account(Request $request, AppNavigation $navigation): View
     {
-        abort_unless($navigation->staffKind($request->user()) !== null, 403);
+        if ($navigation->staffKind($request->user()) === null) {
+            $portal = app(PortalContext::class)->for($request);
+            abort_unless(in_array($portal['kind'] ?? null, ['student', 'parent'], true), 403);
+
+            return view('core.portal-account', [
+                'account' => $request->user(),
+                'portalKind' => $portal['kind'],
+                'student' => $portal['kind'] === 'student' ? $portal['selected'] : null,
+                'children' => $portal['kind'] === 'parent' ? $portal['wards'] : [],
+            ]);
+        }
 
         return view('core.account', ['account' => $request->user()->load(['roles', 'sections'])]);
     }

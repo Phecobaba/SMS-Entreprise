@@ -11,6 +11,7 @@ use App\Modules\Academics\Models\SchoolClass;
 use App\Modules\Academics\Models\Section;
 use App\Modules\Academics\Models\Subject;
 use App\Modules\Academics\Models\TeacherSubjectAssignment;
+use App\Modules\Academics\Services\ClassOrderingService;
 use App\Modules\Admissions\Models\Candidate;
 use App\Modules\Admissions\Models\Student;
 use App\Modules\Admissions\Services\RegistrationNumbers;
@@ -58,12 +59,7 @@ class DemoDataSeeder extends Seeder
 
         DB::transaction(function () use ($passwords): void {
             $now = now();
-            if (DB::table('schools')->where('id', 1)->exists()) {
-                DB::table('schools')->where('id', 1)->update([
-                    'name' => 'Oakfield International Schools',
-                    'updated_at' => $now,
-                ]);
-            } else {
+            if (! DB::table('schools')->where('id', 1)->exists()) {
                 DB::table('schools')->insert([
                     'id' => 1,
                     'name' => 'Oakfield International Schools',
@@ -82,41 +78,61 @@ class DemoDataSeeder extends Seeder
             $roles = app(DefaultRoleCatalog::class)->provision();
             $roles['Candidate'] = Role::firstOrCreate(['name' => 'Candidate']);
 
-            $users = collect(self::ACCOUNTS)->mapWithKeys(function (array $account, string $key) use ($passwords, $roles): array {
-                $user = User::firstOrNew(['email' => $account[1]]);
-                if (! $user->exists) {
-                    $user->password = $passwords[$key];
+            $createDemoStudent = Student::query()->doesntExist();
+            $accounts = collect(self::ACCOUNTS)
+                ->when(! $createDemoStudent, fn ($items) => $items->except('student'));
+
+            $users = $accounts->mapWithKeys(function (array $account, string $key) use ($passwords, $roles): array {
+                $user = User::firstOrCreate(['email' => $account[1]], [
+                    'name' => 'Demo '.$account[0],
+                    'email_verified_at' => now(),
+                    'password' => $passwords[$key],
+                    'status' => 'active',
+                ]);
+                if ($user->wasRecentlyCreated) {
+                    $user->roles()->attach($roles[$account[0]]->id, ['school_id' => 1]);
                 }
-                $user->name = 'Demo '.$account[0];
-                $user->status = 'active';
-                $user->save();
-                $user->roles()->syncWithPivotValues([$roles[$account[0]]->id], ['school_id' => 1]);
 
                 return [$key => $user];
             });
 
-            $primary = Section::updateOrCreate(
+            $primary = Section::firstOrCreate(
                 ['name' => 'Primary School'],
                 ['head_title' => 'Head Teacher', 'classes_arranged_by' => $users['admin']->id, 'classes_arranged_at' => $now],
             );
-            $secondary = Section::updateOrCreate(
+            $secondary = Section::firstOrCreate(
                 ['name' => 'Secondary School'],
                 ['head_title' => 'Principal', 'classes_arranged_by' => $users['admin']->id, 'classes_arranged_at' => $now],
             );
-            $secondary->heads()->syncWithoutDetaching([
-                $users['principal']->id => ['school_id' => 1],
-            ]);
+            if (! $secondary->heads()->whereKey($users['principal']->id)->exists()) {
+                $secondary->heads()->attach($users['principal']->id, ['school_id' => 1]);
+            }
 
-            $lowerPrimary = AcademicLevel::updateOrCreate(['name' => 'Lower Primary'], ['section_id' => $primary->id]);
-            $upperPrimary = AcademicLevel::updateOrCreate(['name' => 'Upper Primary'], ['section_id' => $primary->id]);
-            $juniorSecondary = AcademicLevel::updateOrCreate(['name' => 'Junior Secondary'], ['section_id' => $secondary->id]);
-            $seniorSecondary = AcademicLevel::updateOrCreate(['name' => 'Senior Secondary'], ['section_id' => $secondary->id]);
+            $lowerPrimary = AcademicLevel::firstOrCreate(['name' => 'Lower Primary'], ['section_id' => $primary->id]);
+            $upperPrimary = AcademicLevel::firstOrCreate(['name' => 'Upper Primary'], ['section_id' => $primary->id]);
+            $juniorSecondary = AcademicLevel::firstOrCreate(['name' => 'Junior Secondary'], ['section_id' => $secondary->id]);
+            $seniorSecondary = AcademicLevel::firstOrCreate(['name' => 'Senior Secondary'], ['section_id' => $secondary->id]);
 
-            $primaryOne = SchoolClass::updateOrCreate(['academic_level_id' => $lowerPrimary->id, 'name' => 'Primary 1'], ['position' => 1]);
-            $primaryFour = SchoolClass::updateOrCreate(['academic_level_id' => $upperPrimary->id, 'name' => 'Primary 4'], ['position' => 2]);
-            $primarySix = SchoolClass::updateOrCreate(['academic_level_id' => $upperPrimary->id, 'name' => 'Primary 6'], ['position' => 3]);
-            $jsOne = SchoolClass::updateOrCreate(['academic_level_id' => $juniorSecondary->id, 'name' => 'JS 1'], ['position' => 4]);
-            $ssOne = SchoolClass::updateOrCreate(['academic_level_id' => $seniorSecondary->id, 'name' => 'SS 1'], ['position' => 5]);
+            $upsertClass = function (AcademicLevel $level, string $name, int $position): SchoolClass {
+                $existing = SchoolClass::where('academic_level_id', $level->id)
+                    ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower(trim($name))])->first();
+                if ($existing) {
+                    return $existing;
+                }
+                $name = app(ClassOrderingService::class)->assertSchoolWideNameIsUnique($name);
+                $class = SchoolClass::create([
+                    'academic_level_id' => $level->id,
+                    'name' => $name,
+                    'position' => $position,
+                ]);
+
+                return $class;
+            };
+            $primaryOne = $upsertClass($lowerPrimary, 'Primary 1', 1);
+            $primaryFour = $upsertClass($upperPrimary, 'Primary 4', 2);
+            $primarySix = $upsertClass($upperPrimary, 'Primary 6', 3);
+            $jsOne = $upsertClass($juniorSecondary, 'JS 1', 4);
+            $ssOne = $upsertClass($seniorSecondary, 'SS 1', 5);
 
             $arms = collect([
                 'primary_one' => [$primaryOne, 'A'],
@@ -125,14 +141,16 @@ class DemoDataSeeder extends Seeder
                 'js_one' => [$jsOne, 'A'],
                 'ss_one' => [$ssOne, 'A'],
             ])->mapWithKeys(fn (array $entry, string $key): array => [
-                $key => ClassArm::updateOrCreate(['class_id' => $entry[0]->id, 'name' => $entry[1]]),
+                $key => ClassArm::firstOrCreate(
+                    ['class_id' => $entry[0]->id, 'name' => $entry[1]],
+                    $key === 'js_one' ? ['form_teacher_user_id' => $users['teacher']->id] : [],
+                ),
             ]);
-            $arms['js_one']->update(['form_teacher_user_id' => $users['teacher']->id]);
 
-            $primaryMath = Subject::updateOrCreate(['section_id' => $primary->id, 'name' => 'Mathematics']);
-            $primaryEnglish = Subject::updateOrCreate(['section_id' => $primary->id, 'name' => 'English Language']);
-            $secondaryMath = Subject::updateOrCreate(['section_id' => $secondary->id, 'name' => 'Mathematics']);
-            $secondaryEnglish = Subject::updateOrCreate(['section_id' => $secondary->id, 'name' => 'English Language']);
+            $primaryMath = Subject::firstOrCreate(['section_id' => $primary->id, 'name' => 'Mathematics']);
+            $primaryEnglish = Subject::firstOrCreate(['section_id' => $primary->id, 'name' => 'English Language']);
+            $secondaryMath = Subject::firstOrCreate(['section_id' => $secondary->id, 'name' => 'Mathematics']);
+            $secondaryEnglish = Subject::firstOrCreate(['section_id' => $secondary->id, 'name' => 'English Language']);
             foreach ([
                 [$primaryOne, $primaryMath], [$primaryOne, $primaryEnglish],
                 [$primaryFour, $primaryMath], [$primaryFour, $primaryEnglish],
@@ -149,42 +167,47 @@ class DemoDataSeeder extends Seeder
             ]);
 
             $today = Carbon::now('Africa/Lagos')->startOfDay();
-            $session = AcademicSession::updateOrCreate(
+            $session = AcademicSession::firstOrCreate(
                 ['name' => $today->year.'/'.($today->year + 1)],
                 ['start_date' => $today->copy()->subMonth()->toDateString(), 'end_date' => $today->copy()->addMonths(9)->toDateString()],
             );
-            $term = AcademicTerm::updateOrCreate(
+            $term = AcademicTerm::firstOrCreate(
                 ['session_id' => $session->id, 'name' => 'First Term'],
                 ['start_date' => $today->copy()->subMonth()->toDateString(), 'end_date' => $today->copy()->addMonths(2)->toDateString()],
             );
 
-            $student = Student::updateOrCreate(
-                ['user_id' => $users['student']->id],
-                ['class_arm_id' => $arms['primary_four']->id, 'status' => Student::STATUS_ACTIVE, 'admission_date' => $today->copy()->subYear()->toDateString()],
-            );
-            app(RegistrationNumbers::class)->assignAutomatic($student, $users['admin']);
-            $parent = ParentProfile::firstOrCreate(['user_id' => $users['parent']->id]);
-            ParentStudent::firstOrCreate(['parent_id' => $parent->id, 'student_id' => $student->id]);
-            Candidate::updateOrCreate(
+            Candidate::firstOrCreate(
                 ['user_id' => $users['candidate']->id],
                 ['applied_level_id' => $juniorSecondary->id, 'name' => $users['candidate']->name, 'phone' => '08000000000', 'status' => 'Application Submitted'],
             );
 
             $tuition = FeeItem::firstOrCreate(['name' => 'Tuition']);
-            $schedule = FeeScheduleLine::updateOrCreate(
+            $schedule = FeeScheduleLine::firstOrCreate(
                 ['term_id' => $term->id, 'scope_type' => 'level', 'academic_level_id' => $upperPrimary->id, 'class_id' => null, 'department_id' => null, 'fee_item_id' => $tuition->id],
                 ['amount_kobo' => 4500000, 'is_required' => true],
             );
-            $invoice = Invoice::updateOrCreate(
-                ['term_id' => $term->id, 'term_fee_student_id' => $student->id],
-                ['student_id' => $student->id, 'purpose' => 'First Term fees', 'kind' => Invoice::KIND_TERM_FEE,
-                    'creation_source' => 'demo', 'amount_kobo' => $schedule->amount_kobo,
-                    'due_date' => $today->copy()->addMonth()->toDateString(), 'status' => 'Unpaid', 'created_by' => $users['admin']->id],
-            );
-            InvoiceLine::updateOrCreate(
-                ['invoice_id' => $invoice->id, 'fee_item_id' => $tuition->id],
-                ['description' => 'Tuition', 'amount_kobo' => $schedule->amount_kobo, 'is_required' => true],
-            );
+
+            if ($createDemoStudent) {
+                $student = Student::firstOrCreate(
+                    ['user_id' => $users['student']->id],
+                    ['class_arm_id' => $arms['primary_four']->id, 'status' => Student::STATUS_ACTIVE, 'admission_date' => $today->copy()->subYear()->toDateString()],
+                );
+                if ($student->wasRecentlyCreated) {
+                    app(RegistrationNumbers::class)->assignAutomatic($student, $users['admin']);
+                }
+                $parent = ParentProfile::firstOrCreate(['user_id' => $users['parent']->id]);
+                ParentStudent::firstOrCreate(['parent_id' => $parent->id, 'student_id' => $student->id]);
+                $invoice = Invoice::firstOrCreate(
+                    ['term_id' => $term->id, 'term_fee_student_id' => $student->id],
+                    ['student_id' => $student->id, 'purpose' => 'First Term fees', 'kind' => Invoice::KIND_TERM_FEE,
+                        'creation_source' => 'demo', 'amount_kobo' => $schedule->amount_kobo,
+                        'due_date' => $today->copy()->addMonth()->toDateString(), 'status' => 'Unpaid', 'created_by' => $users['admin']->id],
+                );
+                InvoiceLine::firstOrCreate(
+                    ['invoice_id' => $invoice->id, 'fee_item_id' => $tuition->id],
+                    ['description' => 'Tuition', 'amount_kobo' => $schedule->amount_kobo, 'is_required' => true],
+                );
+            }
         });
     }
 }

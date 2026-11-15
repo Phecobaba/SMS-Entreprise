@@ -70,8 +70,8 @@ class ResultApprovalLockTest extends TestCase
         $otherSubject = Subject::create(['section_id' => $section->id, 'name' => 'English']);
         ClassSubject::create(['class_id' => $class->id, 'subject_id' => $otherSubject->id]);
         app(ResultTeachingAssignments::class)->assign($teacher->id, $class->id, $subject->id, $principal);
-        $session = AcademicSession::create(['name' => '2026/2027', 'start_date' => '2026-01-01', 'end_date' => '2026-12-31']);
-        $term = AcademicTerm::create(['session_id' => $session->id, 'name' => 'First Term', 'start_date' => '2026-01-01', 'end_date' => '2026-03-31']);
+        $session = AcademicSession::create(['name' => '2026/2027', 'start_date' => today('Africa/Lagos')->subMonth(), 'end_date' => today('Africa/Lagos')->addMonths(8)]);
+        $term = AcademicTerm::create(['session_id' => $session->id, 'name' => 'First Term', 'start_date' => today('Africa/Lagos')->subMonth(), 'end_date' => today('Africa/Lagos')->addMonth()]);
         $student = Student::create(['user_id' => $learner->id, 'class_arm_id' => $arm->id, 'candidate_id' => null, 'registration_number' => 'REG-CARD-100', 'admission_date' => '2026-01-01']);
 
         $configuration = app(ResultConfiguration::class);
@@ -86,14 +86,13 @@ class ResultApprovalLockTest extends TestCase
         $this->assertTrue($template->show_subject_remarks);
 
         $this->actingAs($principal)->get(route('results.configuration'))->assertOk()->assertSee('Secondary default');
-        $this->actingAs($teacher)->get(route('results.index'))->assertOk()->assertSee('Results workspace');
-        $this->get(route('results.new', $student->id))->assertOk()->assertSee('Enter result for Learner');
-        $this->post(route('results.drafts.store'), [
-            'student_id' => $student->id, 'subject_id' => $otherSubject->id, 'term_id' => $term->id,
+        $this->actingAs($teacher)->get(route('results.index'))->assertOk()->assertSee('My classes and subjects');
+        $this->get(route('results.new', $student->id))->assertForbidden();
+        $this->get(route('results.teacher.entry', [$class, $subject, $student]))->assertOk()->assertSee('Enter scores');
+        $this->post(route('results.teacher.draft', [$class, $otherSubject, $student]), [
             'scores' => [$ca->id => 10],
-        ])->assertSessionHasErrors('subject_id');
-        $this->actingAs($teacher)->post(route('results.drafts.store'), [
-            'student_id' => $student->id, 'subject_id' => $subject->id, 'term_id' => $term->id,
+        ])->assertForbidden();
+        $this->actingAs($teacher)->post(route('results.teacher.draft', [$class, $subject, $student]), [
             'scores' => [$ca->id => 12, $ca2->id => 12, $assignment->id => 14, $exam->id => 42],
         ])->assertSessionHasNoErrors();
         app(TenantContext::class)->set($school->id);
@@ -101,9 +100,9 @@ class ResultApprovalLockTest extends TestCase
         $this->assertSame('Draft', $result->status);
         $this->get(route('results.show', $result))->assertOk()->assertSee('Submit for approval');
         $validCsv = UploadedFile::fake()->createWithContent('draft-scores.csv', "student_id,subject_id,term_id,component_id,score\n{$student->id},{$subject->id},{$term->id},{$ca2->id},12\n");
-        $this->post(route('results.imports.store'), ['file' => $validCsv])->assertSessionHasNoErrors();
+        $this->post(route('results.imports.store'), ['file' => $validCsv])->assertForbidden();
 
-        $this->post(route('results.submit', $result))->assertSessionHasNoErrors();
+        $this->post(route('results.teacher.submit', [$class, $subject, $student]))->assertSessionHasNoErrors();
         $this->post(route('results.approve', $result))->assertForbidden();
         $this->actingAs($principal)->post(route('results.approve', $result))->assertSessionHasNoErrors();
         app(TenantContext::class)->set($school->id);
@@ -114,15 +113,30 @@ class ResultApprovalLockTest extends TestCase
         $this->assertSame('A', $result->grade);
         $this->get(route('results.show', $result))->assertOk()->assertSee('Approved and locked');
 
-        $this->actingAs($teacher)->post(route('results.drafts.update', $result), ['scores' => [$ca->id => 1]])
+        $this->actingAs($teacher)->post(route('results.teacher.draft', [$class, $subject, $student]), ['scores' => [$ca->id => 1]])
             ->assertSessionHasErrors('result');
         $csv = UploadedFile::fake()->createWithContent('scores.csv', "student_id,subject_id,term_id,component_id,score\n{$student->id},{$subject->id},{$term->id},{$ca->id},1\n");
-        $this->post(route('results.imports.store'), ['file' => $csv])->assertSessionHasErrors('result');
+        $this->post(route('results.imports.store'), ['file' => $csv])->assertForbidden();
         app(TenantContext::class)->set($school->id);
         $this->assertSame('12.00', ResultItem::where('result_id', $result->id)->where('assessment_component_id', $ca->id)->firstOrFail()->score);
-        $this->assertSame(['Upload', 'Edit', 'Submit', 'Approve'], ResultAuditLog::where('result_id', $result->id)->orderBy('id')->pluck('action')->all());
+        $this->assertSame(['Upload', 'Submit', 'Approve'], ResultAuditLog::where('result_id', $result->id)->orderBy('id')->pluck('action')->all());
 
         $card = ResultCard::where('student_id', $student->id)->where('term_id', $term->id)->firstOrFail();
+        $otherFormTeacher = User::create(['name' => 'Other Form Teacher', 'email' => 'other-form-teacher@example.test', 'password' => 'long-password-here', 'status' => 'active']);
+        $otherFormTeacher->roles()->attach($entryRole);
+        $otherArm = ClassArm::create(['class_id' => $class->id, 'name' => 'B', 'form_teacher_user_id' => $otherFormTeacher->id]);
+        $otherLearner = User::create(['name' => 'Other Learner', 'email' => 'other-learner@example.test', 'password' => 'long-password-here', 'status' => 'active']);
+        $otherStudent = Student::create(['user_id' => $otherLearner->id, 'class_arm_id' => $otherArm->id, 'candidate_id' => null, 'admission_date' => '2026-01-01']);
+        $otherCard = ResultCard::create(['student_id' => $otherStudent->id, 'term_id' => $term->id, 'class_arm_id' => $otherArm->id, 'compiled_at' => now()]);
+        $this->actingAs($teacher)->get(route('results.cards.show', $card))->assertForbidden();
+        $this->get(route('results.cards.pdf', $card))->assertForbidden();
+        $this->get(route('results.cards.show', $otherCard))->assertForbidden();
+        $this->get(route('results.cards.pdf', $otherCard))->assertForbidden();
+        $this->get(route('results.index'))->assertOk()
+            ->assertDontSee(route('results.cards.show', $card), false)
+            ->assertDontSee(route('results.cards.show', $otherCard), false);
+        $this->actingAs($formTeacher)->get(route('results.cards.show', $otherCard))->assertForbidden();
+        $this->actingAs($otherFormTeacher)->get(route('results.cards.show', $card))->assertForbidden();
         $this->actingAs($teacher)->post(route('results.cards.comments', $card), ['class_teacher_comment' => 'Subject teacher attempt'])
             ->assertForbidden();
         app(TenantContext::class)->set($school->id);

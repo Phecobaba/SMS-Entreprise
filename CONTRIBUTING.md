@@ -57,6 +57,9 @@ following are true:
    confirmation, attendance locking, candidate conversion) — **a test
    exists and passes.** This is the one category where "it worked when I
    clicked through it" is not sufficient.
+   Authentication and recovery changes also need focused tests proving
+   non-enumerating responses, server-side throttling, single-use/expiry,
+   session revocation and absence of plaintext secrets from durable state.
 4. **If it's not trust-sensitive** (most CRUD screens, most Livewire
    components) — manual verification that it works is sufficient. Do not
    write exhaustive tests here; that burns time/tokens against a
@@ -94,9 +97,13 @@ any control over the stopping point):
 
 Automated tests run only against SQLite in-memory; the shared test base fails
 fast if the resolved database is anything else. Browser and manual QA checks
-must use a separate throwaway SQLite file, for example `database/qa.sqlite`,
-selected with an environment override for the QA process. Migrate and seed
-that file, perform the check, then delete it. `database/*.sqlite` is gitignored.
+start only through `php artisan qa:prepare <absolute database/qa.sqlite path>
+--serve`; see `docs/QA.md`. The command prepares and serves the isolated file;
+it must print a passing live HTTP database proof before any login, fixture access
+or browser automation. Delete it after the check. `database/*.sqlite` is
+gitignored. Record and compare the persistent development database SHA-256
+hash, size and modified time around every QA session; investigate and report
+any difference as an incident.
 
 Never run `migrate:fresh`, seed QA fixtures, or point a test or browser runner
 at `database/database.sqlite`. It is the persistent local development database,

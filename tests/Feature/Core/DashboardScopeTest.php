@@ -21,6 +21,7 @@ use App\Modules\Core\Models\School;
 use App\Modules\Core\Models\User;
 use App\Modules\Core\Services\DashboardOverview;
 use App\Modules\Core\TenantContext;
+use App\Modules\Notifications\Models\Notification;
 use App\Modules\Payments\Models\Invoice;
 use App\Modules\Results\Models\GradingScheme;
 use App\Modules\Results\Models\Result;
@@ -94,6 +95,81 @@ class DashboardScopeTest extends TestCase
             ->assertDontSee('JS1 Blue');
     }
 
+    public function test_live_result_attention_is_role_scoped_linked_and_hidden_at_zero(): void
+    {
+        $f = $this->fixture();
+
+        $admin = $this->actingAs($f['admin'])->get(route('dashboard'));
+        $admin->assertOk()
+            ->assertSee('2 submitted results waiting for approval')
+            ->assertSee('aria-label="Items waiting, 2"', false)
+            ->assertSee(route('results.index', absolute: false), false);
+        preg_match('/<aside class="oak-sidebar".*?<\/aside>/s', $admin->getContent(), $sidebar);
+        $this->assertStringNotContainsString('submitted results waiting for approval', $sidebar[0] ?? '');
+        $this->actingAs($f['admin'])->get(route('notifications.index'))
+            ->assertOk()->assertSee('data-live-result-attention', false)->assertSee('2 submitted results waiting for approval');
+
+        app(TenantContext::class)->set($f['school']->id);
+        Notification::create(['user_id' => $f['admin']->id, 'channel' => 'In App', 'title' => 'Stored', 'body' => 'Stored unread']);
+        $this->app->forgetScopedInstances();
+        $this->actingAs($f['admin'])->get(route('dashboard'))->assertSee('aria-label="Items waiting, 3"', false);
+
+        $this->actingAs($f['head'])->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('1 submitted result waiting for approval')
+            ->assertSee('aria-label="Items waiting, 1"', false)
+            ->assertDontSee('2 submitted results waiting for approval');
+        $this->get(route('results.show', $f['secondaryResult']))->assertForbidden();
+
+        app(TenantContext::class)->set($f['school']->id);
+        $this->actingAs($f['teacher'])->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('1 result returned for correction')
+            ->assertSee('aria-label="Items waiting, 1"', false)
+            ->assertSee(route('results.show', $f['rejectedResult'], false), false);
+        app(TenantContext::class)->set($f['school']->id);
+        $secondRejected = Result::create([
+            'student_id' => $f['secondSecondaryStudent']->id,
+            'class_arm_id' => $f['rejectedResult']->class_arm_id,
+            'subject_id' => $f['rejectedResult']->subject_id,
+            'term_id' => $f['rejectedResult']->term_id,
+            'result_template_id' => $f['rejectedResult']->result_template_id,
+            'status' => 'Rejected',
+            'submitted_by' => $f['teacher']->id,
+            'rejection_reason' => 'Check the total.',
+        ]);
+        $this->app->forgetScopedInstances();
+        $this->get(route('dashboard'))->assertOk()
+            ->assertSee('2 results returned for correction')
+            ->assertSee('aria-label="Items waiting, 2"', false);
+        $this->get(route('results.index', ['status' => 'Rejected']))
+            ->assertOk()
+            ->assertSee('Returned results')
+            ->assertSee($f['rejectedResult']->rejection_reason)
+            ->assertSee($secondRejected->rejection_reason);
+
+        app(TenantContext::class)->set($f['school']->id);
+        $quietTeacher = $this->user('Quiet Teacher');
+        $quietTeacher->roles()->attach($f['teacherRole']);
+        $this->actingAs($quietTeacher)->get(route('dashboard'))
+            ->assertOk()
+            ->assertDontSee('returned for correction')
+            ->assertDontSee('aria-label="Items waiting,', false);
+    }
+
+    public function test_phone_header_school_name_has_no_truncation_classes(): void
+    {
+        $f = $this->fixture();
+        $f['school']->update(['name' => 'Oakfield International Schools Early Years Primary Secondary']);
+
+        $response = $this->actingAs($f['admin'])->get(route('dashboard'))->assertOk();
+        preg_match('/<header class="oak-header".*?<\/header>/s', $response->getContent(), $header);
+
+        $this->assertStringContainsString('oak-header-school-name', $header[0] ?? '');
+        $this->assertStringContainsString('Oakfield International Schools Early Years Primary Secondary', $header[0] ?? '');
+        $this->assertDoesNotMatchRegularExpression('/\b(?:truncate|text-ellipsis|whitespace-nowrap)\b/', $header[0] ?? '');
+    }
+
     private function fixture(): array
     {
         $school = School::create(['name' => 'Oakfield']);
@@ -102,7 +178,7 @@ class DashboardScopeTest extends TestCase
 
         $permissions = collect([
             'view_dashboard', 'view_all_sections', 'approve_results', 'view_attendance_alerts',
-            'manage_attendance', 'manage_payments',
+            'manage_attendance', 'manage_payments', 'enter_results', 'mark_attendance',
         ])->mapWithKeys(fn (string $name) => [$name => Permission::firstOrCreate(['name' => $name])]);
         $adminRole = Role::create(['name' => 'School Admin']);
         $adminRole->permissions()->attach($permissions->pluck('id'));
@@ -110,6 +186,8 @@ class DashboardScopeTest extends TestCase
         $headRole->permissions()->attach($permissions->only([
             'view_dashboard', 'approve_results', 'view_attendance_alerts', 'manage_attendance',
         ])->pluck('id'));
+        $teacherRole = Role::create(['name' => 'Teacher']);
+        $teacherRole->permissions()->attach($permissions->only(['view_dashboard', 'enter_results', 'mark_attendance'])->pluck('id'));
 
         $admin = $this->user('Admin');
         $head = $this->user('Primary Head');
@@ -130,17 +208,20 @@ class DashboardScopeTest extends TestCase
 
         $primaryStudent = $this->student('Primary Learner', $primaryArm);
         $secondaryStudent = $this->student('Secondary Learner', $secondaryArm);
-        $this->student('Second Secondary Learner', $secondaryArm);
+        $secondSecondaryStudent = $this->student('Second Secondary Learner', $secondaryArm);
         $subject = Subject::create(['section_id' => $primary->id, 'name' => 'Mathematics']);
         $secondarySubject = Subject::create(['section_id' => $secondary->id, 'name' => 'Mathematics']);
         $rejectedSubject = Subject::create(['section_id' => $secondary->id, 'name' => 'English']);
         ClassSubject::create(['class_id' => $primaryClass->id, 'subject_id' => $subject->id]);
         ClassSubject::create(['class_id' => $secondaryClass->id, 'subject_id' => $secondarySubject->id]);
+        ClassSubject::create(['class_id' => $secondaryClass->id, 'subject_id' => $rejectedSubject->id]);
         $teacherOne = $this->user('Shared Teacher');
         $teacherTwo = $this->user('Secondary Teacher');
+        $teacherTwo->roles()->attach($teacherRole);
         TeacherSubjectAssignment::create(['user_id' => $teacherOne->id, 'class_id' => $primaryClass->id, 'subject_id' => $subject->id]);
         TeacherSubjectAssignment::create(['user_id' => $teacherOne->id, 'class_id' => $secondaryClass->id, 'subject_id' => $secondarySubject->id]);
         TeacherSubjectAssignment::create(['user_id' => $teacherTwo->id, 'class_id' => $secondaryClass->id, 'subject_id' => $secondarySubject->id]);
+        TeacherSubjectAssignment::create(['user_id' => $teacherTwo->id, 'class_id' => $secondaryClass->id, 'subject_id' => $rejectedSubject->id]);
 
         $session = AcademicSession::create(['name' => '2026/2027', 'start_date' => today()->subMonth(), 'end_date' => today()->addMonths(8)]);
         $term = AcademicTerm::create(['session_id' => $session->id, 'name' => 'First Term', 'start_date' => today()->subMonth(), 'end_date' => today()->addMonths(2)]);
@@ -150,7 +231,7 @@ class DashboardScopeTest extends TestCase
         $secondaryTemplate = ResultTemplate::create(['section_id' => $secondary->id, 'academic_level_id' => $secondaryLevel->id, 'grading_scheme_id' => $secondaryScheme->id, 'name' => 'Secondary', 'scope_key' => 'level:'.$secondaryLevel->id]);
         Result::create(['student_id' => $primaryStudent->id, 'class_arm_id' => $primaryArm->id, 'subject_id' => $subject->id, 'term_id' => $term->id, 'result_template_id' => $primaryTemplate->id, 'status' => 'Submitted', 'submitted_by' => $teacherOne->id]);
         $secondaryResult = Result::create(['student_id' => $secondaryStudent->id, 'class_arm_id' => $secondaryArm->id, 'subject_id' => $secondarySubject->id, 'term_id' => $term->id, 'result_template_id' => $secondaryTemplate->id, 'status' => 'Submitted', 'submitted_by' => $teacherTwo->id]);
-        Result::create(['student_id' => $secondaryStudent->id, 'class_arm_id' => $secondaryArm->id, 'subject_id' => $rejectedSubject->id, 'term_id' => $term->id, 'result_template_id' => $secondaryTemplate->id, 'status' => 'Rejected', 'submitted_by' => $teacherTwo->id]);
+        $rejectedResult = Result::create(['student_id' => $secondaryStudent->id, 'class_arm_id' => $secondaryArm->id, 'subject_id' => $rejectedSubject->id, 'term_id' => $term->id, 'result_template_id' => $secondaryTemplate->id, 'status' => 'Rejected', 'submitted_by' => $teacherTwo->id, 'rejection_reason' => 'Correct the exam score.']);
 
         AttendanceAlert::create(['class_arm_id' => $primaryArm->id, 'date' => today('Africa/Lagos'), 'session' => 'Morning', 'resolved' => false]);
         AttendanceAlert::create(['class_arm_id' => $secondaryArm->id, 'date' => today('Africa/Lagos'), 'session' => 'Afternoon', 'resolved' => false]);
@@ -159,7 +240,10 @@ class DashboardScopeTest extends TestCase
         Invoice::create(['student_id' => $primaryStudent->id, 'term_id' => $term->id, 'purpose' => 'Tuition', 'amount_kobo' => 100000, 'due_date' => today(), 'status' => 'Unpaid', 'created_by' => $admin->id]);
         Invoice::create(['student_id' => $secondaryStudent->id, 'term_id' => $term->id, 'purpose' => 'Tuition', 'amount_kobo' => 200000, 'due_date' => today(), 'status' => 'Unpaid', 'created_by' => $admin->id]);
 
-        return compact('admin', 'head', 'unassignedHead', 'primary', 'secondary', 'secondaryResult');
+        return compact('school', 'admin', 'head', 'unassignedHead', 'primary', 'secondary', 'secondaryResult', 'rejectedResult', 'teacherRole') + [
+            'teacher' => $teacherTwo,
+            'secondSecondaryStudent' => $secondSecondaryStudent,
+        ];
     }
 
     private function user(string $name): User

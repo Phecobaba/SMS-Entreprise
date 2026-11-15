@@ -55,6 +55,26 @@ class FeeInvoicingTest extends TestCase
             ->assertOk()->assertSee('₦12,500.50');
     }
 
+    public function test_fee_items_and_schedule_lines_paginate_independently_and_keep_the_term(): void
+    {
+        $data = $this->context();
+        foreach (range(1, 21) as $number) {
+            $item = FeeItem::create(['name' => 'Item '.str_pad((string) $number, 2, '0', STR_PAD_LEFT)]);
+            FeeScheduleLine::create([
+                'term_id' => $data['term']->id, 'scope_type' => 'level',
+                'academic_level_id' => $data['level']->id, 'fee_item_id' => $item->id,
+                'amount_kobo' => 10000 + $number, 'is_required' => true,
+            ]);
+        }
+
+        $this->actingAs($data['bursar'])->get(route('fees.schedule.index', [
+            'term' => $data['term']->id, 'items_page' => 2, 'lines_page' => 2,
+        ]))->assertOk()
+            ->assertViewHas('termId', $data['term']->id)
+            ->assertViewHas('items', fn ($items): bool => $items->currentPage() === 2 && $items->perPage() === 20)
+            ->assertViewHas('lines', fn ($lines): bool => $lines->currentPage() === 2 && $lines->perPage() === 20);
+    }
+
     public function test_bulk_preview_matches_apply_is_idempotent_and_invoice_total_equals_snapshot_lines(): void
     {
         $data = $this->context();

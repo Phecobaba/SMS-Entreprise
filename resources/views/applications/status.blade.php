@@ -1,0 +1,17 @@
+@php($autoRefresh = max(0, min(22, (int) request('auto_refresh', 0))))
+@php($publicProfile = app(\App\Modules\Core\Services\CurrentSchoolProfile::class)->landingPage())
+@php($title = 'Application status | '.($publicProfile['name'] ?? 'Oakfield'))
+@php($description = 'Check the status of an Oakfield admission application.')
+@extends('layouts.public')
+@if($state===\App\Modules\Admissions\Services\ApplicationWorkflow::CONFIRMING && $autoRefresh < 22)@push('head')<meta http-equiv="refresh" content="8;url={{ request()->fullUrlWithQuery(['auto_refresh' => $autoRefresh + 1]) }}">@endpush @endif
+@section('content')<main id="main" class="calm"><h1>Your application</h1><div class="status"><p class="big">{{ $application->child_first_name }}</p>
+@php($bad = in_array($state,[\App\Modules\Admissions\Services\ApplicationWorkflow::FAILED,\App\Modules\Admissions\Services\ApplicationWorkflow::EXPIRED],true))
+<p @class(['pill','ok'=>$state===\App\Modules\Admissions\Services\ApplicationWorkflow::REGISTERED,'bad'=>$bad])>{{ $state }}</p>
+@if(session('status'))<p class="notice">{{ session('status') }}</p>@endif
+@if($errors->any())<div class="notice" role="alert">@foreach($errors->all() as $error)<p>{{ $error }}</p>@endforeach</div>@endif
+@if($state===\App\Modules\Admissions\Services\ApplicationWorkflow::AWAITING)<p>Your application has been received. Payment is the last step.</p>@if($cookieOwner)<form method="post" action="{{ route('applications.continue') }}">@csrf<button class="btn btn-teal full">Continue payment</button></form>@endif
+@elseif($state===\App\Modules\Admissions\Services\ApplicationWorkflow::CONFIRMING)<p>We are confirming your payment. <strong>Please do not pay again.</strong> Press “Check again” in a minute.</p>@if($cookieOwner)<form method="post" action="{{ route('applications.check') }}">@csrf<button class="btn btn-teal full">Check again</button></form>@endif<p class="small" role="status">This page refreshes by itself.</p>
+@elseif($state===\App\Modules\Admissions\Services\ApplicationWorkflow::REGISTERED)<p>Your application and payment are confirmed.</p>@if($application->examSession)<p><strong>{{ $application->examSession->name }}</strong><br>{{ $application->examSession->starts_at->timezone('Africa/Lagos')->format('j F Y') }} at {{ $application->examSession->starts_at->timezone('Africa/Lagos')->format('g:i a') }}@if($application->examSession->venue_note)<br>{{ $application->examSession->venue_note }}@endif</p>@else<p>The school will send the exam date.</p>@endif<p>Sign-in details will be given at the school on exam day.</p>
+@elseif($state===\App\Modules\Admissions\Services\ApplicationWorkflow::FAILED)<p>Paystack says the payment did not succeed. You may try again.</p>@if($cookieOwner)<form method="post" action="{{ route('applications.continue') }}">@csrf<button class="btn btn-teal full">Try payment again</button></form>@endif
+@elseif($state===\App\Modules\Admissions\Services\ApplicationWorkflow::EXPIRED)<p>This application has expired. You can start a new one.</p><a class="btn btn-teal full" href="{{ route('applications.create') }}">Start a new application</a>@endif
+</div>@if($cookieOwner)<form class="status-forget" method="post" action="{{ route('applications.forget') }}">@csrf<button class="tl plain-button">Not you? Start a new application</button></form>@endif</main>@endsection

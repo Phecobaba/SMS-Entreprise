@@ -44,6 +44,8 @@ class AttendanceService
 
     public const SESSIONS = ['Morning', 'Afternoon'];
 
+    public const AFTERNOON_OPENS_AT = '12:00';
+
     public function dashboardToday(?int $armId = null, ?User $viewer = null): array
     {
         if ($viewer) {
@@ -59,7 +61,7 @@ class AttendanceService
         }
         $arms = $query->get();
         $counts = app(StudentDirectory::class)->countsByArmIds($arms->pluck('id')->all());
-        $notHeld = AttendanceSessionNotHeld::whereDate('date', $date)->get()
+        $notHeld = AttendanceSessionNotHeld::whereBetween('date', [$date.' 00:00:00', $date.' 23:59:59'])->get()
             ->mapWithKeys(fn ($row) => [$row->section_id.'|'.$row->session => true]);
 
         return collect(self::SESSIONS)->mapWithKeys(function (string $session) use ($arms, $counts, $notHeld, $date): array {
@@ -72,7 +74,8 @@ class AttendanceService
             if ($expected === 0) {
                 return [$session => null];
             }
-            $records = AttendanceRecord::whereIn('class_arm_id', $armIds)->whereDate('date', $date)
+            $records = AttendanceRecord::whereIn('class_arm_id', $armIds)
+                ->whereBetween('date', [$date.' 00:00:00', $date.' 23:59:59'])
                 ->where(fn ($query) => $query->where('session', $session)->orWhereNull('session'));
             if ((clone $records)->distinct()->count('student_id') !== $expected) {
                 return [$session => null];
@@ -97,7 +100,7 @@ class AttendanceService
         $sectionNames = $arms->mapWithKeys(fn (ClassArm $arm): array => [
             $arm->schoolClass?->level?->section_id => $arm->schoolClass?->level?->section?->name,
         ])->filter();
-        $notHeldRows = AttendanceSessionNotHeld::whereDate('date', $date)
+        $notHeldRows = AttendanceSessionNotHeld::whereBetween('date', [$date.' 00:00:00', $date.' 23:59:59'])
             ->whereIn('section_id', $sectionNames->keys())->get();
         $notHeld = $notHeldRows->mapWithKeys(
             fn ($row): array => [$row->section_id.'|'.$row->session => true],
@@ -110,7 +113,8 @@ class AttendanceService
             });
             $heldIds = $heldArms->pluck('id');
             $expected = $heldIds->sum(fn ($id): int => (int) ($counts[$id] ?? 0));
-            $records = AttendanceRecord::whereIn('class_arm_id', $heldIds)->whereDate('date', $date)
+            $records = AttendanceRecord::whereIn('class_arm_id', $heldIds)
+                ->whereBetween('date', [$date.' 00:00:00', $date.' 23:59:59'])
                 ->where(fn ($builder) => $builder->where('session', $session)->orWhereNull('session'));
             $markedByArm = (clone $records)->selectRaw('class_arm_id, count(distinct student_id) as marked_count')
                 ->groupBy('class_arm_id')->pluck('marked_count', 'class_arm_id');
@@ -129,7 +133,8 @@ class AttendanceService
             ]];
         })->all();
 
-        $alertsQuery = AttendanceAlert::where('resolved', false)->whereDate('date', $date)
+        $alertsQuery = AttendanceAlert::where('resolved', false)
+            ->whereBetween('date', [$date.' 00:00:00', $date.' 23:59:59'])
             ->whereIn('class_arm_id', $armIds);
         $alertsCount = (clone $alertsQuery)->count();
         $armLabels = $arms->keyBy('id');
@@ -203,6 +208,7 @@ class AttendanceService
         $arm = ClassArm::with('schoolClass.level')->findOrFail($armId);
         app(FormTeacherAssignments::class)->assertMayMark($arm, $actor);
         $this->assertToday($date);
+        $this->assertAfternoonIsOpen($session, $actor);
         $sectionId = $arm->schoolClass?->level?->section_id;
         if ($sectionId && AttendanceSessionNotHeld::where('section_id', $sectionId)->whereDate('date', $date)->where('session', $session)->exists()) {
             throw ValidationException::withMessages(['attendance' => 'This session is marked not held; no roll is needed.']);
@@ -245,6 +251,20 @@ class AttendanceService
             AttendanceAlert::where('class_arm_id', $armId)->whereDate('date', $date)
                 ->where('session', $session)->update(['resolved' => true]);
         });
+    }
+
+    public function defaultSession(): string
+    {
+        return CarbonImmutable::now('Africa/Lagos')->format('H:i') < self::AFTERNOON_OPENS_AT
+            ? 'Morning'
+            : 'Afternoon';
+    }
+
+    public function afternoonIsUnavailable(string $date, User $actor): bool
+    {
+        return $date === CarbonImmutable::now('Africa/Lagos')->toDateString()
+            && ! $actor->can('manage_attendance')
+            && CarbonImmutable::now('Africa/Lagos')->format('H:i') < self::AFTERNOON_OPENS_AT;
     }
 
     public function lockDay(int $armId, string $date, string $session, User $actor): void
@@ -603,6 +623,15 @@ class AttendanceService
     {
         if ($date !== CarbonImmutable::now('Africa/Lagos')->toDateString()) {
             throw ValidationException::withMessages(['date' => 'Attendance can only be marked or changed on the same school day.']);
+        }
+    }
+
+    private function assertAfternoonIsOpen(string $session, User $actor): void
+    {
+        if ($session === 'Afternoon'
+            && ! $actor->can('manage_attendance')
+            && CarbonImmutable::now('Africa/Lagos')->format('H:i') < self::AFTERNOON_OPENS_AT) {
+            throw ValidationException::withMessages(['attendance' => 'Afternoon attendance opens at 12:00.']);
         }
     }
 }

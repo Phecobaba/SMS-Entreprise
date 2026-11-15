@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\CBT\Models\Exam;
 use App\Modules\CBT\Models\ExamSubmission;
 use App\Modules\CBT\Models\Question;
+use App\Modules\CBT\Services\ExamAttemptLifecycle;
 use App\Modules\CBT\Services\ExamWorkflow;
 use App\Modules\Notifications\Services\InAppNotifications;
 use App\Modules\Portals\Services\PortalContext;
@@ -42,18 +43,16 @@ class ExamParticipantController extends Controller
 
     public function sit(int $submission, Request $request, ExamWorkflow $workflow): View|RedirectResponse
     {
-        $attempt = ExamSubmission::with(['exam', 'answers'])->findOrFail($submission);
+        $attempt = ExamSubmission::with(['exam', 'answers.selections'])->findOrFail($submission);
         $workflow->assertOwner($attempt, $request->user());
-        abort_unless($attempt->status === 'In Progress', 403);
-        if ($workflow->remainingSeconds($attempt) === 0) {
-            $workflow->submit($attempt, [], $request->user());
+        app(ExamAttemptLifecycle::class)->submitExpiredAttempt($attempt);
+        $attempt->refresh();
+        if ($attempt->status === 'Submitted') {
+            $route = $workflow->isReleased($attempt->exam) ? route('cbt.result', $attempt) : route('cbt.mine');
 
-            if ($workflow->isReleased($attempt->exam)) {
-                return redirect()->route('cbt.result', $attempt)->with('status', 'Time ended. Your saved answers were submitted.');
-            }
-
-            return redirect()->route('cbt.mine')->with('status', 'Time ended. Your saved answers were submitted.');
+            return redirect($route)->with('status', 'Time ended. Your saved answers were submitted.');
         }
+        abort_unless($attempt->status === 'In Progress', 403);
         $questions = Question::with('options')->where('exam_id', $attempt->exam_id)->orderBy('position')->get();
 
         return view('cbt.sit', [
@@ -68,12 +67,14 @@ class ExamParticipantController extends Controller
         $data = $request->validate([
             'question_id' => ['required', 'integer'],
             'option_id' => ['nullable', 'integer'],
+            'option_ids' => ['nullable', 'array'],
+            'option_ids.*' => ['integer', 'distinct'],
             'flagged' => ['required', 'boolean'],
         ]);
         $workflow->saveAnswer(
             ExamSubmission::findOrFail($submission),
             (int) $data['question_id'],
-            isset($data['option_id']) ? (int) $data['option_id'] : null,
+            $data['option_ids'] ?? (isset($data['option_id']) ? [(int) $data['option_id']] : []),
             (bool) $data['flagged'],
             $request->user(),
         );
@@ -83,7 +84,7 @@ class ExamParticipantController extends Controller
 
     public function submit(int $submission, Request $request, ExamWorkflow $workflow): RedirectResponse
     {
-        $data = $request->validate(['answers' => ['nullable', 'array'], 'answers.*' => ['required', 'integer']]);
+        $data = $request->validate(['answers' => ['nullable', 'array']]);
         $attempt = $workflow->submit(ExamSubmission::findOrFail($submission), $data['answers'] ?? [], $request->user());
 
         if (! $workflow->isReleased($attempt->exam)) {

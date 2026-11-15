@@ -43,7 +43,7 @@ class ResultConfiguration
         return GradeBand::create(['grading_scheme_id' => $scheme->id, 'min_score' => $min, 'max_score' => $max, 'grade' => $grade, 'remark' => $remark]);
     }
 
-    public function addTemplate(string $name, int $sectionId, ?int $levelId, ?int $classId, int $schemeId, array $componentIds, bool $showSubjectRemarks = true): ResultTemplate
+    public function addTemplate(string $name, int $sectionId, ?int $levelId, ?int $classId, int $schemeId, array $componentIds, bool $showSubjectRemarks = true, bool $showOverallTotal = true, bool $showAverage = true, bool $showPosition = true): ResultTemplate
     {
         app(ResultAcademicCatalog::class)->assertTemplateScope($sectionId, $levelId, $classId);
         $this->assertTemplateConfiguration($sectionId, $schemeId, $componentIds);
@@ -56,7 +56,7 @@ class ResultConfiguration
             throw ValidationException::withMessages(['components' => 'Choose one or more distinct assessment components.']);
         }
 
-        return DB::transaction(function () use ($name, $sectionId, $levelId, $classId, $schemeId, $scopeKey, $ids, $showSubjectRemarks): ResultTemplate {
+        return DB::transaction(function () use ($name, $sectionId, $levelId, $classId, $schemeId, $scopeKey, $ids, $showSubjectRemarks, $showOverallTotal, $showAverage, $showPosition): ResultTemplate {
             $template = ResultTemplate::create([
                 'name' => $name,
                 'section_id' => $sectionId,
@@ -66,6 +66,9 @@ class ResultConfiguration
                 'scope_key' => $scopeKey,
                 'active_scope_key' => $scopeKey,
                 'show_subject_remarks' => $showSubjectRemarks,
+                'show_overall_total' => $showOverallTotal,
+                'show_average' => $showAverage,
+                'show_position' => $showPosition,
             ]);
             foreach ($ids as $position => $id) {
                 ResultTemplateComponent::create(['result_template_id' => $template->id, 'assessment_component_id' => $id, 'position' => $position + 1]);
@@ -80,6 +83,20 @@ class ResultConfiguration
         $template = ResultTemplate::findOrFail($templateId);
         $this->assertTemplateActive($template);
         $template->update(['show_subject_remarks' => $show]);
+
+        return $template;
+    }
+
+    public function setDisplayOptions(int $templateId, array $options): ResultTemplate
+    {
+        $template = ResultTemplate::findOrFail($templateId);
+        $this->assertTemplateActive($template);
+        $template->update([
+            'show_subject_remarks' => (bool) ($options['show_subject_remarks'] ?? $template->show_subject_remarks),
+            'show_overall_total' => (bool) ($options['show_overall_total'] ?? $template->show_overall_total),
+            'show_average' => (bool) ($options['show_average'] ?? $template->show_average),
+            'show_position' => (bool) ($options['show_position'] ?? $template->show_position),
+        ]);
 
         return $template;
     }
@@ -146,14 +163,18 @@ class ResultConfiguration
     {
         $this->assertBandUnlocked($band);
         $current = GradeBand::where('grading_scheme_id', $band->grading_scheme_id)->orderBy('min_score')->get();
-        $requiredMin = (float) $current->min('min_score');
-        $requiredMax = (float) $current->max('max_score');
         $candidate = $current->map(fn (GradeBand $row): array => $row->id === $band->id
             ? ['min_score' => $min, 'max_score' => $max]
             : $row->only(['min_score', 'max_score']))->all();
-        app(GradeScale::class)->assertValidBands($candidate, 'min_score', $requiredMin, $requiredMax);
+        app(GradeScale::class)->assertValidBands($candidate, 'min_score');
         $before = $band->only(['grading_scheme_id', 'min_score', 'max_score', 'grade', 'remark']);
-        $band->update(['min_score' => $min, 'max_score' => $max, 'grade' => trim($grade), 'remark' => $remark === null ? null : trim($remark)]);
+        GradeBand::whereKey($band->id)->update([
+            'min_score' => $min,
+            'max_score' => $max,
+            'grade' => trim($grade),
+            'remark' => $remark === null ? null : trim($remark),
+        ]);
+        $band->refresh();
         app(AuditRecorder::class)->record($actor, 'grade_band_updated', $band, [
             'before' => $before, 'after' => $band->only(['grading_scheme_id', 'min_score', 'max_score', 'grade', 'remark']),
         ]);
@@ -164,16 +185,6 @@ class ResultConfiguration
     public function deleteBand(GradeBand $band, User $actor): void
     {
         $this->assertBandUnlocked($band);
-        $current = GradeBand::where('grading_scheme_id', $band->grading_scheme_id)->orderBy('min_score')->get();
-        $remaining = $current->reject(fn (GradeBand $row): bool => $row->id === $band->id);
-        if ($remaining->isNotEmpty()) {
-            app(GradeScale::class)->assertValidBands(
-                $remaining->map(fn (GradeBand $row): array => $row->only(['min_score', 'max_score']))->all(),
-                'band',
-                (float) $current->min('min_score'),
-                (float) $current->max('max_score'),
-            );
-        }
         $before = $band->only(['grading_scheme_id', 'min_score', 'max_score', 'grade', 'remark']);
         app(AuditRecorder::class)->record($actor, 'grade_band_deleted', $band, ['before' => $before, 'after' => null]);
         $band->delete();

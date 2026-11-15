@@ -31,7 +31,7 @@ class PromotionService
 
         return DB::transaction(function () use ($actor, $source, $sourceArmId, $placements): array {
             Student::whereIn('id', array_map('intval', array_keys($placements)))->lockForUpdate()->get();
-            $plan = $this->buildPlan($actor, $source, $sourceArmId, $placements);
+            $plan = $this->buildPlan($actor, $source, $sourceArmId, $placements, true);
 
             foreach ($plan['rows'] as $row) {
                 if ($row['action'] === 'stay') {
@@ -60,6 +60,7 @@ class PromotionService
                         'awaiting_admission_at' => null,
                     ]);
                 } else {
+                    app(RegistrationNumbers::class)->applyMovementPlan($student, $row['registration'], $actor);
                     $student->update([
                         'class_arm_id' => $row['destination_arm_id'],
                         'status' => Student::STATUS_ACTIVE,
@@ -72,6 +73,7 @@ class PromotionService
                     'from' => $before,
                     'to' => ['class_arm_id' => $student->class_arm_id, 'status' => $student->status],
                     'source_class_id' => $source->id,
+                    'registration_number' => $row['registration'],
                 ]);
             }
 
@@ -95,6 +97,9 @@ class PromotionService
             }
 
             $from = $student->class_arm_id;
+            $numberState = [];
+            $registration = app(RegistrationNumbers::class)->planMovement($student, $arm, $numberState, true);
+            app(RegistrationNumbers::class)->applyMovementPlan($student, $registration, $actor);
             $student->update([
                 'class_arm_id' => $arm->id,
                 'status' => Student::STATUS_ACTIVE,
@@ -104,6 +109,7 @@ class PromotionService
             app(AuditRecorder::class)->record($actor, 'student_moved', $student, [
                 'from' => ['class_arm_id' => $from, 'status' => Student::STATUS_ACTIVE],
                 'to' => ['class_arm_id' => $arm->id, 'status' => Student::STATUS_ACTIVE],
+                'registration_number' => $registration,
             ]);
 
             return $student->refresh();
@@ -123,7 +129,7 @@ class PromotionService
         return ['final' => null, 'class' => $destination, 'arm' => $arm];
     }
 
-    private function buildPlan(User $actor, SchoolClass $source, ?int $sourceArmId, array $placements): array
+    private function buildPlan(User $actor, SchoolClass $source, ?int $sourceArmId, array $placements, bool $reserveNumbers = false): array
     {
         if ($placements === []) {
             throw ValidationException::withMessages(['students' => 'Select at least one student to review.']);
@@ -137,6 +143,7 @@ class PromotionService
         $finalStatus = $nextStep->isEmpty() ? $catalog->finalStatus($source) : null;
         $rows = collect();
         $errors = [];
+        $numberState = [];
 
         foreach ($requestedIds as $studentId) {
             $student = $students->get($studentId);
@@ -148,6 +155,7 @@ class PromotionService
                     'student' => $student, 'action' => 'move', 'status' => $finalStatus,
                     'destination_class_id' => null, 'destination_arm_id' => null,
                     'destination' => $finalStatus,
+                    'registration' => $this->unchangedRegistration($student),
                 ]);
 
                 continue;
@@ -159,6 +167,7 @@ class PromotionService
                     'student' => $student, 'action' => 'stay', 'status' => Student::STATUS_ACTIVE,
                     'destination_class_id' => $source->id, 'destination_arm_id' => $student->class_arm_id,
                     'destination' => $source->name.' · '.$student->classArm->name.' (stay)',
+                    'registration' => $this->unchangedRegistration($student),
                 ]);
 
                 continue;
@@ -185,6 +194,9 @@ class PromotionService
                 'student' => $student, 'action' => 'move', 'status' => Student::STATUS_ACTIVE,
                 'destination_class_id' => $classId, 'destination_arm_id' => $arm->id,
                 'destination' => $arm->schoolClass?->name.' · '.$arm->name,
+                'registration' => app(RegistrationNumbers::class)->planMovement(
+                    $student, $arm, $numberState, $reserveNumbers
+                ),
             ]);
         }
 
@@ -200,6 +212,17 @@ class PromotionService
             'stayed' => $rows->where('action', 'stay')->count(),
             'skipped' => $requestedIds->count() - $students->count(),
             'final_status' => $finalStatus,
+        ];
+    }
+
+    private function unchangedRegistration(Student $student): array
+    {
+        return [
+            'old_number' => $student->registration_number,
+            'new_number' => $student->registration_number,
+            'changed' => false,
+            'adjusted' => false,
+            'reason' => 'movement_policy_kept_number',
         ];
     }
 }

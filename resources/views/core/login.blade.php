@@ -8,15 +8,16 @@
     <div class="lg-top"><span class="oak-logo-crop">@if($school['logo_url'] ?? null)<img class="oak-logo-mark" src="{{ $school['logo_url'] }}" alt="">@endif</span><span class="oak-school-name">{{ $school['name'] ?? 'Oakfield' }}</span></div>
     <main class="lg-main"><div class="lg-card">
         <h1>Sign in</h1><p class="oak-sub">Use the email or username and password the school gave you.</p>
+        @if(session('status'))<div class="oak-notice oak-notice-warning" role="status"><x-icon name="clock" /><span>{{ session('status') }}</span></div>@endif
         @if($errors->any())<div class="oak-notice oak-notice-danger" role="alert"><x-icon name="alert-triangle" /><span>{{ $errors->first() }}</span></div>@endif
         @if(session('retry_after'))<div class="oak-notice oak-notice-warning" role="alert" data-retry-seconds="{{ (int) session('retry_after') }}"><x-icon name="clock" /><span>Too many attempts. Try again in <strong data-retry-count>{{ (int) session('retry_after') }}</strong> seconds.</span></div>@endif
         <form method="post" action="{{ route('login.store') }}" class="lg-form">@csrf
-            <div class="oak-field"><label for="identifier">Email or username</label><input id="identifier" name="identifier" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required value="{{ old('identifier') }}" @error('identifier') aria-invalid="true" @enderror><small>Students and parents: use the username on your slip. It does not matter if you type capital letters.</small></div>
+            <div class="oak-field"><label for="identifier">Email or username</label><input id="identifier" name="identifier" type="text" autocomplete="username" autocapitalize="none" spellcheck="false" required value="{{ old('identifier') }}" @error('identifier') aria-invalid="true" @enderror></div>
             <div class="oak-field"><label for="password">Password</label><div class="lg-pw"><input id="password" name="password" type="password" autocomplete="current-password" required><button type="button" aria-label="Show password" aria-pressed="false" onclick="const p=document.getElementById('password');const show=p.type==='password';p.type=show?'text':'password';this.setAttribute('aria-pressed',String(show));this.setAttribute('aria-label',show?'Hide password':'Show password')"><x-icon name="eye" /></button></div></div>
             <label class="lg-check"><input name="remember" type="checkbox" value="1"> Keep me signed in on this device</label>
             <button class="oak-btn oak-btn-primary oak-btn-block" type="submit" @if(session('retry_after')) disabled @endif>Sign in</button>
         </form>
-        <p class="oak-sub">Forgot your username or password? Ask the school office. An Admin will give you a new temporary password.</p>
+        <p class="oak-sub"><a class="oak-link" href="{{ route('password.request') }}">Forgot password?</a></p>
         <a class="oak-link ac-login-back" href="{{ route('home') }}">Back to the school website</a>
     </div></main>
 </div>

@@ -7,8 +7,10 @@ use App\Modules\Core\Models\User;
 use App\Modules\Core\Services\AuditRecorder;
 use App\Modules\Notifications\Services\InAppNotifications;
 use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class PaystackCredentials
@@ -117,19 +119,70 @@ class PaystackCredentials
 
     public function testConnection(): bool
     {
-        $secret = $this->secretKeyOrFail();
+        return $this->connectionTest()['ok'];
+    }
+
+    public function connectionTest(): array
+    {
+        $secret = $this->secretKey();
+        if ($secret === null) {
+            return $this->failedConnectionTest(
+                'keys_missing',
+                'Paystack keys are missing. Save the public and secret keys, then try again.',
+            );
+        }
 
         try {
-            $response = Http::withToken($secret)->acceptJson()->timeout(10)
+            $response = Http::withToken($secret)->acceptJson()->connectTimeout(5)->timeout(15)
                 ->get(rtrim(config('services.paystack.base_url'), '/').'/transaction', [
                     'perPage' => 1,
                     'page' => 1,
                 ]);
-
-            return $response->successful() && $response->json('status') === true;
+        } catch (ConnectionException) {
+            return $this->failedConnectionTest(
+                'network_error',
+                'We could not reach Paystack. Check the internet connection and try again.',
+            );
         } catch (\Throwable) {
-            return false;
+            return $this->failedConnectionTest(
+                'unexpected_error',
+                'Paystack returned an unexpected response. Try again later.',
+            );
         }
+
+        if ($response->status() === 401) {
+            return $this->failedConnectionTest(
+                'credentials_rejected',
+                'Paystack rejected the configured keys. Check and save them again.',
+                401,
+                $response->json('message'),
+            );
+        }
+        if (! $response->successful() || $response->json('status') !== true) {
+            return $this->failedConnectionTest(
+                'http_error',
+                'Paystack returned an unexpected response. Try again later.',
+                $response->status(),
+                $response->json('message'),
+            );
+        }
+
+        return ['ok' => true, 'category' => 'ok', 'message' => 'Connection OK. Paystack accepted the configured keys. No money moved.'];
+    }
+
+    private function failedConnectionTest(
+        string $category,
+        string $message,
+        ?int $httpStatus = null,
+        mixed $paystackMessage = null,
+    ): array {
+        Log::warning('Paystack connection test failed.', [
+            'category' => $category,
+            'http_status' => $httpStatus,
+            'paystack_message' => is_string($paystackMessage) ? $paystackMessage : null,
+        ]);
+
+        return ['ok' => false, 'category' => $category, 'message' => $message];
     }
 
     private function load(): void

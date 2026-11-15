@@ -33,6 +33,7 @@ class StaffCredentials
             ]);
             $user->setRawAttributes(array_merge($user->getAttributes(), [
                 'password' => Hash::make($temporaryPassword, ['rounds' => config('accounts.temporary_bcrypt_rounds')]),
+                'email_verified_at' => filled($data['email'] ?? null) ? now() : null,
             ]));
             $user->save();
             $user->roles()->syncWithPivotValues([$role->id], ['school_id' => $user->school_id]);
