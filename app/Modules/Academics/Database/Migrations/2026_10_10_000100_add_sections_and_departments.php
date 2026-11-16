@@ -51,10 +51,16 @@ return new class extends Migration
         });
 
         Schema::table('term_default_comments', function (Blueprint $table): void {
-            $table->dropUnique('term_default_comment_unique');
             $table->foreignId('section_id')->nullable()->after('term_id');
+        });
+        Schema::table('term_default_comments', function (Blueprint $table): void {
             $table->unique(['school_id', 'term_id', 'section_id', 'comment_type'], 'term_section_default_comment_unique');
             $table->foreign(['school_id', 'section_id'], 'term_default_section_fk')->references(['school_id', 'id'])->on('sections');
+        });
+        Schema::table('term_default_comments', function (Blueprint $table): void {
+            // The replacement index must exist first because MySQL uses the old
+            // unique index to support term_default_term_fk.
+            $table->dropUnique('term_default_comment_unique');
         });
 
         Schema::table('result_card_comment_audit', function (Blueprint $table): void {
@@ -95,9 +101,15 @@ return new class extends Migration
         });
         Schema::table('term_default_comments', function (Blueprint $table): void {
             $table->dropForeign('term_default_section_fk');
+        });
+        Schema::table('term_default_comments', function (Blueprint $table): void {
+            // Restore the supporting left-prefix index before removing its
+            // section-scoped replacement.
+            $table->unique(['school_id', 'term_id', 'comment_type'], 'term_default_comment_unique');
+        });
+        Schema::table('term_default_comments', function (Blueprint $table): void {
             $table->dropUnique('term_section_default_comment_unique');
             $table->dropColumn('section_id');
-            $table->unique(['school_id', 'term_id', 'comment_type'], 'term_default_comment_unique');
         });
         Schema::table('candidates', function (Blueprint $table): void {
             $table->dropForeign('candidate_applied_level_fk');
