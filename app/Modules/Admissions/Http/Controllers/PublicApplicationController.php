@@ -29,7 +29,7 @@ class PublicApplicationController extends Controller
             'open' => (bool) ($settings->admissions_open ?? true),
             'feeKobo' => ($settings->application_fee_enabled ?? false) ? (int) $settings->application_fee_kobo : 0,
             'levels' => AcademicLevel::with('section')->whereNotNull('section_id')
-                ->orderBy('section_id')->orderBy('position')->orderBy('name')->limit(100)->get()->groupBy('section.name'),
+                ->orderBy('section_id')->orderBy('name')->limit(100)->get()->groupBy('section.name'),
         ]);
     }
 
