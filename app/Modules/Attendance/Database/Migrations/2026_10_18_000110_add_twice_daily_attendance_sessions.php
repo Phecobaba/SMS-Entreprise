@@ -9,15 +9,26 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('attendance_records', function (Blueprint $table): void {
-            $table->dropUnique('attendance_student_date_unique');
             $table->string('session', 20)->nullable()->after('date');
+        });
+        Schema::table('attendance_records', function (Blueprint $table): void {
             $table->unique(['school_id', 'student_id', 'date', 'session'], 'attendance_student_date_session_unique');
+        });
+        Schema::table('attendance_records', function (Blueprint $table): void {
+            // MySQL uses the old unique index to support attendance_student_fk,
+            // so its replacement must exist before the old index is removed.
+            $table->dropUnique('attendance_student_date_unique');
         });
 
         Schema::table('attendance_alerts', function (Blueprint $table): void {
-            $table->dropUnique('attendance_alert_arm_date_unique');
             $table->string('session', 20)->nullable()->after('date');
+        });
+        Schema::table('attendance_alerts', function (Blueprint $table): void {
             $table->unique(['school_id', 'class_arm_id', 'date', 'session'], 'attendance_alert_arm_date_session_unique');
+        });
+        Schema::table('attendance_alerts', function (Blueprint $table): void {
+            // Keep a left-prefix index available for attendance_alert_arm_fk.
+            $table->dropUnique('attendance_alert_arm_date_unique');
         });
 
         Schema::create('attendance_alert_settings', function (Blueprint $table): void {
@@ -57,14 +68,18 @@ return new class extends Migration
         Schema::dropIfExists('attendance_alert_settings');
 
         Schema::table('attendance_alerts', function (Blueprint $table): void {
+            $table->unique(['school_id', 'class_arm_id', 'date'], 'attendance_alert_arm_date_unique');
+        });
+        Schema::table('attendance_alerts', function (Blueprint $table): void {
             $table->dropUnique('attendance_alert_arm_date_session_unique');
             $table->dropColumn('session');
-            $table->unique(['school_id', 'class_arm_id', 'date'], 'attendance_alert_arm_date_unique');
+        });
+        Schema::table('attendance_records', function (Blueprint $table): void {
+            $table->unique(['school_id', 'student_id', 'date'], 'attendance_student_date_unique');
         });
         Schema::table('attendance_records', function (Blueprint $table): void {
             $table->dropUnique('attendance_student_date_session_unique');
             $table->dropColumn('session');
-            $table->unique(['school_id', 'student_id', 'date'], 'attendance_student_date_unique');
         });
     }
 };
