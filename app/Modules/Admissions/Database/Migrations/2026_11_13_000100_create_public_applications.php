@@ -69,7 +69,7 @@ return new class extends Migration
             $table->boolean('late_success')->default(false);
             $table->timestamps();
             $table->unique(['school_id', 'id']);
-            $table->unique(['school_id', 'active_application_id']);
+            $table->unique(['school_id', 'active_application_id'], 'application_attempt_active_unique');
             $table->index(['school_id', 'status', 'created_at'], 'application_attempt_recheck_idx');
             $table->foreign(['school_id', 'application_id'], 'application_attempt_application_fk')->references(['school_id', 'id'])->on('applications')->cascadeOnDelete();
         });
