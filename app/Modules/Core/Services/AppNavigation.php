@@ -247,13 +247,13 @@ class AppNavigation
         }
 
         $flags = User::query()->whereKey($user->id)
-            ->withExists(['teacherSubjectAssignments', 'formTeacherArms', 'sections'])
+            ->withExists(['teacherSubjectAssignments', 'formTeacherArms', 'headSections'])
             ->firstOrFail();
 
         return $this->staffFlagsByUser[$user->id] = [
             'teaching' => (bool) ($flags->teacher_subject_assignments_exists || $flags->form_teacher_arms_exists),
             'form_teacher' => (bool) $flags->form_teacher_arms_exists,
-            'head' => (bool) $flags->sections_exists,
+            'head' => (bool) $flags->head_sections_exists,
         ];
     }
 

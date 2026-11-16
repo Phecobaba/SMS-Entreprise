@@ -95,6 +95,31 @@ class DashboardScopeTest extends TestCase
             ->assertDontSee('JS1 Blue');
     }
 
+    public function test_a_teaching_head_with_only_an_ordinary_section_link_sees_the_not_assigned_state(): void
+    {
+        $f = $this->fixture();
+        $classSubject = ClassSubject::whereHas(
+            'schoolClass.level',
+            fn ($level) => $level->where('section_id', $f['primary']->id),
+        )->firstOrFail();
+
+        $f['unassignedHead']->roles()->attach($f['teacherRole']);
+        $f['unassignedHead']->sections()->attach($f['primary']->id, [
+            'school_id' => $f['school']->id,
+            'is_head' => false,
+        ]);
+        TeacherSubjectAssignment::create([
+            'user_id' => $f['unassignedHead']->id,
+            'class_id' => $classSubject->class_id,
+            'subject_id' => $classSubject->subject_id,
+        ]);
+
+        $this->actingAs($f['unassignedHead'])->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee("You haven't been assigned to a section yet", false)
+            ->assertDontSee('Teachers assigned');
+    }
+
     public function test_live_result_attention_is_role_scoped_linked_and_hidden_at_zero(): void
     {
         $f = $this->fixture();
